@@ -168,6 +168,7 @@ cv.addEventListener('pointermove', e => {
 
 window.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return; // leave Ctrl+C / Ctrl+S etc. to the browser
   const k = e.key.toLowerCase();
   if (k === 'h') $('panel').classList.toggle('hidden');
   if (k === 'c') clear();
