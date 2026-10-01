@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>タイピング落ち物</title>
+<style>
+  :root {
+    --bg: #0c1020;
+    --text: #eef1ff;
+    --muted: #8a93b8;
+    --accent: #5ee6a8;
+    --typed: #5ee6a8;
+    --danger: #ff5c7a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: system-ui, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  .hud {
+    position: fixed; top: 0; left: 0; right: 0; display: flex; gap: 24px; justify-content: center;
+    padding: 12px 16px; font-size: 15px; font-variant-numeric: tabular-nums; pointer-events: none;
+  }
+  .hud b { color: var(--accent); }
+  .overlay {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(8, 10, 22, 0.78); backdrop-filter: blur(4px);
+  }
+  .overlay.hidden { display: none; }
+  .card { text-align: center; padding: 28px 32px; max-width: 440px; margin: 16px; }
+  .card h1 { font-size: 30px; margin: 0 0 6px; }
+  .card p { color: var(--muted); line-height: 1.7; margin: 8px 0; }
+  .card .big { font-size: 42px; color: var(--accent); font-weight: 700; margin: 4px 0; }
+  .modes { display: flex; gap: 10px; justify-content: center; margin: 18px 0 8px; flex-wrap: wrap; }
+  button {
+    padding: 10px 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.07); color: var(--text); font: inherit; font-size: 15px; cursor: pointer;
+  }
+  button:hover, button:focus-visible { background: rgba(94, 230, 168, 0.2); border-color: var(--accent); outline: none; }
+  .key { display: inline-block; padding: 1px 7px; border: 1px solid var(--muted); border-radius: 5px; font-size: 12px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">
+  <div>スコア <b id="score">0</b></div>
+  <div>レベル <b id="level">1</b></div>
+  <div>ライフ <span id="lives"></span></div>
+  <div>ハイスコア <b id="best">0</b></div>
+</div>
+
+<div class="overlay" id="start">
+  <div class="card">
+    <h1>⌨️ タイピング落ち物</h1>
+    <p>落ちてくる単語を、地面に着く前に打って消そう。<br>最初の1文字でねらう単語が決まります。</p>
+    <div class="modes">
+      <button data-mode="ja">日本語（ローマ字）</button>
+      <button data-mode="en">English</button>
+    </div>
+    <p><span class="key">Esc</span> で一時停止</p>
+  </div>
+</div>
+
+<div class="overlay hidden" id="over">
+  <div class="card">
+    <h1>ゲームオーバー</h1>
+    <div class="big" id="final">0</div>
+    <p id="overMsg"></p>
+    <div class="modes">
+      <button id="retry">もう一度 (Enter)</button>
+      <button id="menu">モード選択</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="pause">
+  <div class="card"><h1>一時停止</h1><p><span class="key">Esc</span> で再開</p></div>
+</div>
+
+<script>
+// ---- word lists: [display, romaji] ----
+const WORDS = {
+  ja: [
+    ['ねこ','neko'],['いぬ','inu'],['さくら','sakura'],['そら','sora'],['うみ','umi'],['やま','yama'],
+    ['りんご','ringo'],['みかん','mikan'],['ともだち','tomodati'],['がっこう','gakkou'],['でんしゃ','densya'],
+    ['ほし','hosi'],['つき','tuki'],['はなび','hanabi'],['すいか','suika'],['かぜ','kaze'],['あめ','ame'],
+    ['ゆき','yuki'],['おちゃ','otya'],['らーめん','ra-men'],['すし','susi'],['てんぷら','tenpura'],
+    ['ひこうき','hikouki'],['じてんしゃ','zitensya'],['えんぴつ','enpitu'],['ぼうけん','bouken'],
+    ['まほう','mahou'],['たからもの','takaramono'],['にじいろ','niziiro'],['ゆうやけ','yuuyake'],
+    ['おまつり','omaturi'],['かいじゅう','kaizyuu'],['うちゅう','utyuu'],['ろけっと','roketto'],
+    ['こんぴゅーた','konpyu-ta'],['きーぼーど','ki-bo-do'],['ぷろぐらむ','puroguramu'],['ふじさん','huzisan'],
+    ['しんかんせん','sinkansen'],['あさごはん','asagohan'],['ひまわり','himawari'],['かたつむり','katatumuri'],
+  ],
+  en: [
+    'cat','dog','sun','moon','star','tree','rain','wind','fire','code','game','word','fast','jump','blue',
+    'green','apple','ocean','river','cloud','light','music','dream','storm','pixel','robot','magic','quest',
+    'planet','rocket','garden','castle','dragon','silver','winter','summer','window','yellow','galaxy',
+    'keyboard','thunder','mountain','adventure','butterfly','sunflower','treasure','universe','javascript',
+  ].map(w => [w, w]),
+};
+
+// ---- setup ----
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let W, H;
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k) { try { return +localStorage.getItem(k) || 0; } catch { return 0; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+
+let mode = 'ja';
+let state = 'menu'; // menu | play | pause | over
+let words, sparks, score, level, lives, cleared, misses, typedKeys, target, spawnTimer, lastTime, shake;
+const MAX_LIVES = 5;
+
+function bestKey() { return 'typing-best-' + mode; }
+
+function reset() {
+  words = []; sparks = [];
+  score = 0; level = 1; lives = MAX_LIVES; cleared = 0; misses = 0; typedKeys = 0;
+  target = null; spawnTimer = 0; shake = 0;
+  updateHud();
+}
+
+function updateHud() {
+  $('score').textContent = score;
+  $('level').textContent = level;
+  $('lives').textContent = '❤️'.repeat(lives) + '🖤'.repeat(MAX_LIVES - lives);
+  $('best').textContent = store.get(bestKey());
+}
+
+function startGame(m) {
+  mode = m;
+  reset();
+  $('start').classList.add('hidden');
+  $('over').classList.add('hidden');
+  state = 'play';
+  lastTime = performance.now();
+}
+
+document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => startGame(b.dataset.mode));
+$('retry').onclick = () => startGame(mode);
+$('menu').onclick = () => { $('over').classList.add('hidden'); $('start').classList.remove('hidden'); state = 'menu'; };
+
+// ---- difficulty ----
+const fallSpeed = () => 28 + level * 9;              // px / sec
+const spawnEvery = () => Math.max(0.55, 2.3 - level * 0.17); // sec
+
+function spawnWord() {
+  const list = WORDS[mode];
+  // avoid duplicate first letters on screen so targeting stays unambiguous-ish
+  let pick, tries = 0;
+  do {
+    pick = list[Math.floor(Math.random() * list.length)];
+    tries++;
+  } while (tries < 20 && words.some(w => w.romaji[0] === pick[1][0] || w.romaji === pick[1]));
+  ctx.font = '600 22px system-ui';
+  const width = Math.max(ctx.measureText(pick[0]).width, ctx.measureText(pick[1]).width * 0.75) + 20;
+  words.push({
+    text: pick[0], romaji: pick[1], typed: 0,
+    x: 20 + Math.random() * Math.max(1, W - width - 40), y: -10, width,
+    speed: fallSpeed() * (0.8 + Math.random() * 0.4),
+  });
+}
+
+// ---- input ----
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (state === 'play') { state = 'pause'; $('pause').classList.remove('hidden'); }
+    else if (state === 'pause') { state = 'play'; $('pause').classList.add('hidden'); lastTime = performance.now(); }
+    return;
+  }
+  if (state === 'over' && e.key === 'Enter') { startGame(mode); return; }
+  if (state !== 'play' || e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+  e.preventDefault();
+  const k = e.key.toLowerCase();
+
+  if (!target) {
+    // lock onto the lowest word starting with this key
+    const candidates = words.filter(w => w.romaji[0] === k).sort((a, b) => b.y - a.y);
+    target = candidates[0] || null;
+  }
+  if (target && target.romaji[target.typed] === k) {
+    target.typed++;
+    typedKeys++;
+    if (target.typed === target.romaji.length) clearWord(target);
+  } else {
+    misses++;
+    shake = 6;
+  }
+});
+
+function clearWord(w) {
+  score += w.romaji.length * 10 * level;
+  cleared++;
+  if (cleared % 8 === 0) level++;
+  burst(w.x + w.width / 2, w.y, 140);
+  words.splice(words.indexOf(w), 1);
+  target = null;
+  updateHud();
+}
+
+function burst(x, y, hue) {
+  for (let i = 0; i < 22; i++) {
+    const a = Math.random() * Math.PI * 2, s = 60 + Math.random() * 220;
+    sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60, life: 1, hue: hue + Math.random() * 60 });
+  }
+}
+
+function loseLife(w) {
+  lives--;
+  shake = 14;
+  burst(w.x + w.width / 2, H - 30, 340);
+  if (target === w) target = null;
+  words.splice(words.indexOf(w), 1);
+  updateHud();
+  if (lives <= 0) gameOver();
+}
+
+function gameOver() {
+  state = 'over';
+  const best = store.get(bestKey());
+  const isNew = score > best;
+  if (isNew) store.set(bestKey(), score);
+  const acc = typedKeys + misses ? Math.round(typedKeys / (typedKeys + misses) * 100) : 100;
+  $('final').textContent = score;
+  $('overMsg').innerHTML = (isNew ? '🎉 ハイスコア更新！<br>' : '') +
+    `消した単語 ${cleared} ・ レベル ${level} ・ 正確さ ${acc}%`;
+  $('over').classList.remove('hidden');
+  updateHud();
+}
+
+// ---- render ----
+const stars = Array.from({ length: 80 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.5 + 0.3 }));
+
+function draw() {
+  ctx.save();
+  if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+  ctx.fillStyle = '#0c1020'; ctx.fillRect(-20, -20, W + 40, H + 40);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  for (const s of stars) { ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r, 0, 7); ctx.fill(); }
+
+  // ground
+  const g = ctx.createLinearGradient(0, H - 40, 0, H);
+  g.addColorStop(0, 'rgba(255,92,122,0)'); g.addColorStop(1, 'rgba(255,92,122,0.35)');
+  ctx.fillStyle = g; ctx.fillRect(0, H - 40, W, 40);
+
+  for (const w of words) {
+    const isT = w === target;
+    const danger = w.y / (H - 40);
+    // bubble
+    ctx.fillStyle = isT ? 'rgba(94,230,168,0.16)' : `rgba(255,255,255,${0.05 + danger * 0.05})`;
+    ctx.strokeStyle = isT ? '#5ee6a8' : danger > 0.75 ? '#ff5c7a' : 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = isT ? 2 : 1;
+    const bh = mode === 'ja' ? 58 : 38;
+    roundRect(w.x, w.y - 26, w.width, bh, 10); ctx.fill(); ctx.stroke();
+
+    ctx.textAlign = 'center';
+    const cx = w.x + w.width / 2;
+    if (mode === 'ja') {
+      ctx.font = '600 22px system-ui, "Yu Gothic UI", sans-serif';
+      ctx.fillStyle = '#eef1ff';
+      ctx.fillText(w.text, cx, w.y);
+      drawRomaji(w, cx, w.y + 22, '15px ui-monospace, Consolas, monospace');
+    } else {
+      drawRomaji(w, cx, w.y, '600 20px ui-monospace, Consolas, monospace');
+    }
+  }
+
+  for (const s of sparks) {
+    ctx.fillStyle = `hsla(${s.hue}, 90%, 65%, ${s.life})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 2.5 * s.life + 0.5, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawRomaji(w, cx, y, font) {
+  ctx.font = font;
+  const done = w.romaji.slice(0, w.typed), rest = w.romaji.slice(w.typed);
+  const total = ctx.measureText(w.romaji).width;
+  let x = cx - total / 2;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#5ee6a8'; ctx.fillText(done, x, y);
+  x += ctx.measureText(done).width;
+  ctx.fillStyle = mode === 'ja' ? '#8a93b8' : '#eef1ff'; ctx.fillText(rest, x, y);
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+// ---- loop ----
+function tick(now) {
+  const dt = Math.min(0.05, (now - (lastTime || now)) / 1000);
+  lastTime = now;
+
+  if (state === 'play') {
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) { spawnWord(); spawnTimer = spawnEvery(); }
+    for (let i = words.length - 1; i >= 0; i--) {
+      const w = words[i];
+      w.y += w.speed * dt;
+      if (w.y > H - 30) loseLife(w);
+      if (state !== 'play') break;
+    }
+  }
+  if (state !== 'pause') {
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i];
+      s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 400 * dt; s.life -= dt * 1.4;
+      if (s.life <= 0) sparks.splice(i, 1);
+    }
+    shake *= 0.85; if (shake < 0.3) shake = 0;
+  }
+  if (words) draw();
+  requestAnimationFrame(tick);
+}
+
+reset();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

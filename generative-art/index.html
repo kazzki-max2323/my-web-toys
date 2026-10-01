@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>万華鏡キャンバス</title>
+<style>
+  :root {
+    --panel: rgba(18, 18, 28, 0.82);
+    --text: #e8e8f0;
+    --muted: #9a9ab0;
+    --accent: #ff6ad5;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #07070c; color: var(--text);
+    font-family: system-ui, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; touch-action: none; }
+  .panel {
+    position: fixed; top: 16px; left: 16px; width: 240px; padding: 14px 16px;
+    background: var(--panel); backdrop-filter: blur(8px); border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08); font-size: 13px; transition: opacity .3s;
+  }
+  .panel.hidden { opacity: 0; pointer-events: none; }
+  h1 { font-size: 15px; margin: 0 0 10px; letter-spacing: .05em; }
+  label { display: block; margin: 10px 0 2px; color: var(--muted); }
+  label span { float: right; color: var(--text); font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .row { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+  button {
+    flex: 1; padding: 7px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06); color: var(--text); font: inherit; cursor: pointer;
+  }
+  button:hover { background: rgba(255,255,255,0.14); }
+  button.on { background: var(--accent); color: #111; border-color: var(--accent); }
+  .hint { margin-top: 10px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+  @media (max-width: 520px) { .panel { left: 16px; right: 16px; width: auto; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="panel" id="panel">
+  <h1>🎨 万華鏡キャンバス</h1>
+  <label>対称の数 <span id="symV"></span></label>
+  <input id="sym" type="range" min="1" max="16" value="8">
+  <label>速さ <span id="spdV"></span></label>
+  <input id="spd" type="range" min="1" max="10" value="4">
+  <label>線の太さ <span id="wV"></span></label>
+  <input id="w" type="range" min="1" max="8" value="2">
+  <label>残像の長さ <span id="fadeV"></span></label>
+  <input id="fade" type="range" min="0" max="100" value="92">
+  <label>色の移り変わり <span id="hueV"></span></label>
+  <input id="hue" type="range" min="0" max="10" value="3">
+  <div class="row">
+    <button id="mirror" class="on">鏡像</button>
+    <button id="auto">オート</button>
+  </div>
+  <div class="row">
+    <button id="clear">クリア</button>
+    <button id="save">PNG保存</button>
+  </div>
+  <div class="hint">ドラッグで描画 ・ H: パネル表示切替<br>C: クリア ・ A: オート ・ S: 保存</div>
+</div>
+
+<script>
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let W, H, DPR;
+function resize() {
+  DPR = window.devicePixelRatio || 1;
+  W = window.innerWidth; H = window.innerHeight;
+  // Preserve the drawing across resizes
+  const old = document.createElement('canvas');
+  old.width = cv.width; old.height = cv.height;
+  if (cv.width) old.getContext('2d').drawImage(cv, 0, 0);
+  cv.width = W * DPR; cv.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#07070c'; ctx.fillRect(0, 0, W, H);
+  if (old.width) ctx.drawImage(old, 0, 0, old.width / DPR, old.height / DPR);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---- settings ----
+const $ = id => document.getElementById(id);
+const S = {};
+const sliders = {
+  sym:  v => `${v}`,
+  spd:  v => `${v}`,
+  w:    v => `${v}px`,
+  fade: v => `${v}%`,
+  hue:  v => `${v}`,
+};
+for (const [id, fmt] of Object.entries(sliders)) {
+  const el = $(id);
+  const sync = () => { S[id] = +el.value; $(id + 'V').textContent = fmt(el.value); };
+  el.addEventListener('input', sync); sync();
+}
+S.mirror = true; S.auto = false;
+const toggle = (id, key) => { S[key] = !S[key]; $(id).classList.toggle('on', S[key]); };
+$('mirror').onclick = () => toggle('mirror', 'mirror');
+$('auto').onclick = () => toggle('auto', 'auto');
+$('clear').onclick = clear;
+$('save').onclick = save;
+
+function clear() { ctx.fillStyle = '#07070c'; ctx.fillRect(0, 0, W, H); particles.length = 0; }
+function save() {
+  const a = document.createElement('a');
+  a.download = `kaleidoscope-${Date.now()}.png`;
+  a.href = cv.toDataURL('image/png');
+  a.click();
+}
+
+// ---- particles following a flow field ----
+const particles = [];
+let baseHue = Math.random() * 360;
+let t = 0;
+
+function field(x, y) {
+  // Smooth pseudo-noise angle from layered sines
+  const s = 0.004;
+  return Math.sin(x * s + t * 0.3) * 2.1 + Math.cos(y * s * 1.3 - t * 0.2) * 1.7
+       + Math.sin((x + y) * s * 0.7 + t * 0.15) * 1.2;
+}
+
+function spawn(x, y, n = 3) {
+  for (let i = 0; i < n; i++) {
+    particles.push({
+      x: x + (Math.random() - 0.5) * 8,
+      y: y + (Math.random() - 0.5) * 8,
+      life: 1,
+      decay: 0.004 + Math.random() * 0.01,
+      hue: baseHue + (Math.random() - 0.5) * 40,
+    });
+  }
+  if (particles.length > 1500) particles.splice(0, particles.length - 1500);
+}
+
+// draw a segment relative to the center, replicated with rotational / mirror symmetry
+function symSegment(x1, y1, x2, y2) {
+  const cx = W / 2, cy = H / 2;
+  const n = S.sym;
+  ctx.save();
+  ctx.translate(cx, cy);
+  for (let i = 0; i < n; i++) {
+    ctx.rotate((Math.PI * 2) / n);
+    ctx.beginPath(); ctx.moveTo(x1 - cx, y1 - cy); ctx.lineTo(x2 - cx, y2 - cy); ctx.stroke();
+    if (S.mirror && n > 1) {
+      ctx.save(); ctx.scale(1, -1);
+      ctx.beginPath(); ctx.moveTo(x1 - cx, y1 - cy); ctx.lineTo(x2 - cx, y2 - cy); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+
+// ---- input ----
+let down = false, px = 0, py = 0;
+cv.addEventListener('pointerdown', e => { down = true; px = e.clientX; py = e.clientY; spawn(px, py, 8); });
+window.addEventListener('pointerup', () => down = false);
+cv.addEventListener('pointermove', e => {
+  if (!down) return;
+  const dx = e.clientX - px, dy = e.clientY - py;
+  const steps = Math.max(1, Math.floor(Math.hypot(dx, dy) / 6));
+  for (let i = 1; i <= steps; i++) spawn(px + dx * i / steps, py + dy * i / steps, 2);
+  px = e.clientX; py = e.clientY;
+});
+
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const k = e.key.toLowerCase();
+  if (k === 'h') $('panel').classList.toggle('hidden');
+  if (k === 'c') clear();
+  if (k === 'a') toggle('auto', 'auto');
+  if (k === 's') save();
+});
+
+// auto mode: a wandering brush
+const wander = { x: 0, y: 0, a: Math.random() * 6.28 };
+function autoStep() {
+  wander.a += (Math.random() - 0.5) * 0.5;
+  const r = Math.min(W, H) * 0.38;
+  const tx = W / 2 + Math.cos(t * 0.7) * r * Math.sin(t * 0.23);
+  const ty = H / 2 + Math.sin(t * 0.9) * r * Math.cos(t * 0.17);
+  wander.x = tx + Math.cos(wander.a) * 30;
+  wander.y = ty + Math.sin(wander.a) * 30;
+  spawn(wander.x, wander.y, 2);
+}
+
+// ---- loop ----
+function frame() {
+  t += 0.01;
+  baseHue = (baseHue + S.hue * 0.15) % 360;
+
+  // fade layer for trails
+  const fadeAlpha = (100 - S.fade) / 100 * 0.25 + 0.002;
+  ctx.fillStyle = `rgba(7,7,12,${fadeAlpha})`;
+  ctx.fillRect(0, 0, W, H);
+
+  if (S.auto) autoStep();
+
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  const speed = S.spd * 0.6;
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    const a = field(p.x, p.y);
+    const nx = p.x + Math.cos(a) * speed;
+    const ny = p.y + Math.sin(a) * speed;
+    ctx.strokeStyle = `hsla(${p.hue}, 90%, 62%, ${p.life * 0.55})`;
+    ctx.lineWidth = S.w * (0.4 + p.life * 0.6);
+    symSegment(p.x, p.y, nx, ny);
+    p.x = nx; p.y = ny;
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>
