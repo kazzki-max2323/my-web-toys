@@ -1,0 +1,998 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>いただきタウン</title>
+<style>
+  :root {
+    --bg: #0c1020;
+    --panel: #151a30;
+    --cell: #1d2342;
+    --text: #eef1ff;
+    --muted: #8a93b8;
+    --accent: #5ee6a8;
+    --gold: #ffd166;
+    --danger: #ff5c7a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: system-ui, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif; overflow: hidden; }
+  #app { display: flex; gap: 16px; padding: 16px; height: 100vh; }
+  #boardWrap { flex: 1; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center; }
+  #board { display: block; touch-action: manipulation; }
+  #toast {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: min(360px, 90%);
+    padding: 14px 18px; border-radius: 14px; background: rgba(21, 26, 48, 0.96); border: 1px solid var(--gold);
+    text-align: center; line-height: 1.6; pointer-events: none; transition: opacity .25s;
+  }
+  #toast.hidden { opacity: 0; }
+  #side { width: 340px; flex: none; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  #side > * { flex: none; }
+  .box { background: var(--panel); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+  .box summary { cursor: pointer; color: var(--muted); }
+  #players { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pc { background: var(--panel); border: 2px solid transparent; border-radius: 12px; padding: 8px 10px; font-size: 12px;
+    font-variant-numeric: tabular-nums; line-height: 1.55; }
+  .pc.now { border-color: var(--pc); box-shadow: 0 0 12px color-mix(in srgb, var(--pc) 40%, transparent); }
+  .pc.out { opacity: .4; }
+  .pc .pn { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .pc .pn i { width: 12px; height: 12px; border-radius: 50%; background: var(--pc); display: inline-block; }
+  .pc .pn small { color: var(--muted); font-weight: 400; margin-left: auto; }
+  .pc b { color: var(--gold); }
+  .suits span { opacity: .22; margin-right: 2px; font-size: 14px; }
+  .suits span.on { opacity: 1; }
+  .suits .w { color: var(--gold); opacity: 1; font-size: 11px; }
+  #stocks { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 6px; }
+  #stocks th, #stocks td { padding: 2px 3px; text-align: right; font-weight: 400; }
+  #stocks th { color: var(--muted); font-size: 11px; }
+  #stocks td:first-child, #stocks th:first-child { text-align: left; }
+  .tag { display: inline-block; min-width: 16px; text-align: center; border-radius: 4px; color: #0c1020; font-weight: 700; font-size: 11px; margin-right: 4px; }
+  #info { line-height: 1.7; min-height: 60px; }
+  #info h3 { margin: 0 0 2px; font-size: 15px; }
+  #log { max-height: 220px; overflow-y: auto; line-height: 1.6; }
+  #log div { border-bottom: 1px solid rgba(255,255,255,0.05); padding: 2px 0; }
+  .tools { display: flex; gap: 8px; }
+  .tools button { flex: 1; }
+  button {
+    padding: 9px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.07); color: var(--text); font: inherit; font-size: 14px; cursor: pointer;
+  }
+  button:hover:not(:disabled), button:focus-visible { background: rgba(94, 230, 168, 0.2); border-color: var(--accent); outline: none; }
+  button.primary { background: rgba(94, 230, 168, 0.22); border-color: var(--accent); }
+  button:disabled { opacity: .35; cursor: default; }
+  /* desktop: dialog sits over the side panel so the board stays visible */
+  .dialog { position: fixed; right: 16px; top: 16px; width: 340px; z-index: 10; }
+  .dialog.hidden { display: none; }
+  .dialog .card { background: rgba(21, 26, 48, 0.97); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px;
+    padding: 14px 16px; max-height: 62vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+  .dialog h2 { font-size: 16px; margin: 0 0 6px; }
+  .dbody { color: var(--muted); font-size: 13px; line-height: 1.7; }
+  .dbody b { color: var(--text); }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .opts { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+  .opt { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 8px; background: rgba(255,255,255,0.04); cursor: pointer; color: var(--text); }
+  .opt:has(input:checked) { background: rgba(94, 230, 168, 0.16); }
+  .opt .r { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .amt { display: flex; align-items: center; gap: 10px; margin-top: 8px; color: var(--text); }
+  .amt input { flex: 1; accent-color: var(--accent); }
+  .amt output { min-width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+  .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(8, 10, 22, 0.82); backdrop-filter: blur(4px); z-index: 20; overflow-y: auto; }
+  .overlay.hidden { display: none; }
+  .ocard { padding: 24px 28px; max-width: 560px; margin: 16px; line-height: 1.75; }
+  .ocard h1 { font-size: 30px; margin: 0 0 4px; text-align: center; }
+  .ocard p, .ocard li { color: var(--muted); }
+  .ocard .center { text-align: center; }
+  .rank { list-style: none; padding: 0; margin: 12px 0; }
+  .rank li { display: flex; gap: 10px; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.05); margin-bottom: 6px; color: var(--text); }
+  .rank li span:last-child { margin-left: auto; color: var(--gold); font-variant-numeric: tabular-nums; }
+  @media (max-width: 860px) {
+    html, body { overflow: auto; height: auto; }
+    #app { flex-direction: column; height: auto; padding: 12px 16px 220px; }
+    #boardWrap { flex: none; }
+    #side { width: auto; overflow: visible; }
+    .dialog { left: 50%; right: auto; top: auto; bottom: 16px; transform: translateX(-50%); width: min(480px, calc(100% - 32px)); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="boardWrap">
+    <canvas id="board"></canvas>
+    <div id="toast" class="hidden"></div>
+  </div>
+  <aside id="side">
+    <div id="players"></div>
+    <div class="box" id="info">マスをタップすると詳しい情報が見られます。</div>
+    <details class="box" open><summary>株価と持ち株</summary><table id="stocks"></table></details>
+    <div class="box" id="log"></div>
+    <div class="tools">
+      <button id="speedBtn">CPU速度: ふつう</button>
+      <button id="rulesBtn">ルール</button>
+    </div>
+  </aside>
+</div>
+
+<div id="dialog" class="dialog hidden"><div class="card" id="dlgCard"></div></div>
+
+<div class="overlay" id="title">
+  <div class="ocard">
+    <h1>🏙️ いただきタウン</h1>
+    <p class="center">お店を買って、増資して、株でもうけて。<br>目標の総資産をためて銀行にもどった人の勝ち！</p>
+    <p class="center">あなた 対 CPU 3人</p>
+    <p class="center">目標金額をえらんでスタート</p>
+    <div class="btns" style="justify-content:center">
+      <button data-target="5000">5,000G（短め）</button>
+      <button data-target="8000" class="primary">8,000G（ふつう）</button>
+      <button data-target="12000">12,000G（長め）</button>
+    </div>
+    <p class="center" style="margin-top:14px"><button id="titleRules">ルールを読む</button></p>
+  </div>
+</div>
+
+<div class="overlay hidden" id="rules">
+  <div class="ocard">
+    <h1>ルール</h1>
+    <ul>
+      <li><b>サイコロ</b>をふって進む。分かれ道では進む方向を選べる（来た道はもどれない）。</li>
+      <li><b>空き店</b>に止まったら買える。<b>他人の店</b>に止まったら買い物料をはらう。はらった後、店の価値の<b>5倍</b>で買い取ることもできる（持ち主は3倍を受け取る）。</li>
+      <li>同じエリアの店を多く持つほど買い物料が上がる。エリアを独占するとさらに大きく上がる。</li>
+      <li><b>自分の店</b>に止まると、そのエリアの自分の店に<b>増資</b>できる。増資すると店の価値と買い物料が上がり、エリアの株価も上がる。増資の上限はエリアの持ち店数で決まる。</li>
+      <li><b>株</b>は銀行か株屋で買える（1回99株まで）。売るのは自分の番の最初ならいつでもOK。10株以上の売買で株価が少し動く。そのエリアで買い物料がはらわれるたびに、株主に<b>配当</b>が入る。</li>
+      <li>♠♥♦♣ の4つの<b>スート</b>を集めて銀行を通ると<b>昇進</b>し、給料（基本給＋店の価値の10%）がもらえる。</li>
+      <li><b>チャンス</b>マスではカードを引く。<b>休憩所</b>は1回休み。<b>宝くじ</b>はお金がもらえるかも。</li>
+      <li>所持金がマイナスになったら株や店を売って返す。店は銀行に価値の75%で売られ、他のプレイヤーでオークションになる。返せなくなったら<b>破産</b>でゲーム終了、総資産で順位を決める。</li>
+      <li>総資産（所持金＋店の価値＋株の価値）が<b>目標金額</b>以上で銀行に着いたら優勝！</li>
+    </ul>
+    <p class="center"><button id="closeRules" class="primary">とじる</button></p>
+  </div>
+</div>
+
+<div class="overlay hidden" id="end">
+  <div class="ocard">
+    <h1 id="endTitle">ゲーム終了</h1>
+    <p class="center" id="endMsg"></p>
+    <ol class="rank" id="ranking"></ol>
+    <p class="center"><button id="again" class="primary">もう一度あそぶ</button></p>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const DEMO = params.has('demo'); // all players are CPU, very fast (for testing)
+
+// ---------- board data ----------
+const N = 9;
+const SUITS = { s: '♠', h: '♥', d: '♦', c: '♣' };
+const DISTRICTS = [
+  { key: 'A', name: 'ひかり通り', color: '#ff9f7a', base: 100, coords: [[1,0],[2,0],[3,0]] },
+  { key: 'B', name: 'みなと町',   color: '#ffd27a', base: 130, coords: [[5,0],[6,0],[7,0]] },
+  { key: 'C', name: 'さくら坂',   color: '#ff9fc8', base: 160, coords: [[8,1],[8,2],[8,3]] },
+  { key: 'D', name: 'にじ公園',   color: '#c7a6ff', base: 190, coords: [[8,5],[8,6],[8,7]] },
+  { key: 'E', name: 'ほし市場',   color: '#8fd3ff', base: 220, coords: [[7,8],[6,8],[5,8]] },
+  { key: 'F', name: 'もり広場',   color: '#9ff0c4', base: 250, coords: [[3,8],[2,8],[1,8]] },
+  { key: 'G', name: 'ゆめ通り',   color: '#d6f28a', base: 200, coords: [[0,7],[0,6],[0,5]] },
+  { key: 'H', name: 'かぜの丘',   color: '#8ff0e6', base: 150, coords: [[0,3],[0,2],[0,1]] },
+  { key: 'I', name: '中央通り',   color: '#ffe9a8', base: 280, coords: [[4,1],[4,2],[4,6],[4,7]] },
+  { key: 'J', name: '大通り',     color: '#f5c0ff', base: 300, coords: [[1,4],[2,4],[6,4],[7,4]] },
+];
+const SHOP_NAMES = ['パン屋','花屋','本屋','カフェ','八百屋','魚屋','時計屋','雑貨屋','靴屋','帽子屋','おもちゃ屋',
+  '宿屋','道具屋','武器屋','防具屋','薬屋','銭湯','ケーキ屋','そば屋','すし屋','ラーメン屋','肉屋','文具店',
+  '楽器店','写真館','美容室','画廊','茶屋','酒場','劇場','ホテル','百貨店'];
+const SPECIAL = {
+  bank:    { label: '銀行', desc: 'スタート地点。スートが4つそろっていれば通るだけで昇進。増資や株の購入ができる。目標金額に届いていればここで優勝。' },
+  suit:    { label: 'スート', desc: '通る・止まるとスートがもらえる。4つ集めて銀行へ。' },
+  chance:  { label: 'チャンス', desc: '止まるとチャンスカードを1枚引く。' },
+  stock:   { label: '株屋', desc: '止まると好きなエリアの株を買える。' },
+  rest:    { label: '休憩所', desc: '止まると次の番は1回休み。' },
+  lottery: { label: '宝くじ', desc: '止まると0〜400Gのどれかがもらえる。' },
+};
+
+const cells = [];
+const at = {};
+const isRoad = (x, y) => x === 0 || y === 0 || x === N - 1 || y === N - 1 || x === 4 || y === 4;
+for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+  if (!isRoad(x, y)) continue;
+  at[x + ',' + y] = cells.length;
+  cells.push({ id: cells.length, x, y, nb: [] });
+}
+for (const c of cells) for (const [dx, dy] of [[0,-1],[1,0],[0,1],[-1,0]]) {
+  const k = at[(c.x + dx) + ',' + (c.y + dy)];
+  if (k !== undefined) c.nb.push(k);
+}
+const cellAt = (x, y) => cells[at[x + ',' + y]];
+const BANK = at['4,4'];
+cellAt(4, 4).type = 'bank';
+[['s',4,0],['h',8,4],['d',4,8],['c',0,4]].forEach(([s, x, y]) => Object.assign(cellAt(x, y), { type: 'suit', suit: s }));
+[[0,0,'chance'],[8,8,'chance'],[4,3,'chance'],[4,5,'chance'],[8,0,'stock'],[0,8,'stock'],[3,4,'rest'],[5,4,'lottery']]
+  .forEach(([x, y, t]) => cellAt(x, y).type = t);
+let nameIdx = 0;
+DISTRICTS.forEach((d, di) => {
+  d.shops = d.coords.map(([x, y], i) => {
+    const c = cellAt(x, y);
+    Object.assign(c, { type: 'shop', d: di, name: SHOP_NAMES[nameIdx++], base: d.base + i * 30 });
+    return c.id;
+  });
+});
+const SHOPS = cells.filter(c => c.type === 'shop').map(c => c.id);
+const SUIT_CELLS = cells.filter(c => c.type === 'suit').map(c => c.id);
+
+// ---------- state ----------
+const PLAYER_DEFS = [
+  { name: 'あなた', color: '#4da3ff', cpu: false },
+  { name: 'ミナ',   color: '#ff5c7a', cpu: true },
+  { name: 'ゴロウ', color: '#ffb43f', cpu: true },
+  { name: 'ルイ',   color: '#3fd17a', cpu: true },
+];
+const START_CASH = 1500;
+let players = [], turn = 0, round = 1, over = true, target = 8000, gameId = 0;
+let current = null, highlight = [], selected = null, dice = null, pick = null;
+let speed = DEMO ? 0.01 : 1;
+
+const sleep = ms => new Promise(r => setTimeout(r, ms * speed));
+const fmt = n => n.toLocaleString('ja-JP') + 'G';
+const rand = n => Math.floor(Math.random() * n);
+
+// ---------- economy ----------
+const ownedIn = (pid, d) => DISTRICTS[d].shops.filter(s => cells[s].owner === pid).length;
+const ownedShops = p => SHOPS.filter(s => cells[s].owner === p.id);
+const districtValue = d => DISTRICTS[d].shops.reduce((a, s) => a + cells[s].value, 0);
+const price = d => Math.max(1, Math.round(districtValue(d) * DISTRICTS[d].mod / 50));
+function feeRate(s) {
+  const c = cells[s];
+  const n = ownedIn(c.owner, c.d), total = DISTRICTS[c.d].shops.length;
+  return 0.2 + 0.15 * (n - 1) + (n === total ? 0.3 : 0);
+}
+function fee(s) {
+  const c = cells[s];
+  if (c.owner == null) return 0;
+  const f = Math.round(c.value * feeRate(s));
+  return players[c.owner].feeDouble ? f * 2 : f;
+}
+function maxValue(s) {
+  const c = cells[s];
+  const n = c.owner == null ? 1 : ownedIn(c.owner, c.d);
+  return c.base * (1 + n);
+}
+const room = s => Math.max(0, maxValue(s) - cells[s].value);
+const shopWorth = p => ownedShops(p).reduce((a, s) => a + cells[s].value, 0);
+const stockWorth = p => p.stocks.reduce((a, n, d) => a + n * price(d), 0);
+const worth = p => p.cash + shopWorth(p) + stockWorth(p);
+const missingSuits = p => Object.keys(SUITS).filter(k => !p.suits[k]);
+const hasAllSuits = p => missingSuits(p).length <= p.wild;
+
+// ---------- UI helpers ----------
+function log(msg) {
+  const el = document.createElement('div');
+  el.innerHTML = msg;
+  $('log').prepend(el);
+  while ($('log').children.length > 80) $('log').lastChild.remove();
+  if (DEMO) console.log(el.textContent);
+}
+const pname = p => `<span style="color:${p.color};font-weight:700">${p.name}</span>`;
+let toastTimer;
+async function toast(html, ms = 1400) {
+  $('toast').innerHTML = html;
+  $('toast').classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').classList.add('hidden'), ms * speed);
+  await sleep(ms);
+}
+
+function showDialog({ title, body = '', buttons = [], mount }, onPick) {
+  const card = $('dlgCard');
+  card.innerHTML = `<h2>${title}</h2><div class="dbody">${body}</div><div class="btns"></div>`;
+  for (const b of buttons) {
+    const el = document.createElement('button');
+    el.textContent = b.label;
+    if (b.primary) el.className = 'primary';
+    el.disabled = !!b.disabled;
+    el.onclick = () => onPick(b.value);
+    card.querySelector('.btns').append(el);
+  }
+  if (mount) mount(card);
+  $('dialog').classList.remove('hidden');
+}
+const closeDialog = () => $('dialog').classList.add('hidden');
+const ask = o => new Promise(res => showDialog(o, v => { closeDialog(); res(v); }));
+
+// radio list + amount slider. returns { sel, amt } via mutable object
+function pickerDialog({ title, body = '', items, amountMax, amountLabel, okLabel, step = 10 }) {
+  const st = { sel: items[0].value, amt: 0 };
+  const list = items.map((it, i) =>
+    `<label class="opt"><input type="radio" name="pk" value="${it.value}" ${i ? '' : 'checked'}>${it.label}<span class="r">${it.right || ''}</span></label>`).join('');
+  return ask({
+    title,
+    body: `${body}<div class="opts">${list}</div><div class="amt"><input type="range" min="0" step="1"><output></output></div>`,
+    buttons: [{ label: okLabel, value: 'ok', primary: true }, { label: 'やめる', value: 'no' }],
+    mount(card) {
+      const range = card.querySelector('input[type=range]'), out = card.querySelector('output');
+      const okBtn = card.querySelector('.btns button');
+      const sync = () => { st.amt = +range.value; out.textContent = amountLabel(st.sel, st.amt); okBtn.disabled = st.amt <= 0; };
+      const setMax = () => {
+        const m = amountMax(st.sel);
+        range.max = m;
+        range.step = m >= step * 2 ? step : 1;
+        range.value = Math.min(m, Math.max(range.step, Math.round(m / 2 / range.step) * range.step));
+        range.disabled = m <= 0;
+        sync();
+      };
+      card.querySelectorAll('input[name=pk]').forEach(r => r.onchange = () => { st.sel = +r.value; setMax(); });
+      range.oninput = sync;
+      setMax();
+    },
+  }).then(v => (v === 'ok' && st.amt > 0 ? st : null));
+}
+
+// ---------- rendering ----------
+const cv = $('board'), ctx = cv.getContext('2d');
+let size = 400, cs = 400 / N;
+function resize() {
+  const wrap = $('boardWrap');
+  const mobile = window.innerWidth <= 860;
+  size = mobile ? Math.min(window.innerWidth - 32, 620) : Math.min(wrap.clientWidth, wrap.clientHeight);
+  if (mobile) wrap.style.height = size + 'px'; else wrap.style.height = '';
+  cs = size / N;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = size * dpr; cv.height = size * dpr;
+  cv.style.width = size + 'px'; cv.style.height = size + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+function drawBoard(now) {
+  ctx.clearRect(0, 0, size, size);
+  const font = (w, px) => `${w} ${Math.max(8, px)}px system-ui, "Hiragino Sans", "Yu Gothic UI", sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  // centre decorations in the four empty blocks
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  for (const [bx, by] of [[1,1],[5,1],[1,5],[5,5]]) { rr(bx * cs + 4, by * cs + 4, cs * 3 - 8, cs * 3 - 8, 12); ctx.fill(); }
+  ctx.fillStyle = '#8a93b8';
+  ctx.font = font(400, cs * 0.24);
+  ctx.fillText('目標', 6.5 * cs, 2.1 * cs);
+  ctx.fillStyle = '#ffd166';
+  ctx.font = font(700, cs * 0.4);
+  ctx.fillText(fmt(target), 6.5 * cs, 2.6 * cs);
+  ctx.fillStyle = '#8a93b8';
+  ctx.font = font(400, cs * 0.24);
+  ctx.fillText(`ラウンド ${round}`, 2.5 * cs, 6.5 * cs);
+  if (dice) {
+    const dx = 2.5 * cs, dy = 2.5 * cs, ds = cs * 1.3;
+    ctx.fillStyle = '#eef1ff';
+    rr(dx - ds / 2, dy - ds / 2, ds, ds, ds * 0.18); ctx.fill();
+    ctx.fillStyle = '#0c1020';
+    ctx.font = font(800, cs * 0.8);
+    ctx.fillText(dice.n, dx, dy + 2);
+    if (dice.left != null) {
+      ctx.fillStyle = '#8a93b8';
+      ctx.font = font(400, cs * 0.22);
+      ctx.fillText(`のこり ${dice.left}`, dx, dy + ds / 2 + cs * 0.3);
+    }
+  }
+  if (current) {
+    ctx.fillStyle = current.color;
+    ctx.font = font(700, cs * 0.3);
+    ctx.fillText(`${current.name}の番`, 6.5 * cs, 6.5 * cs);
+  }
+
+  for (const c of cells) {
+    const x = c.x * cs + 2, y = c.y * cs + 2, w = cs - 4;
+    let bg = '#1d2342';
+    if (c.type === 'shop' && c.owner != null) bg = players[c.owner].color;
+    else if (c.type === 'bank') bg = '#ffd166';
+    else if (c.type === 'chance') bg = '#3a2f6b';
+    else if (c.type === 'stock') bg = '#1f4d57';
+    else if (c.type === 'rest') bg = '#3b3346';
+    else if (c.type === 'lottery') bg = '#5a3b2a';
+    ctx.fillStyle = bg;
+    rr(x, y, w, w, cs * 0.12); ctx.fill();
+
+    const dark = (c.type === 'shop' && c.owner != null) || c.type === 'bank';
+    if (c.type === 'shop') {
+      const d = DISTRICTS[c.d];
+      ctx.save(); rr(x, y, w, w, cs * 0.12); ctx.clip();
+      ctx.fillStyle = d.color; ctx.fillRect(x, y, w, cs * 0.24);
+      ctx.restore();
+      ctx.fillStyle = '#0c1020';
+      ctx.font = font(700, cs * 0.17);
+      ctx.fillText(d.key, x + w / 2, y + cs * 0.12);
+      ctx.fillStyle = dark ? '#0c1020' : '#eef1ff';
+      ctx.font = font(700, cs * 0.22);
+      ctx.fillText(c.value, x + w / 2, y + cs * 0.47);
+      ctx.font = font(400, cs * 0.16);
+      ctx.fillStyle = dark ? 'rgba(12,16,32,0.8)' : '#8a93b8';
+      ctx.fillText(c.owner != null ? `料 ${fee(c.id)}` : c.name.slice(0, 4), x + w / 2, y + cs * 0.73);
+    } else if (c.type === 'suit') {
+      ctx.fillStyle = c.suit === 'h' || c.suit === 'd' ? '#ff6b88' : '#eef1ff';
+      ctx.font = font(700, cs * 0.55);
+      ctx.fillText(SUITS[c.suit], x + w / 2, y + w / 2 + 1);
+    } else {
+      const label = { bank: '銀行', chance: '？', stock: '株', rest: '休', lottery: 'くじ' }[c.type];
+      ctx.fillStyle = dark ? '#0c1020' : '#eef1ff';
+      ctx.font = font(800, cs * (c.type === 'chance' ? 0.5 : 0.3));
+      ctx.fillText(label, x + w / 2, y + w / 2 + 1);
+    }
+    if (selected === c.id) {
+      ctx.strokeStyle = '#eef1ff'; ctx.lineWidth = 2;
+      rr(x, y, w, w, cs * 0.12); ctx.stroke();
+    }
+    if (highlight.includes(c.id)) {
+      ctx.strokeStyle = `rgba(94,230,168,${0.55 + 0.45 * Math.sin(now / 160)})`;
+      ctx.lineWidth = 4;
+      rr(x - 1, y - 1, w + 2, w + 2, cs * 0.14); ctx.stroke();
+    }
+  }
+
+  // tokens
+  const offs = [[0.27, 0.27], [0.73, 0.27], [0.27, 0.73], [0.73, 0.73]];
+  players.forEach((p, i) => {
+    if (p.bankrupt) return;
+    const c = cells[p.pos];
+    const tx = (c.x + offs[i][0]) * cs, ty = (c.y + offs[i][1]) * cs;
+    const r = cs * (p === current ? 0.19 : 0.15);
+    ctx.beginPath(); ctx.arc(tx, ty, r, 0, 7);
+    ctx.fillStyle = p.color; ctx.fill();
+    ctx.lineWidth = p === current ? 3 : 2; ctx.strokeStyle = '#0c1020'; ctx.stroke();
+    if (p === current) {
+      ctx.beginPath(); ctx.arc(tx, ty, r + 3 + Math.sin(now / 200) * 1.5, 0, 7);
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    ctx.fillStyle = '#0c1020';
+    ctx.font = font(800, r * 1.1);
+    ctx.fillText(p.name[0], tx, ty + 1);
+  });
+}
+
+function renderPanel() {
+  $('players').innerHTML = players.map(p => {
+    const suits = Object.entries(SUITS).map(([k, s]) => `<span class="${p.suits[k] ? 'on' : ''}">${s}</span>`).join('') +
+      (p.wild ? `<span class="w">ワイルド×${p.wild}</span>` : '');
+    const status = p.bankrupt ? '破産' : p.skip ? '休み' : `Lv${p.level}`;
+    return `<div class="pc ${p === current ? 'now' : ''} ${p.bankrupt ? 'out' : ''}" style="--pc:${p.color}">
+      <div class="pn"><i></i>${p.name}<small>${status}</small></div>
+      <div>所持金 <b>${fmt(p.cash)}</b></div>
+      <div>総資産 ${fmt(worth(p))}</div>
+      <div>店${ownedShops(p).length} ・ 株${fmt(stockWorth(p))}</div>
+      <div class="suits">${suits}</div></div>`;
+  }).join('');
+
+  $('stocks').innerHTML = `<tr><th>エリア</th><th>株価</th>${players.map(p => `<th style="color:${p.color}">${p.name[0]}</th>`).join('')}</tr>` +
+    DISTRICTS.map((d, i) => `<tr><td><span class="tag" style="background:${d.color}">${d.key}</span>${d.name}</td><td>${price(i)}G</td>` +
+      players.map(p => `<td>${p.stocks[i] || '·'}</td>`).join('') + '</tr>').join('');
+  renderInfo();
+}
+
+function renderInfo() {
+  if (selected == null) return;
+  const c = cells[selected];
+  if (c.type === 'shop') {
+    const d = DISTRICTS[c.d];
+    const owner = c.owner != null ? pname(players[c.owner]) : 'なし（空き店）';
+    $('info').innerHTML = `<h3><span class="tag" style="background:${d.color}">${d.key}</span>${c.name}</h3>
+      ${d.name}（${d.shops.length}軒）<br>持ち主: ${owner}<br>
+      店の価値: <b>${fmt(c.value)}</b>（増資の上限 ${fmt(maxValue(c.id))}）<br>
+      買い物料: ${c.owner != null ? `<b>${fmt(fee(c.id))}</b>` : '—'} ・ 買い取り: ${c.owner != null ? fmt(c.value * 5) : '—'}<br>
+      エリアの株価: ${price(c.d)}G`;
+  } else {
+    const s = SPECIAL[c.type];
+    $('info').innerHTML = `<h3>${c.type === 'suit' ? SUITS[c.suit] + ' ' : ''}${s.label}</h3>${s.desc}`;
+  }
+}
+
+function frame(now) {
+  drawBoard(now);
+  requestAnimationFrame(frame);
+}
+
+cv.addEventListener('click', e => {
+  const r = cv.getBoundingClientRect();
+  const id = at[Math.floor((e.clientX - r.left) / cs) + ',' + Math.floor((e.clientY - r.top) / cs)];
+  if (id === undefined) return;
+  if (pick && pick.opts.includes(id)) { pick.done(id); return; }
+  selected = id;
+  renderInfo();
+});
+
+// ---------- game flow ----------
+function newGame(t) {
+  target = t;
+  for (const s of SHOPS) Object.assign(cells[s], { owner: null, value: cells[s].base });
+  DISTRICTS.forEach(d => d.mod = 1);
+  players = PLAYER_DEFS.map((d, id) => ({
+    ...d, cpu: d.cpu || DEMO, id, cash: START_CASH, pos: BANK, prev: null, suits: {}, wild: 0, level: 1,
+    stocks: DISTRICTS.map(() => 0), skip: false, feeDouble: false, freeFee: false, bankrupt: false,
+  }));
+  turn = 0; round = 1; over = false; current = null; dice = null; selected = null; highlight = [];
+  $('log').innerHTML = '';
+  log(`ゲームスタート！目標は <b>${fmt(target)}</b>`);
+  ['title', 'end'].forEach(id => $(id).classList.add('hidden'));
+  renderPanel();
+  gameLoop(++gameId);
+}
+
+async function gameLoop(id) {
+  while (!over && id === gameId) {
+    const p = players[turn];
+    if (!p.bankrupt) {
+      await takeTurn(p);
+      for (const q of [p, ...players.filter(q => q !== p)]) {
+        if (over || id !== gameId) break;
+        if (q.cash < 0) await settleDebt(q);
+      }
+    }
+    turn = (turn + 1) % players.length;
+    if (turn === 0) round++;
+    renderPanel();
+  }
+}
+
+async function takeTurn(p) {
+  current = p; dice = null;
+  p.feeDouble = false;
+  renderPanel();
+  await sleep(300);
+  if (p.skip) {
+    p.skip = false;
+    log(`${pname(p)}は休憩中…（1回休み）`);
+    await toast(`${pname(p)}は休憩中…`, 900);
+    return;
+  }
+  if (!p.cpu) {
+    for (;;) {
+      const a = await ask({
+        title: 'あなたの番です',
+        body: `所持金 <b>${fmt(p.cash)}</b> ・ 総資産 <b>${fmt(worth(p))}</b>（目標 ${fmt(target)}）`,
+        buttons: [
+          { label: '🎲 サイコロをふる', value: 'roll', primary: true },
+          { label: '株を売る', value: 'stock', disabled: !p.stocks.some(n => n > 0) },
+          { label: '店を売る', value: 'shop', disabled: !ownedShops(p).length },
+        ],
+      });
+      if (a === 'roll') break;
+      if (a === 'stock') await humanSellStock(p);
+      if (a === 'shop') await humanSellShop(p);
+      renderPanel();
+    }
+  }
+  await rollAndMove(p);
+}
+
+async function rollAndMove(p) {
+  for (let i = 0; i < 6; i++) { dice = { n: 1 + rand(6) }; await sleep(60); }
+  const n = 1 + rand(6);
+  dice = { n, left: n };
+  log(`${pname(p)}はサイコロで <b>${n}</b> を出した`);
+  await sleep(400);
+  await move(p, n);
+  if (over) return;
+  await land(p);
+}
+
+async function move(p, n) {
+  for (let i = 0; i < n; i++) {
+    let opts = cells[p.pos].nb.filter(id => id !== p.prev);
+    if (!opts.length) opts = cells[p.pos].nb;
+    const next = opts.length === 1 ? opts[0] : p.cpu ? cpuDirection(p, opts) : await humanDirection(p, opts, n - i);
+    p.prev = p.pos; p.pos = next;
+    dice.left = n - i - 1;
+    await sleep(p.cpu ? 200 : 170);
+    const c = cells[next];
+    if (c.type === 'suit' && !p.suits[c.suit]) {
+      p.suits[c.suit] = true;
+      log(`${pname(p)}が ${SUITS[c.suit]} を手に入れた`);
+      renderPanel();
+    }
+    if (c.type === 'bank') {
+      await bankVisit(p, i === n - 1);
+      if (over) return;
+    }
+  }
+}
+
+const arrow = (from, to) => {
+  const dx = cells[to].x - cells[from].x, dy = cells[to].y - cells[from].y;
+  return dx > 0 ? '→' : dx < 0 ? '←' : dy > 0 ? '↓' : '↑';
+};
+const cellName = id => {
+  const c = cells[id];
+  return c.type === 'shop' ? c.name : c.type === 'suit' ? SUITS[c.suit] : SPECIAL[c.type].label;
+};
+
+function humanDirection(p, opts, left) {
+  highlight = opts;
+  return new Promise(res => {
+    const done = v => { pick = null; highlight = []; closeDialog(); res(v); };
+    pick = { opts, done };
+    showDialog({
+      title: `どっちに進む？（のこり ${left}マス）`,
+      body: '光っているマスをタップしても選べます。',
+      buttons: opts.map(id => ({ label: `${arrow(p.pos, id)} ${cellName(id)}`, value: id })),
+    }, done);
+  });
+}
+
+async function bankVisit(p, landed) {
+  log(`${pname(p)}が銀行に${landed ? '止まった' : '立ち寄った'}`);
+  if (hasAllSuits(p)) {
+    const used = missingSuits(p).length;
+    const pay = Math.round(300 + p.level * 100 + shopWorth(p) * 0.1);
+    p.level++;
+    p.cash += pay;
+    p.suits = {};
+    p.wild -= used;
+    log(`🎉 ${pname(p)}がレベル${p.level}に昇進！ 給料 <b>${fmt(pay)}</b>`);
+    renderPanel();
+    await toast(`🎉 ${pname(p)}が昇進！<br>給料 <b>${fmt(pay)}</b>`, 1300);
+  }
+  if (worth(p) >= target) { endGame(p); return; }
+  if (p.cpu) {
+    await cpuInvest(p, ownedShops(p));
+    await cpuBuyStock(p);
+    return;
+  }
+  let invested = false, bought = false;
+  for (;;) {
+    const a = await ask({
+      title: '🏦 銀行',
+      body: `所持金 <b>${fmt(p.cash)}</b> ・ 総資産 <b>${fmt(worth(p))}</b> / 目標 ${fmt(target)}<br>スート: ${Object.keys(SUITS).map(k => p.suits[k] ? SUITS[k] : '・').join(' ')}`,
+      buttons: [
+        { label: '増資する', value: 'invest', disabled: invested || !ownedShops(p).some(s => room(s) > 0) || p.cash <= 0 },
+        { label: '株を買う', value: 'stock', disabled: bought || p.cash <= 0 },
+        { label: '先へ進む', value: 'go', primary: true },
+      ],
+    });
+    if (a === 'go') break;
+    if (a === 'invest') invested = await humanInvest(p, ownedShops(p), '増資するお店を選んでね');
+    if (a === 'stock') bought = await humanBuyStock(p, '買う株を選んでね（99株まで）');
+    renderPanel();
+  }
+}
+
+async function land(p) {
+  const c = cells[p.pos];
+  selected = c.id;
+  renderPanel();
+  if (c.type === 'shop') await landShop(p, c);
+  else if (c.type === 'chance') await drawChance(p);
+  else if (c.type === 'stock') {
+    log(`${pname(p)}は株屋に止まった`);
+    if (p.cpu) await cpuBuyStock(p, true);
+    else await humanBuyStock(p, '株屋：買う株を選んでね（99株まで）');
+  } else if (c.type === 'rest') {
+    p.skip = true;
+    log(`${pname(p)}は休憩所でひと休み（次は1回休み）`);
+    await toast(`${pname(p)}は休憩所でひと休み<br>次は1回休み`, 1000);
+  } else if (c.type === 'lottery') {
+    const win = [0, 0, 50, 100, 100, 200, 400][rand(7)];
+    p.cash += win;
+    log(`${pname(p)}の宝くじ… ${win ? `<b>${fmt(win)}</b> 当たり！` : 'はずれ'}`);
+    await toast(`🎫 宝くじ… ${win ? `<b>${fmt(win)}</b> 当たり！` : 'はずれ…'}`, 1000);
+  }
+  renderPanel();
+}
+
+async function landShop(p, c) {
+  const d = DISTRICTS[c.d];
+  if (c.owner == null) {
+    if (p.cash < c.value) { log(`${pname(p)}は${c.name}を買うお金が足りない`); return; }
+    const yes = p.cpu ? p.cash - c.value >= 50 : await ask({
+      title: `${c.name}を買いますか？`,
+      body: `${d.name}（${d.key}）・ 店の価値 <b>${fmt(c.value)}</b><br>所持金 ${fmt(p.cash)} → ${fmt(p.cash - c.value)}`,
+      buttons: [{ label: `買う（${fmt(c.value)}）`, value: true, primary: true }, { label: '買わない', value: false }],
+    });
+    if (yes) {
+      p.cash -= c.value; c.owner = p.id;
+      log(`${pname(p)}が${d.name}の${c.name}を <b>${fmt(c.value)}</b> で買った`);
+      await sleep(400);
+    }
+  } else if (c.owner === p.id) {
+    log(`${pname(p)}は自分の${c.name}に止まった`);
+    const mine = d.shops.filter(s => cells[s].owner === p.id);
+    if (p.cpu) await cpuInvest(p, mine);
+    else await humanInvest(p, mine, `${d.name}の自分の店に増資できます`);
+  } else {
+    const o = players[c.owner];
+    let f = fee(c.id);
+    if (p.freeFee) { p.freeFee = false; f = 0; log(`${pname(p)}は無料券を使った！`); }
+    p.cash -= f; o.cash += f;
+    log(`${pname(p)}が${pname(o)}の${c.name}で買い物料 <b>${fmt(f)}</b>`);
+    renderPanel();
+    await toast(`${pname(o)}の${c.name}<br>買い物料 <b>${fmt(f)}</b>`, 900);
+    if (f > 0) payDividends(c.d, f);
+    const cost = c.value * 5;
+    if (p.cash >= cost) {
+      const yes = p.cpu ? p.cash - cost >= 1000 && ownedIn(p.id, c.d) >= 1 : await ask({
+        title: `${c.name}を買い取りますか？`,
+        body: `5倍の <b>${fmt(cost)}</b> で買い取れます（${o.name}は ${fmt(c.value * 3)} を受け取る）。<br>所持金 ${fmt(p.cash)} → ${fmt(p.cash - cost)}`,
+        buttons: [{ label: '買い取る', value: true }, { label: 'やめる', value: false, primary: true }],
+      });
+      if (yes) {
+        p.cash -= cost; o.cash += c.value * 3; c.owner = p.id;
+        log(`💥 ${pname(p)}が${pname(o)}の${c.name}を <b>${fmt(cost)}</b> で買い取った！`);
+        await toast(`💥 ${pname(p)}が${c.name}を買い取った！`, 1100);
+      }
+    }
+  }
+}
+
+function payDividends(d, f) {
+  for (const q of players) {
+    if (q.bankrupt || !q.stocks[d]) continue;
+    const div = Math.round(f * q.stocks[d] * 0.004);
+    if (div > 0) { q.cash += div; log(`${pname(q)}に${DISTRICTS[d].name}株の配当 ${fmt(div)}`); }
+  }
+  renderPanel();
+}
+
+function invest(p, s, amt) {
+  const c = cells[s], before = price(c.d);
+  c.value += amt; p.cash -= amt;
+  log(`${pname(p)}が${c.name}に <b>${fmt(amt)}</b> 増資（株価 ${before}→${price(c.d)}G）`);
+  renderPanel();
+}
+
+function trade(p, d, qty) {
+  const pr = price(d), D = DISTRICTS[d];
+  p.stocks[d] += qty;
+  p.cash -= qty * pr;
+  if (Math.abs(qty) >= 10) D.mod *= 1 + Math.sign(qty) * 0.015 * Math.floor(Math.abs(qty) / 10);
+  log(`${pname(p)}が${D.name}の株を ${Math.abs(qty)}株 ${qty > 0 ? '買った' : '売った'}（1株 ${pr}G → ${price(d)}G）`);
+  renderPanel();
+}
+
+// ---- human dialogs ----
+async function humanInvest(p, shopIds, title) {
+  const cand = shopIds.filter(s => room(s) > 0);
+  if (!cand.length || p.cash <= 0) return false;
+  const r = await pickerDialog({
+    title,
+    body: `所持金 <b>${fmt(p.cash)}</b>。増資すると店の価値・買い物料・株価が上がります。`,
+    items: cand.map(s => ({ value: s, label: `${DISTRICTS[cells[s].d].key} ${cells[s].name}`, right: `${cells[s].value} / ${maxValue(s)}G` })),
+    amountMax: s => Math.min(room(s), p.cash),
+    amountLabel: (s, a) => `${fmt(a)} 増資`,
+    okLabel: '増資する',
+  });
+  if (!r) return false;
+  invest(p, r.sel, r.amt);
+  return true;
+}
+
+async function humanBuyStock(p, title) {
+  if (p.cash < 1) return false;
+  const r = await pickerDialog({
+    title,
+    body: `所持金 <b>${fmt(p.cash)}</b>`,
+    items: DISTRICTS.map((d, i) => ({ value: i, label: `<span class="tag" style="background:${d.color}">${d.key}</span>${d.name}`, right: `${price(i)}G ・ ${p.stocks[i]}株` })),
+    amountMax: d => Math.min(99, Math.floor(p.cash / price(d))),
+    amountLabel: (d, a) => `${a}株 = ${fmt(a * price(d))}`,
+    okLabel: '買う', step: 1,
+  });
+  if (!r) return false;
+  trade(p, r.sel, r.amt);
+  return true;
+}
+
+async function humanSellStock(p) {
+  const held = DISTRICTS.map((d, i) => i).filter(i => p.stocks[i] > 0);
+  if (!held.length) return;
+  const r = await pickerDialog({
+    title: '売る株を選んでね',
+    body: `所持金 <b>${fmt(p.cash)}</b>`,
+    items: held.map(i => ({ value: i, label: `<span class="tag" style="background:${DISTRICTS[i].color}">${DISTRICTS[i].key}</span>${DISTRICTS[i].name}`, right: `${price(i)}G ・ ${p.stocks[i]}株` })),
+    amountMax: d => p.stocks[d],
+    amountLabel: (d, a) => `${a}株 = ${fmt(a * price(d))}`,
+    okLabel: '売る', step: 1,
+  });
+  if (r) trade(p, r.sel, -r.amt);
+}
+
+async function humanSellShop(p) {
+  const mine = ownedShops(p);
+  if (!mine.length) return;
+  let sel = mine[0];
+  const ok = await ask({
+    title: '銀行に売る店を選んでね',
+    body: `店は価値の75%で銀行に売れます。売った店はオークションにかけられます。<div class="opts">${
+      mine.map((s, i) => `<label class="opt"><input type="radio" name="sh" value="${s}" ${i ? '' : 'checked'}>${DISTRICTS[cells[s].d].key} ${cells[s].name}<span class="r">+${fmt(Math.round(cells[s].value * 0.75))}</span></label>`).join('')}</div>`,
+    buttons: [{ label: '売る', value: true, primary: true }, { label: 'やめる', value: false }],
+    mount: card => card.querySelectorAll('input[name=sh]').forEach(r => r.onchange = () => sel = +r.value),
+  });
+  if (ok) await sellShop(p, sel);
+}
+
+async function sellShop(p, s) {
+  const c = cells[s], got = Math.round(c.value * 0.75);
+  p.cash += got; c.owner = null;
+  log(`${pname(p)}が${c.name}を銀行に ${fmt(got)} で売った`);
+  renderPanel();
+  await auction(s, p.id);
+}
+
+async function auction(s, sellerId) {
+  const c = cells[s];
+  const bids = [];
+  for (const q of players) {
+    if (q.id === sellerId || q.bankrupt || q.cash < c.value) continue;
+    let bid = 0;
+    if (q.cpu) {
+      if (q.cash - c.value >= 300) bid = Math.min(q.cash - 200, Math.round(c.value * (1 + Math.random() * 0.3)));
+    } else {
+      bid = await ask({
+        title: `オークション：${c.name}`,
+        body: `${DISTRICTS[c.d].name}・店の価値 <b>${fmt(c.value)}</b>。入札額を選んでね（いちばん高い人が落札）。<br>所持金 ${fmt(q.cash)}`,
+        buttons: [1, 1.15, 1.3, 1.5].map(m => Math.round(c.value * m)).map(v => ({ label: fmt(v), value: v, disabled: v > q.cash }))
+          .concat([{ label: 'パス', value: 0 }]),
+      });
+    }
+    if (bid >= c.value) bids.push({ q, bid });
+  }
+  bids.sort((a, b) => b.bid - a.bid);
+  if (!bids.length) { log(`${c.name}のオークションは入札なし。空き店になった`); return; }
+  const { q, bid } = bids[0];
+  q.cash -= bid; c.owner = q.id;
+  log(`🔨 ${pname(q)}が${c.name}を <b>${fmt(bid)}</b> で落札`);
+  renderPanel();
+  await toast(`🔨 ${pname(q)}が${c.name}を<br><b>${fmt(bid)}</b> で落札`, 1000);
+}
+
+async function settleDebt(p) {
+  while (p.cash < 0 && !over) {
+    const hasStock = p.stocks.some(n => n > 0), shops = ownedShops(p);
+    if (!hasStock && !shops.length) { bankrupt(p); return; }
+    if (p.cpu) {
+      if (hasStock) {
+        const d = p.stocks.map((n, i) => i).filter(i => p.stocks[i] > 0).sort((a, b) => p.stocks[a] * price(a) - p.stocks[b] * price(b))[0];
+        trade(p, d, -Math.min(p.stocks[d], Math.ceil(-p.cash / price(d))));
+      } else {
+        await sellShop(p, shops.sort((a, b) => cells[a].value - cells[b].value)[0]);
+      }
+      await sleep(300);
+      continue;
+    }
+    const a = await ask({
+      title: '⚠️ 所持金がマイナスです',
+      body: `所持金 <b style="color:var(--danger)">${fmt(p.cash)}</b>。株や店を売ってプラスにもどしてください。`,
+      buttons: [
+        { label: '株を売る', value: 'stock', disabled: !hasStock },
+        { label: '店を売る', value: 'shop', disabled: !shops.length },
+      ],
+    });
+    if (a === 'stock') await humanSellStock(p);
+    else await humanSellShop(p);
+    renderPanel();
+  }
+}
+
+function bankrupt(p) {
+  p.bankrupt = true;
+  log(`💸 ${pname(p)}が破産した…`);
+  endGame(null, `${p.name}が破産したのでゲーム終了！`);
+}
+
+// ---- chance cards ----
+const others = p => players.filter(q => q !== p && !q.bankrupt);
+const CARDS = [
+  { t: '銀行から 200G もらう', f: p => { p.cash += 200; } },
+  { t: '大もうけ！ 銀行から 500G もらう', f: p => { p.cash += 500; } },
+  { t: '全員から 50G ずつもらう', f: p => others(p).forEach(q => { q.cash -= 50; p.cash += 50; }) },
+  { t: '全員に 50G ずつくばる', f: p => others(p).forEach(q => { q.cash += 50; p.cash -= 50; }) },
+  { t: '持っている店1軒につき 40G もらう', f: p => { p.cash += ownedShops(p).length * 40; } },
+  { t: '店の修理代：持っている店1軒につき 30G はらう', f: p => { p.cash -= ownedShops(p).length * 30; } },
+  { t: '所持金の 10% を寄付する', f: p => { p.cash -= Math.max(0, Math.round(p.cash * 0.1)); } },
+  { t: 'ワイルドスートをもらう（どのスートの代わりにもなる）', f: p => { p.wild++; } },
+  { t: '足りないスートを1つもらう', f: p => { const m = missingSuits(p); if (m.length) p.suits[m[rand(m.length)]] = true; else p.cash += 100; } },
+  { t: '銀行へワープ！', f: async p => { p.pos = BANK; p.prev = null; renderPanel(); await sleep(300); await bankVisit(p, true); } },
+  { t: 'もう一度サイコロをふる', f: async p => { await rollAndMove(p); } },
+  { t: '次の自分の番まで、自分の店の買い物料が2倍', f: p => { p.feeDouble = true; } },
+  { t: '次にはらう買い物料が1回タダになる', f: p => { p.freeFee = true; } },
+  { t: 'ランダムなエリアの株価が 20% アップ', f: p => { const d = rand(DISTRICTS.length); DISTRICTS[d].mod *= 1.2; log(`${DISTRICTS[d].name}の株価が上がった`); } },
+  { t: 'ランダムなエリアの株価が 20% ダウン', f: p => { const d = rand(DISTRICTS.length); DISTRICTS[d].mod *= 0.8; log(`${DISTRICTS[d].name}の株価が下がった`); } },
+  { t: '自分の店1軒にタダで増資（最大150G）', f: p => {
+    const c = ownedShops(p).filter(s => room(s) > 0);
+    if (!c.length) { p.cash += 100; return; }
+    const s = c[rand(c.length)], a = Math.min(150, room(s));
+    cells[s].value += a;
+    log(`${cells[s].name}の価値が ${fmt(a)} 上がった`);
+  } },
+  { t: '1回休み', f: p => { p.skip = true; } },
+];
+
+async function drawChance(p) {
+  const card = CARDS[rand(CARDS.length)];
+  log(`${pname(p)}のチャンスカード：「${card.t}」`);
+  if (p.cpu) await toast(`🎴 チャンスカード<br><b>${card.t}</b>`, 1500);
+  else await ask({ title: '🎴 チャンスカード', body: `<b>${card.t}</b>`, buttons: [{ label: 'OK', value: 1, primary: true }] });
+  await card.f(p);
+  renderPanel();
+}
+
+// ---- CPU logic ----
+function distanceTo(start, blocked, targets) {
+  const seen = new Set([blocked, start]), q = [[start, 0]];
+  while (q.length) {
+    const [id, d] = q.shift();
+    if (targets.includes(id)) return d;
+    for (const n of cells[id].nb) if (!seen.has(n)) { seen.add(n); q.push([n, d + 1]); }
+  }
+  return 99;
+}
+
+function cpuDirection(p, opts) {
+  if (Math.random() < 0.2) return opts[rand(opts.length)];
+  const targets = hasAllSuits(p) ? [BANK] : SUIT_CELLS.filter(id => !p.suits[cells[id].suit]);
+  let best = opts[0], bd = Infinity;
+  for (const o of opts) {
+    const d = distanceTo(o, p.pos, targets) + Math.random() * 1.5;
+    if (d < bd) { bd = d; best = o; }
+  }
+  return best;
+}
+
+async function cpuInvest(p, shopIds) {
+  const cand = shopIds.filter(s => room(s) > 0);
+  const budget = p.cash - 400;
+  if (!cand.length || budget < 50) return;
+  cand.sort((a, b) => ownedIn(p.id, cells[b].d) - ownedIn(p.id, cells[a].d) || room(b) - room(a));
+  const s = cand[0];
+  const amt = Math.floor(Math.min(room(s), budget * 0.7) / 10) * 10;
+  if (amt < 30) return;
+  invest(p, s, amt);
+  await sleep(500);
+}
+
+async function cpuBuyStock(p, eager = false) {
+  if (p.cash < (eager ? 600 : 900) || Math.random() < 0.3) return;
+  const scored = DISTRICTS.map((d, i) => ({ i, s: ownedIn(p.id, i) * 3 + Math.random() * 2 })).sort((a, b) => b.s - a.s);
+  const d = scored[0].i;
+  const qty = Math.min(99, Math.floor((p.cash - 500) * 0.4 / price(d)));
+  if (qty < 1) return;
+  trade(p, d, qty);
+  await sleep(500);
+}
+
+// ---- end ----
+function endGame(winner, reason) {
+  if (over) return;
+  over = true;
+  closeDialog(); pick = null; highlight = [];
+  const ranked = [...players].sort((a, b) => (b === winner) - (a === winner) || a.bankrupt - b.bankrupt || worth(b) - worth(a));
+  $('endTitle').textContent = winner ? `🏆 ${winner.name}の優勝！` : 'ゲーム終了';
+  $('endMsg').textContent = winner ? `総資産 ${fmt(worth(winner))} で目標達成！（${round}ラウンド）` : reason;
+  $('ranking').innerHTML = ranked.map((p, i) =>
+    `<li><span>${i + 1}位</span><span style="color:${p.color};font-weight:700">${p.name}</span>${p.bankrupt ? '<span>（破産）</span>' : ''}<span>${fmt(worth(p))}</span></li>`).join('');
+  log(winner ? `🏆 ${pname(winner)}の優勝！` : reason);
+  renderPanel();
+  $('end').classList.remove('hidden');
+  if (DEMO) window.__result = { winner: winner && winner.name, round, reason, worth: players.map(worth) };
+}
+
+// ---------- wiring ----------
+document.querySelectorAll('[data-target]').forEach(b => b.onclick = () => newGame(+b.dataset.target));
+$('again').onclick = () => { $('end').classList.add('hidden'); $('title').classList.remove('hidden'); };
+$('rulesBtn').onclick = $('titleRules').onclick = () => $('rules').classList.remove('hidden');
+$('closeRules').onclick = () => $('rules').classList.add('hidden');
+$('speedBtn').onclick = () => {
+  if (DEMO) return;
+  speed = speed === 1 ? 0.4 : speed === 0.4 ? 0.15 : 1;
+  $('speedBtn').textContent = 'CPU速度: ' + { 1: 'ふつう', 0.4: 'はやい', 0.15: 'すごく速い' }[speed];
+};
+
+resize();
+players = PLAYER_DEFS.map((d, id) => ({ ...d, id, cash: START_CASH, pos: BANK, suits: {}, wild: 0, level: 1, stocks: DISTRICTS.map(() => 0) }));
+for (const s of SHOPS) Object.assign(cells[s], { owner: null, value: cells[s].base });
+DISTRICTS.forEach(d => d.mod = 1);
+renderPanel();
+requestAnimationFrame(frame);
+if (DEMO) newGame(+(params.get('target') || 8000));
+</script>
+</body>
+</html>
