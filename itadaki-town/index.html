@@ -79,6 +79,13 @@
   .amt { display: flex; align-items: center; gap: 10px; margin-top: 8px; color: var(--text); }
   .amt input { flex: 1; accent-color: var(--accent); }
   .amt output { min-width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+  .slot { display: flex; gap: 10px; justify-content: center; margin: 10px 0; }
+  .reel { width: 64px; height: 72px; display: flex; align-items: center; justify-content: center; font-size: 38px; font-weight: 800;
+    color: var(--gold); background: var(--bg); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; }
+  .reel.stop { border-color: var(--accent); }
+  .slotmsg { text-align: center; color: var(--text); }
+  .bigcard { display: inline-block; min-width: 44px; padding: 4px 8px; margin: 4px; border-radius: 8px; background: var(--text); color: var(--bg);
+    font-size: 26px; font-weight: 800; text-align: center; }
   .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
     background: rgba(8, 10, 22, 0.82); backdrop-filter: blur(4px); z-index: 20; overflow-y: auto; }
   .overlay.hidden { display: none; }
@@ -123,6 +130,7 @@
     <h1>🏙️ いただきタウン</h1>
     <p class="center">お店を買って、増資して、株でもうけて。<br>目標の総資産をためて銀行にもどった人の勝ち！</p>
     <p class="center">あなた 対 CPU 3人</p>
+    <p class="center"><button id="resume" class="primary" hidden>つづきから</button></p>
     <p class="center">目標金額をえらんでスタート</p>
     <div class="btns" style="justify-content:center">
       <button data-target="5000">5,000G（短め）</button>
@@ -143,9 +151,13 @@
       <li><b>自分の店</b>に止まると、そのエリアの自分の店に<b>増資</b>できる。増資すると店の価値と買い物料が上がり、エリアの株価も上がる。増資の上限はエリアの持ち店数で決まる。</li>
       <li><b>株</b>は銀行か株屋で買える（1回99株まで）。売るのは自分の番の最初ならいつでもOK。10株以上の売買で株価が少し動く。そのエリアで買い物料がはらわれるたびに、株主に<b>配当</b>が入る。</li>
       <li>♠♥♦♣ の4つの<b>スート</b>を集めて銀行を通ると<b>昇進</b>し、給料（基本給＋店の価値の10%）がもらえる。</li>
-      <li><b>チャンス</b>マスではカードを引く。<b>休憩所</b>は1回休み。<b>宝くじ</b>はお金がもらえるかも。</li>
+      <li><b>チャンス</b>マスではカードを引く。<b>休憩所</b>は1回休み。<b>宝くじ</b>はお金がもらえるかも。<b>ワープ</b>は反対の角へ飛ぶ。</li>
+      <li><b>ゲームセンター</b>ではミニゲーム（スロット・ハイ＆ロー）にお金を賭けて遊べる。</li>
+      <li><b>空き地</b>は200Gで買って建物を建てられる。<b>関所</b>はライバルが通るたびに通行料が上がり、<b>税務署</b>は止まったライバルから総資産の4%をもらえる。</li>
+      <li>自分の番の最初に、CPUと店の売り買いを<b>交渉</b>できる（1ターン1回）。CPUから交渉をもちかけられることもある。</li>
       <li>所持金がマイナスになったら株や店を売って返す。店は銀行に価値の75%で売られ、他のプレイヤーでオークションになる。返せなくなったら<b>破産</b>でゲーム終了、総資産で順位を決める。</li>
       <li>総資産（所持金＋店の価値＋株の価値）が<b>目標金額</b>以上で銀行に着いたら優勝！</li>
+      <li>毎ターン自動でセーブされるので、途中で閉じても「つづきから」遊べる。</li>
     </ul>
     <p class="center"><button id="closeRules" class="primary">とじる</button></p>
   </div>
@@ -168,6 +180,7 @@ const DEMO = params.has('demo'); // all players are CPU, very fast (for testing)
 // ---------- board data ----------
 const N = 9;
 const SUITS = { s: '♠', h: '♥', d: '♦', c: '♣' };
+const PLOT_PRICE = 200;
 const DISTRICTS = [
   { key: 'A', name: 'ひかり通り', color: '#ff9f7a', base: 100, coords: [[1,0],[2,0],[3,0]] },
   { key: 'B', name: 'みなと町',   color: '#ffd27a', base: 130, coords: [[5,0],[6,0],[7,0]] },
@@ -177,8 +190,8 @@ const DISTRICTS = [
   { key: 'F', name: 'もり広場',   color: '#9ff0c4', base: 250, coords: [[3,8],[2,8],[1,8]] },
   { key: 'G', name: 'ゆめ通り',   color: '#d6f28a', base: 200, coords: [[0,7],[0,6],[0,5]] },
   { key: 'H', name: 'かぜの丘',   color: '#8ff0e6', base: 150, coords: [[0,3],[0,2],[0,1]] },
-  { key: 'I', name: '中央通り',   color: '#ffe9a8', base: 280, coords: [[4,1],[4,2],[4,6],[4,7]] },
-  { key: 'J', name: '大通り',     color: '#f5c0ff', base: 300, coords: [[1,4],[2,4],[6,4],[7,4]] },
+  { key: 'I', name: '中央通り',   color: '#ffe9a8', base: 280, coords: [[4,1],[4,6],[4,7]] },
+  { key: 'J', name: '大通り',     color: '#f5c0ff', base: 300, coords: [[1,4],[2,4],[7,4]] },
 ];
 const SHOP_NAMES = ['パン屋','花屋','本屋','カフェ','八百屋','魚屋','時計屋','雑貨屋','靴屋','帽子屋','おもちゃ屋',
   '宿屋','道具屋','武器屋','防具屋','薬屋','銭湯','ケーキ屋','そば屋','すし屋','ラーメン屋','肉屋','文具店',
@@ -190,6 +203,9 @@ const SPECIAL = {
   stock:   { label: '株屋', desc: '止まると好きなエリアの株を買える。' },
   rest:    { label: '休憩所', desc: '止まると次の番は1回休み。' },
   lottery: { label: '宝くじ', desc: '止まると0〜400Gのどれかがもらえる。' },
+  warp:    { label: 'ワープ', desc: '止まると反対の角のワープマスへ飛ぶ。' },
+  arcade:  { label: 'ゲームセンター', desc: '止まるとミニゲーム（スロット・ハイ＆ロー）で遊べる。' },
+  plot:    { label: '空き地', desc: `${PLOT_PRICE}Gで買って関所か税務署を建てられる。` },
 };
 
 const cells = [];
@@ -208,8 +224,8 @@ const cellAt = (x, y) => cells[at[x + ',' + y]];
 const BANK = at['4,4'];
 cellAt(4, 4).type = 'bank';
 [['s',4,0],['h',8,4],['d',4,8],['c',0,4]].forEach(([s, x, y]) => Object.assign(cellAt(x, y), { type: 'suit', suit: s }));
-[[0,0,'chance'],[8,8,'chance'],[4,3,'chance'],[4,5,'chance'],[8,0,'stock'],[0,8,'stock'],[3,4,'rest'],[5,4,'lottery']]
-  .forEach(([x, y, t]) => cellAt(x, y).type = t);
+[[0,0,'warp'],[8,8,'warp'],[4,3,'chance'],[4,5,'chance'],[8,0,'stock'],[0,8,'arcade'],[3,4,'rest'],[5,4,'lottery'],
+  [4,2,'plot'],[6,4,'plot']].forEach(([x, y, t]) => cellAt(x, y).type = t);
 let nameIdx = 0;
 DISTRICTS.forEach((d, di) => {
   d.shops = d.coords.map(([x, y], i) => {
@@ -220,6 +236,18 @@ DISTRICTS.forEach((d, di) => {
 });
 const SHOPS = cells.filter(c => c.type === 'shop').map(c => c.id);
 const SUIT_CELLS = cells.filter(c => c.type === 'suit').map(c => c.id);
+const PLOTS = cells.filter(c => c.type === 'plot').map(c => c.id);
+const WARPS = cells.filter(c => c.type === 'warp').map(c => c.id);
+PLOTS.forEach(id => cells[id].name = '空き地');
+const BUILDINGS = {
+  cp:  { label: '関所',   desc: 'ライバルが通るたびに通行料が10Gずつ上がる。止まったライバルは通行料をはらう。' },
+  tax: { label: '税務署', desc: '止まったライバルは総資産の4%を持ち主にはらう。' },
+};
+function resetBoard() {
+  for (const s of SHOPS) Object.assign(cells[s], { owner: null, value: cells[s].base });
+  for (const s of PLOTS) Object.assign(cells[s], { owner: null, value: PLOT_PRICE, building: null, cpFee: 0 });
+  DISTRICTS.forEach(d => d.mod = 1);
+}
 
 // ---------- state ----------
 const PLAYER_DEFS = [
@@ -259,7 +287,13 @@ function maxValue(s) {
   return c.base * (1 + n);
 }
 const room = s => Math.max(0, maxValue(s) - cells[s].value);
-const shopWorth = p => ownedShops(p).reduce((a, s) => a + cells[s].value, 0);
+const ownedProps = p => [...ownedShops(p), ...PLOTS.filter(s => cells[s].owner === p.id)];
+const shopWorth = p => ownedProps(p).reduce((a, s) => a + cells[s].value, 0);
+const areaName = c => c.type === 'shop' ? DISTRICTS[c.d].name : '空き地';
+const propLabel = s => {
+  const c = cells[s];
+  return c.type === 'shop' ? `${DISTRICTS[c.d].key} ${c.name}` : `空き地（${BUILDINGS[c.building].label}）`;
+};
 const stockWorth = p => p.stocks.reduce((a, n, d) => a + n * price(d), 0);
 const worth = p => p.cash + shopWorth(p) + stockWorth(p);
 const missingSuits = p => Object.keys(SUITS).filter(k => !p.suits[k]);
@@ -301,7 +335,7 @@ const closeDialog = () => $('dialog').classList.add('hidden');
 const ask = o => new Promise(res => showDialog(o, v => { closeDialog(); res(v); }));
 
 // radio list + amount slider. returns { sel, amt } via mutable object
-function pickerDialog({ title, body = '', items, amountMax, amountLabel, okLabel, step = 10 }) {
+function pickerDialog({ title, body = '', items, amountMax, amountLabel, okLabel, step = 10, amountInit }) {
   const st = { sel: items[0].value, amt: 0 };
   const list = items.map((it, i) =>
     `<label class="opt"><input type="radio" name="pk" value="${it.value}" ${i ? '' : 'checked'}>${it.label}<span class="r">${it.right || ''}</span></label>`).join('');
@@ -317,7 +351,7 @@ function pickerDialog({ title, body = '', items, amountMax, amountLabel, okLabel
         const m = amountMax(st.sel);
         range.max = m;
         range.step = m >= step * 2 ? step : 1;
-        range.value = Math.min(m, Math.max(range.step, Math.round(m / 2 / range.step) * range.step));
+        range.value = amountInit ? Math.min(m, amountInit(st.sel)) : Math.min(m, Math.max(range.step, Math.round(m / 2 / range.step) * range.step));
         range.disabled = m <= 0;
         sync();
       };
@@ -389,7 +423,11 @@ function drawBoard(now) {
   for (const c of cells) {
     const x = c.x * cs + 2, y = c.y * cs + 2, w = cs - 4;
     let bg = '#1d2342';
-    if (c.type === 'shop' && c.owner != null) bg = players[c.owner].color;
+    const owned = (c.type === 'shop' || c.type === 'plot') && c.owner != null;
+    if (owned) bg = players[c.owner].color;
+    else if (c.type === 'plot') bg = '#2a3050';
+    else if (c.type === 'warp') bg = '#1e3f73';
+    else if (c.type === 'arcade') bg = '#5b2a4f';
     else if (c.type === 'bank') bg = '#ffd166';
     else if (c.type === 'chance') bg = '#3a2f6b';
     else if (c.type === 'stock') bg = '#1f4d57';
@@ -398,7 +436,7 @@ function drawBoard(now) {
     ctx.fillStyle = bg;
     rr(x, y, w, w, cs * 0.12); ctx.fill();
 
-    const dark = (c.type === 'shop' && c.owner != null) || c.type === 'bank';
+    const dark = owned || c.type === 'bank';
     if (c.type === 'shop') {
       const d = DISTRICTS[c.d];
       ctx.save(); rr(x, y, w, w, cs * 0.12); ctx.clip();
@@ -413,14 +451,21 @@ function drawBoard(now) {
       ctx.font = font(400, cs * 0.16);
       ctx.fillStyle = dark ? 'rgba(12,16,32,0.8)' : '#8a93b8';
       ctx.fillText(c.owner != null ? `料 ${fee(c.id)}` : c.name.slice(0, 4), x + w / 2, y + cs * 0.73);
+    } else if (c.type === 'plot') {
+      ctx.fillStyle = dark ? '#0c1020' : '#eef1ff';
+      ctx.font = font(700, cs * 0.2);
+      ctx.fillText(c.owner == null ? '空き地' : BUILDINGS[c.building].label, x + w / 2, y + cs * 0.36);
+      ctx.font = font(400, cs * 0.16);
+      ctx.fillStyle = dark ? 'rgba(12,16,32,0.8)' : '#8a93b8';
+      ctx.fillText(c.owner == null ? fmt(PLOT_PRICE) : c.building === 'cp' ? `料 ${c.cpFee}` : '資産4%', x + w / 2, y + cs * 0.66);
     } else if (c.type === 'suit') {
       ctx.fillStyle = c.suit === 'h' || c.suit === 'd' ? '#ff6b88' : '#eef1ff';
       ctx.font = font(700, cs * 0.55);
       ctx.fillText(SUITS[c.suit], x + w / 2, y + w / 2 + 1);
     } else {
-      const label = { bank: '銀行', chance: '？', stock: '株', rest: '休', lottery: 'くじ' }[c.type];
+      const label = { bank: '銀行', chance: '？', stock: '株', rest: '休', lottery: 'くじ', warp: 'ワープ', arcade: 'ゲーム' }[c.type];
       ctx.fillStyle = dark ? '#0c1020' : '#eef1ff';
-      ctx.font = font(800, cs * (c.type === 'chance' ? 0.5 : 0.3));
+      ctx.font = font(800, cs * (c.type === 'chance' ? 0.5 : label.length > 2 ? 0.22 : 0.3));
       ctx.fillText(label, x + w / 2, y + w / 2 + 1);
     }
     if (selected === c.id) {
@@ -463,7 +508,7 @@ function renderPanel() {
       <div class="pn"><i></i>${p.name}<small>${status}</small></div>
       <div>所持金 <b>${fmt(p.cash)}</b></div>
       <div>総資産 ${fmt(worth(p))}</div>
-      <div>店${ownedShops(p).length} ・ 株${fmt(stockWorth(p))}</div>
+      <div>店${ownedProps(p).length} ・ 株${fmt(stockWorth(p))}</div>
       <div class="suits">${suits}</div></div>`;
   }).join('');
 
@@ -484,6 +529,10 @@ function renderInfo() {
       店の価値: <b>${fmt(c.value)}</b>（増資の上限 ${fmt(maxValue(c.id))}）<br>
       買い物料: ${c.owner != null ? `<b>${fmt(fee(c.id))}</b>` : '—'} ・ 買い取り: ${c.owner != null ? fmt(c.value * 5) : '—'}<br>
       エリアの株価: ${price(c.d)}G`;
+  } else if (c.type === 'plot' && c.owner != null) {
+    const b = BUILDINGS[c.building];
+    $('info').innerHTML = `<h3>${b.label}</h3>持ち主: ${pname(players[c.owner])}<br>土地の価値: ${fmt(c.value)}<br>
+      ${c.building === 'cp' ? `いまの通行料: <b>${fmt(c.cpFee)}</b><br>` : ''}${b.desc}`;
   } else {
     const s = SPECIAL[c.type];
     $('info').innerHTML = `<h3>${c.type === 'suit' ? SUITS[c.suit] + ' ' : ''}${s.label}</h3>${s.desc}`;
@@ -507,16 +556,20 @@ cv.addEventListener('click', e => {
 // ---------- game flow ----------
 function newGame(t) {
   target = t;
-  for (const s of SHOPS) Object.assign(cells[s], { owner: null, value: cells[s].base });
-  DISTRICTS.forEach(d => d.mod = 1);
+  resetBoard();
   players = PLAYER_DEFS.map((d, id) => ({
     ...d, cpu: d.cpu || DEMO, id, cash: START_CASH, pos: BANK, prev: null, suits: {}, wild: 0, level: 1,
     stocks: DISTRICTS.map(() => 0), skip: false, feeDouble: false, freeFee: false, bankrupt: false,
   }));
-  turn = 0; round = 1; over = false; current = null; dice = null; selected = null; highlight = [];
+  turn = 0; round = 1;
+  startLoop();
+}
+
+function startLoop() {
+  over = false; current = null; dice = null; selected = null; highlight = [];
   $('log').innerHTML = '';
-  log(`ゲームスタート！目標は <b>${fmt(target)}</b>`);
   ['title', 'end'].forEach(id => $(id).classList.add('hidden'));
+  log(round === 1 && turn === 0 ? `ゲームスタート！目標は <b>${fmt(target)}</b>` : `ラウンド${round}から再開しました`);
   renderPanel();
   gameLoop(++gameId);
 }
@@ -525,6 +578,7 @@ async function gameLoop(id) {
   while (!over && id === gameId) {
     const p = players[turn];
     if (!p.bankrupt) {
+      saveGame();
       await takeTurn(p);
       for (const q of [p, ...players.filter(q => q !== p)]) {
         if (over || id !== gameId) break;
@@ -548,7 +602,9 @@ async function takeTurn(p) {
     await toast(`${pname(p)}は休憩中…`, 900);
     return;
   }
+  if (p.cpu) await cpuPropose(p);
   if (!p.cpu) {
+    let traded = false;
     for (;;) {
       const a = await ask({
         title: 'あなたの番です',
@@ -556,10 +612,12 @@ async function takeTurn(p) {
         buttons: [
           { label: '🎲 サイコロをふる', value: 'roll', primary: true },
           { label: '株を売る', value: 'stock', disabled: !p.stocks.some(n => n > 0) },
-          { label: '店を売る', value: 'shop', disabled: !ownedShops(p).length },
+          { label: '店を売る', value: 'shop', disabled: !ownedProps(p).length },
+          { label: '交渉する', value: 'trade', disabled: traded },
         ],
       });
       if (a === 'roll') break;
+      if (a === 'trade') traded = await humanTrade(p);
       if (a === 'stock') await humanSellStock(p);
       if (a === 'shop') await humanSellShop(p);
       renderPanel();
@@ -588,6 +646,7 @@ async function move(p, n) {
     dice.left = n - i - 1;
     await sleep(p.cpu ? 200 : 170);
     const c = cells[next];
+    if (c.type === 'plot' && c.building === 'cp' && c.owner != null && c.owner !== p.id) c.cpFee += 10;
     if (c.type === 'suit' && !p.suits[c.suit]) {
       p.suits[c.suit] = true;
       log(`${pname(p)}が ${SUITS[c.suit]} を手に入れた`);
@@ -673,6 +732,15 @@ async function land(p) {
     p.skip = true;
     log(`${pname(p)}は休憩所でひと休み（次は1回休み）`);
     await toast(`${pname(p)}は休憩所でひと休み<br>次は1回休み`, 1000);
+  } else if (c.type === 'warp') {
+    const to = WARPS.find(id => id !== c.id);
+    log(`${pname(p)}はワープした！`);
+    await toast(`🌀 ${pname(p)}はワープした！`, 800);
+    p.pos = to; p.prev = null; selected = to;
+  } else if (c.type === 'arcade') {
+    await arcade(p);
+  } else if (c.type === 'plot') {
+    await landPlot(p, c);
   } else if (c.type === 'lottery') {
     const win = [0, 0, 50, 100, 100, 200, 400][rand(7)];
     p.cash += win;
@@ -724,6 +792,247 @@ async function landShop(p, c) {
       }
     }
   }
+}
+
+async function landPlot(p, c) {
+  if (c.owner == null) {
+    if (p.cash < PLOT_PRICE) { log(`${pname(p)}は空き地を買うお金が足りない`); return; }
+    const b = p.cpu ? (p.cash - PLOT_PRICE >= 100 ? (Math.random() < 0.5 ? 'cp' : 'tax') : null) : await ask({
+      title: '空き地に建物を建てますか？',
+      body: `${fmt(PLOT_PRICE)}で土地を買って、建物を1つ建てられます。<br><b>関所</b>：${BUILDINGS.cp.desc}<br><b>税務署</b>：${BUILDINGS.tax.desc}`,
+      buttons: [{ label: '関所を建てる', value: 'cp', primary: true }, { label: '税務署を建てる', value: 'tax' }, { label: '買わない', value: null }],
+    });
+    if (!b) return;
+    p.cash -= PLOT_PRICE;
+    Object.assign(c, { owner: p.id, building: b, cpFee: 10 });
+    log(`${pname(p)}が空き地に${BUILDINGS[b].label}を建てた`);
+    await sleep(400);
+  } else if (c.owner === p.id) {
+    log(`${pname(p)}は自分の${BUILDINGS[c.building].label}に止まった`);
+  } else {
+    const o = players[c.owner];
+    let f = c.building === 'cp' ? c.cpFee : Math.max(0, Math.round(worth(p) * 0.04));
+    if (p.freeFee) { p.freeFee = false; f = 0; log(`${pname(p)}は無料券を使った！`); }
+    p.cash -= f; o.cash += f;
+    const what = c.building === 'cp' ? '通行料' : '税金';
+    log(`${pname(p)}が${pname(o)}の${BUILDINGS[c.building].label}で${what} <b>${fmt(f)}</b>`);
+    renderPanel();
+    await toast(`${pname(o)}の${BUILDINGS[c.building].label}<br>${what} <b>${fmt(f)}</b>`, 900);
+  }
+}
+
+// ---- trading ----
+function transfer(s, from, to, amount) {
+  const c = cells[s];
+  to.cash -= amount; from.cash += amount; c.owner = to.id;
+  log(`🤝 ${pname(from)}が${pname(to)}に${c.name}を <b>${fmt(amount)}</b> で売った`);
+  renderPanel();
+}
+// lowest price a CPU owner will sell for
+function cpuAskPrice(owner, s) {
+  const c = cells[s];
+  if (c.type === 'plot') return c.value * 1.4;
+  const n = ownedIn(owner.id, c.d), total = DISTRICTS[c.d].shops.length;
+  return c.value * (1.2 + 0.25 * (n - 1) + (n === total ? 1 : 0));
+}
+// highest price a CPU buyer will pay
+function cpuBidPrice(buyer, s) {
+  const c = cells[s];
+  if (c.type === 'plot') return c.value * 1.1;
+  return c.value * (0.9 + 0.25 * ownedIn(buyer.id, c.d));
+}
+const whim = () => 0.9 + Math.random() * 0.2;
+
+async function humanTrade(p) {
+  const kind = await ask({
+    title: '🤝 交渉',
+    body: 'CPUと店の売り買いを交渉できます（1ターンに1回）。CPUは自分のエリアを大事にするので、独占しているエリアの店は高くないと売ってくれません。',
+    buttons: [
+      { label: '店を買いたい', value: 'buy', primary: true },
+      { label: '店を売りたい', value: 'sell', disabled: !ownedProps(p).length },
+      { label: 'やめる', value: null },
+    ],
+  });
+  if (!kind) return false;
+  const rivals = players.filter(q => q !== p && !q.bankrupt);
+  if (kind === 'buy') {
+    const cand = [...SHOPS, ...PLOTS].filter(s => cells[s].owner != null && cells[s].owner !== p.id && !players[cells[s].owner].bankrupt);
+    if (!cand.length || p.cash <= 0) {
+      await ask({ title: '🤝 交渉', body: '買える店がありません。', buttons: [{ label: 'OK', value: 1 }] });
+      return false;
+    }
+    const r = await pickerDialog({
+      title: '買いたい店と金額を選んでね',
+      body: `所持金 <b>${fmt(p.cash)}</b>`,
+      items: cand.map(s => ({ value: s, label: `<span style="color:${players[cells[s].owner].color}">●</span>${propLabel(s)}`, right: `価値 ${cells[s].value}G` })),
+      amountMax: s => Math.min(p.cash, cells[s].value * 3),
+      amountInit: s => Math.round(cells[s].value * 1.2 / 10) * 10,
+      amountLabel: (s, a) => `${fmt(a)} で提案`,
+      okLabel: '提案する',
+    });
+    if (!r) return false;
+    const o = players[cells[r.sel].owner];
+    log(`${pname(p)}が${pname(o)}に${cells[r.sel].name}を${fmt(r.amt)}で買いたいと提案`);
+    if (r.amt >= cpuAskPrice(o, r.sel) * whim()) { transfer(r.sel, o, p, r.amt); await toast(`${pname(o)}「いいよ、売るよ！」`, 1100); }
+    else { log(`${pname(o)}は断った`); await toast(`${pname(o)}「その値段じゃ売れないな…」`, 1100); }
+    return true;
+  }
+  const r = await pickerDialog({
+    title: '売りたい店と金額を選んでね',
+    body: '次に、売る相手を選びます。',
+    items: ownedProps(p).map(s => ({ value: s, label: propLabel(s), right: `価値 ${cells[s].value}G` })),
+    amountMax: s => cells[s].value * 3,
+    amountInit: s => cells[s].value,
+    amountLabel: (s, a) => `${fmt(a)} で提案`,
+    okLabel: '相手を選ぶ',
+  });
+  if (!r) return false;
+  const q = await ask({
+    title: `${cells[r.sel].name}を ${fmt(r.amt)} で誰に売る？`,
+    buttons: rivals.map(q => ({ label: `${q.name}（所持金 ${fmt(q.cash)}）`, value: q.id })).concat([{ label: 'やめる', value: null }]),
+  });
+  if (q == null) return false;
+  const b = players[q];
+  log(`${pname(p)}が${pname(b)}に${cells[r.sel].name}を${fmt(r.amt)}で売りたいと提案`);
+  if (r.amt <= cpuBidPrice(b, r.sel) * whim() && b.cash - r.amt >= 200) { transfer(r.sel, p, b, r.amt); await toast(`${pname(b)}「買った！」`, 1100); }
+  else { log(`${pname(b)}は断った`); await toast(`${pname(b)}「今回はやめておくよ」`, 1100); }
+  return true;
+}
+
+// a CPU sometimes asks the human to sell a shop that helps its district
+async function cpuPropose(p) {
+  const h = players.find(q => !q.cpu && !q.bankrupt);
+  if (!h || Math.random() > 0.2) return;
+  const cand = ownedShops(h).filter(s => ownedIn(p.id, cells[s].d) >= 1)
+    .sort((a, b) => ownedIn(p.id, cells[b].d) - ownedIn(p.id, cells[a].d));
+  if (!cand.length) return;
+  const s = cand[0], offer = Math.round(cells[s].value * (1.4 + Math.random() * 0.4) / 10) * 10;
+  if (p.cash - offer < 300) return;
+  const yes = await ask({
+    title: `🤝 ${p.name}から交渉`,
+    body: `「あなたの<b>${cells[s].name}</b>（${areaName(cells[s])}・価値 ${fmt(cells[s].value)}）を <b>${fmt(offer)}</b> で売ってくれない？」`,
+    buttons: [{ label: '売る', value: true }, { label: '断る', value: false, primary: true }],
+  });
+  if (yes) transfer(s, h, p, offer);
+  else log(`${pname(h)}は${pname(p)}の交渉を断った`);
+}
+
+// ---- arcade mini games ----
+async function arcade(p) {
+  log(`${pname(p)}はゲームセンターに止まった`);
+  if (p.cpu) {
+    if (p.cash < 300) return;
+    const bet = 50, win = [0, 0, 0, 0, 0, 100, 100, 100, 250, 250, 1000][rand(11)];
+    p.cash += win - bet;
+    log(`${pname(p)}はミニゲームで ${win ? `<b>${fmt(win)}</b> 獲得` : '負けた…'}（賭け金 ${fmt(bet)}）`);
+    await toast(`🎮 ${pname(p)}のミニゲーム…<br>${win ? `<b>${fmt(win)}</b> 獲得！` : 'ざんねん！'}`, 1100);
+    return;
+  }
+  const game = await ask({
+    title: '🎮 ゲームセンター',
+    body: 'ミニゲームで遊べます。<br><b>スロット</b>：3つそろえば大当たり（7がそろうと20倍）<br><b>ハイ＆ロー</b>：当てるたびに賞金が倍、最大4回',
+    buttons: [{ label: 'スロット', value: 'slot', primary: true }, { label: 'ハイ＆ロー', value: 'hilo' }, { label: 'やめる', value: null }],
+  });
+  if (!game) return;
+  const bets = [20, 50, 100].filter(b => b <= p.cash);
+  if (!bets.length) { await ask({ title: '🎮 ゲームセンター', body: 'お金が足りません。', buttons: [{ label: 'OK', value: 1 }] }); return; }
+  const bet = await ask({
+    title: 'いくら賭ける？', body: `所持金 <b>${fmt(p.cash)}</b>`,
+    buttons: bets.map(b => ({ label: fmt(b), value: b, primary: b === bets[0] })).concat([{ label: 'やめる', value: 0 }]),
+  });
+  if (!bet) return;
+  p.cash -= bet;
+  renderPanel();
+  const win = game === 'slot' ? await slotGame(bet) : await hiloGame(bet);
+  p.cash += win;
+  log(`${pname(p)}は${game === 'slot' ? 'スロット' : 'ハイ＆ロー'}で ${win ? `<b>${fmt(win)}</b> 獲得` : '負けた…'}（賭け金 ${fmt(bet)}）`);
+  renderPanel();
+}
+
+const SLOT = ['🍒', '🔔', '🍋', '⭐', '7'];
+function slotGame(bet) {
+  return new Promise(res => {
+    const reels = [0, 1, 2], stopped = [false, false, false];
+    let timer, done = false, win = 0, card;
+    const paint = () => card.querySelectorAll('.reel').forEach((el, i) => { el.textContent = SLOT[reels[i]]; el.classList.toggle('stop', stopped[i]); });
+    showDialog({
+      title: '🎰 スロット',
+      body: `<div class="slot"><span class="reel"></span><span class="reel"></span><span class="reel"></span></div><div class="slotmsg">「ストップ」を3回おしてね（賭け金 ${fmt(bet)}）</div>`,
+      buttons: [{ label: 'ストップ', value: 'stop', primary: true }],
+      mount(c) {
+        card = c;
+        timer = setInterval(() => { reels.forEach((r, i) => { if (!stopped[i]) reels[i] = (r + 1) % SLOT.length; }); paint(); }, 90);
+        paint();
+      },
+    }, () => {
+      if (done) { closeDialog(); res(win); return; }
+      stopped[stopped.indexOf(false)] = true;
+      paint();
+      if (stopped.includes(false)) return;
+      clearInterval(timer);
+      done = true;
+      const [a, b, c] = reels;
+      if (a === b && b === c) win = bet * (SLOT[a] === '7' ? 20 : 8);
+      else if (a === b || b === c || a === c) win = bet * 2;
+      card.querySelector('.slotmsg').innerHTML = win ? `🎉 <b>${fmt(win)}</b> 獲得！` : 'ざんねん、はずれ…';
+      card.querySelector('.btns button').textContent = 'OK';
+    });
+  });
+}
+
+const cardName = n => ({ 1: 'A', 11: 'J', 12: 'Q', 13: 'K' }[n] || String(n));
+async function hiloGame(bet) {
+  let pot = bet, card = 1 + rand(13);
+  for (let r = 0; r < 4; r++) {
+    const g = await ask({
+      title: '🃏 ハイ＆ロー',
+      body: `いまのカード <span class="bigcard">${cardName(card)}</span><br>当たれば賞金 <b>${fmt(pot * 2)}</b>。次のカードは高い？低い？`,
+      buttons: [
+        { label: '⬆ 高い', value: 'hi', primary: true },
+        { label: '⬇ 低い', value: 'lo' },
+        ...(r > 0 ? [{ label: `${fmt(pot)} を受け取ってやめる`, value: 'stop' }] : []),
+      ],
+    });
+    if (g === 'stop') return pot;
+    let next;
+    do next = 1 + rand(13); while (next === card);
+    const ok = g === 'hi' ? next > card : next < card;
+    await ask({ title: ok ? '🎉 あたり！' : 'はずれ…', body: `次のカードは <span class="bigcard">${cardName(next)}</span>`, buttons: [{ label: 'OK', value: 1, primary: true }] });
+    if (!ok) return 0;
+    pot *= 2; card = next;
+  }
+  return pot;
+}
+
+// ---- save / resume ----
+const SAVE_KEY = 'itadaki-town-save';
+function saveGame() {
+  if (DEMO) return;
+  const data = {
+    target, turn, round, players,
+    props: [...SHOPS, ...PLOTS].map(s => { const c = cells[s]; return [s, c.owner, c.value, c.building || null, c.cpFee || 0]; }),
+    mods: DISTRICTS.map(d => d.mod),
+  };
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
+}
+function loadSave() {
+  if (DEMO) return null;
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return null; }
+}
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch {} }
+function resumeGame() {
+  const sv = loadSave();
+  if (!sv) return;
+  resetBoard();
+  ({ target, turn, round, players } = sv);
+  sv.props.forEach(([id, owner, value, building, cpFee]) => Object.assign(cells[id], { owner, value, building, cpFee }));
+  DISTRICTS.forEach((d, i) => d.mod = sv.mods[i]);
+  startLoop();
+}
+function refreshResume() {
+  const sv = loadSave();
+  $('resume').hidden = !sv;
+  if (sv) $('resume').textContent = `つづきから（ラウンド${sv.round}・目標${fmt(sv.target)}）`;
 }
 
 function payDividends(d, f) {
@@ -798,13 +1107,13 @@ async function humanSellStock(p) {
 }
 
 async function humanSellShop(p) {
-  const mine = ownedShops(p);
+  const mine = ownedProps(p);
   if (!mine.length) return;
   let sel = mine[0];
   const ok = await ask({
     title: '銀行に売る店を選んでね',
     body: `店は価値の75%で銀行に売れます。売った店はオークションにかけられます。<div class="opts">${
-      mine.map((s, i) => `<label class="opt"><input type="radio" name="sh" value="${s}" ${i ? '' : 'checked'}>${DISTRICTS[cells[s].d].key} ${cells[s].name}<span class="r">+${fmt(Math.round(cells[s].value * 0.75))}</span></label>`).join('')}</div>`,
+      mine.map((s, i) => `<label class="opt"><input type="radio" name="sh" value="${s}" ${i ? '' : 'checked'}>${propLabel(s)}<span class="r">+${fmt(Math.round(cells[s].value * 0.75))}</span></label>`).join('')}</div>`,
     buttons: [{ label: '売る', value: true, primary: true }, { label: 'やめる', value: false }],
     mount: card => card.querySelectorAll('input[name=sh]').forEach(r => r.onchange = () => sel = +r.value),
   });
@@ -830,7 +1139,7 @@ async function auction(s, sellerId) {
     } else {
       bid = await ask({
         title: `オークション：${c.name}`,
-        body: `${DISTRICTS[c.d].name}・店の価値 <b>${fmt(c.value)}</b>。入札額を選んでね（いちばん高い人が落札）。<br>所持金 ${fmt(q.cash)}`,
+        body: `${areaName(c)}・価値 <b>${fmt(c.value)}</b>。入札額を選んでね（いちばん高い人が落札）。<br>所持金 ${fmt(q.cash)}`,
         buttons: [1, 1.15, 1.3, 1.5].map(m => Math.round(c.value * m)).map(v => ({ label: fmt(v), value: v, disabled: v > q.cash }))
           .concat([{ label: 'パス', value: 0 }]),
       });
@@ -838,7 +1147,11 @@ async function auction(s, sellerId) {
     if (bid >= c.value) bids.push({ q, bid });
   }
   bids.sort((a, b) => b.bid - a.bid);
-  if (!bids.length) { log(`${c.name}のオークションは入札なし。空き店になった`); return; }
+  if (!bids.length) {
+    if (c.type === 'plot') Object.assign(c, { building: null, cpFee: 0 });
+    log(`${c.name}のオークションは入札なし。空き${c.type === 'plot' ? '地' : '店'}になった`);
+    return;
+  }
   const { q, bid } = bids[0];
   q.cash -= bid; c.owner = q.id;
   log(`🔨 ${pname(q)}が${c.name}を <b>${fmt(bid)}</b> で落札`);
@@ -848,7 +1161,7 @@ async function auction(s, sellerId) {
 
 async function settleDebt(p) {
   while (p.cash < 0 && !over) {
-    const hasStock = p.stocks.some(n => n > 0), shops = ownedShops(p);
+    const hasStock = p.stocks.some(n => n > 0), shops = ownedProps(p);
     if (!hasStock && !shops.length) { bankrupt(p); return; }
     if (p.cpu) {
       if (hasStock) {
@@ -965,6 +1278,7 @@ async function cpuBuyStock(p, eager = false) {
 function endGame(winner, reason) {
   if (over) return;
   over = true;
+  clearSave();
   closeDialog(); pick = null; highlight = [];
   const ranked = [...players].sort((a, b) => (b === winner) - (a === winner) || a.bankrupt - b.bankrupt || worth(b) - worth(a));
   $('endTitle').textContent = winner ? `🏆 ${winner.name}の優勝！` : 'ゲーム終了';
@@ -979,7 +1293,8 @@ function endGame(winner, reason) {
 
 // ---------- wiring ----------
 document.querySelectorAll('[data-target]').forEach(b => b.onclick = () => newGame(+b.dataset.target));
-$('again').onclick = () => { $('end').classList.add('hidden'); $('title').classList.remove('hidden'); };
+$('again').onclick = () => { $('end').classList.add('hidden'); refreshResume(); $('title').classList.remove('hidden'); };
+$('resume').onclick = resumeGame;
 $('rulesBtn').onclick = $('titleRules').onclick = () => $('rules').classList.remove('hidden');
 $('closeRules').onclick = () => $('rules').classList.add('hidden');
 $('speedBtn').onclick = () => {
@@ -990,8 +1305,8 @@ $('speedBtn').onclick = () => {
 
 resize();
 players = PLAYER_DEFS.map((d, id) => ({ ...d, id, cash: START_CASH, pos: BANK, suits: {}, wild: 0, level: 1, stocks: DISTRICTS.map(() => 0) }));
-for (const s of SHOPS) Object.assign(cells[s], { owner: null, value: cells[s].base });
-DISTRICTS.forEach(d => d.mod = 1);
+resetBoard();
+refreshResume();
 renderPanel();
 requestAnimationFrame(frame);
 if (DEMO) newGame(+(params.get('target') || 8000));
