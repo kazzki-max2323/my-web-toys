@@ -147,13 +147,15 @@
   .panel.open .in { transform: rotateY(180deg); }
   .panel .f, .panel .b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border: 2.5px solid var(--ink);
     border-radius: 9px; backface-visibility: hidden; -webkit-backface-visibility: hidden; font-family: var(--display); }
-  .panel .f { background: repeating-linear-gradient(45deg, #ff7ab8 0 5px, #ff5fa2 5px 10px); color: #fff; font-size: clamp(12px, 3.6vw, 20px);
+  .panel .f { background: repeating-linear-gradient(45deg, #4b3f7a 0 5px, #5d5096 5px 10px); color: #fff; font-size: clamp(12px, 3.6vw, 20px);
     -webkit-text-stroke: 1px var(--ink); box-shadow: 0 3px 0 var(--ink); transition: transform .12s; }
   .panel:not(:disabled):hover .f { transform: translateY(-3px); }
   .panel .b { transform: rotateY(180deg); background: var(--k); color: var(--ink); font-size: clamp(10px, 2.8vw, 15px); flex-direction: column; line-height: 1.05; }
   .panel .b em { font-style: normal; font-size: clamp(9px, 2.4vw, 14px); }
   .clegend { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 8px; }
   .clegend span { background: var(--k); border: 2px solid var(--ink); border-radius: 999px; padding: 0 8px; font-size: 11px; font-weight: 800; color: var(--ink); }
+  .clegend .icons { flex-basis: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 10px; background: none; border: none; color: var(--muted); }
+  .clegend .icons i { font-style: normal; white-space: nowrap; }
   .panel .b i { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); border: 1.5px solid var(--ink); }
   .panel.aim .f { outline: 4px solid var(--yellow); outline-offset: 1px; animation: bump .45s ease-in-out infinite; }
   .panel.line .b { animation: glow .5s ease-in-out infinite alternate; }
@@ -375,7 +377,7 @@
       <li><b>自分の店</b>に止まると、そのエリアの自分の店に<b>増資</b>できる。増資すると店の価値と買い物料が上がり、エリアの株価も上がる。増資の上限はエリアの持ち店数で決まる。</li>
       <li><b>株</b>は銀行か株屋で買える（1回99株まで）。売るのは自分の番の最初ならいつでもOK。10株以上の売買で株価が少し動く。そのエリアで買い物料がはらわれるたびに、株主に<b>配当</b>が入る。</li>
       <li>♠♥♦♣ の4つの<b>スート</b>を集めて銀行を通ると<b>昇進</b>し、給料（基本給＋店の価値の10%）がもらえる。</li>
-      <li><b>チャンス</b>マスと<b>スート</b>マスに止まると、8×8のチャンスボードからカードを1枚えらんでめくる（カードは100種類）。めくったカードがたて・よこ・ななめに<b>4枚以上</b>ならぶとボーナス、端から端まで8枚ならぶと<b>1,500G</b>！</li>
+      <li><b>チャンス</b>マスと<b>スート</b>マスに止まると、8×8のチャンスボードからカードを1枚えらんでめくる（カードは100種類）。めくったカードがたて・よこ・ななめに<b>4枚以上</b>ならぶとボーナス、端から端まで8枚ならぶと<b>1,500G</b>！めくったカードは、めくった人の色になる。</li>
       <li><b>休憩所</b>は1回休み。<b>宝くじ</b>はお金がもらえるかも。<b>ワープ</b>は反対の角へ飛ぶ。</li>
       <li><b>ゲームセンター</b>ではミニゲーム（スロット・ハイ＆ロー）にお金を賭けて遊べる。</li>
       <li><b>空き地</b>は200Gで買って建物を建てられる。<b>関所</b>はライバルが通るたびに通行料が上がり、<b>税務署</b>は止まったライバルから総資産の4%をもらえる。</li>
@@ -2391,10 +2393,11 @@ function cpuChancePick() {
 }
 
 function renderChanceGrid(clickable, aim = -1) {
-  $('chanceLegend').innerHTML = Object.keys(CARD_COLOR).map(k => `<span style="--k:${CARD_COLOR[k]}">${CARD_ICON[k]} ${CARD_KIND[k]}</span>`).join('');
+  $('chanceLegend').innerHTML = players.map(q => `<span style="--k:${q.color}">${q.name}</span>`).join('') +
+    `<span class="icons">${Object.keys(CARD_ICON).map(k => `<i>${CARD_ICON[k]}${CARD_KIND[k]}</i>`).join('')}</span>`;
   $('chanceGrid').innerHTML = chance.cards.map((cid, i) => {
     const o = chance.open[i], card = CARDS[cid];
-    const back = `<span class="b" style="--k:${CARD_COLOR[card.k]}"><em>${CARD_ICON[card.k]}</em>${cid + 1}${o != null && o >= 0 ? `<i style="--pc:${players[o].color}"></i>` : ''}</span>`;
+    const back = `<span class="b" style="--k:${o != null && o >= 0 ? players[o].color : CARD_COLOR[card.k]}"><em>${CARD_ICON[card.k]}</em>${cid + 1}</span>`;
     return `<button class="panel ${o != null ? 'open' : ''} ${i === aim ? 'aim' : ''}" data-i="${i}" ${clickable && o == null ? '' : 'disabled'}
       aria-label="${o != null ? `カード${cid + 1} ${card.t}` : '裏向きのカード'}"><span class="in"><span class="f">?</span>${back}</span></button>`;
   }).join('');
@@ -2427,7 +2430,7 @@ async function openChance(p) {
   await sleep(550);
   const cid = chance.cards[i], card = CARDS[cid];
   $('chanceCard').innerHTML = `<span class="no">${cid + 1}</span><span class="tx"><small>${CARD_ICON[card.k]} ${CARD_KIND[card.k]}</small>${card.t}</span>`;
-  $('chanceCard').style.setProperty('--k', CARD_COLOR[card.k]);
+  $('chanceCard').style.setProperty('--k', p.color);
   $('chanceCard').hidden = false;
   $('chanceMsg').innerHTML = `${pname(p)}のチャンスカード`;
   log(`🎴 ${pname(p)}のチャンスカード No.${cid + 1}「${card.t}」`);
