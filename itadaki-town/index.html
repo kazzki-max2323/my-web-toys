@@ -754,8 +754,14 @@ function rain(n) {
 function floatMoney(p, amount) {
   if (DEMO || over && !players.includes(p)) return;
   const t = tokenPos(p, players.indexOf(p), performance.now());
-  const [x, y] = boardPoint(t.x, t.y - cs * 0.35);
-  floats.push({ x, y, text: (amount > 0 ? '+' : '−') + fmt(Math.abs(amount)), color: amount > 0 ? '#12a85f' : '#ff3d63', t0: performance.now() });
+  const top = Math.max(cv.getBoundingClientRect().top, 0);
+  let [x, y] = boardPoint(t.x, t.y - cs * 0.35), dir = -1;
+  // near the top edge (top row, or board scrolled up) the label would rise out of view, so drop it downward instead
+  if (y - 70 < top + 8) { y = boardPoint(t.x, t.y + cs * 0.35)[1]; dir = 1; }
+  // stack labels that pop at the same time so they don't overlap
+  const nowT = performance.now();
+  y += dir * 30 * floats.filter(f => nowT - f.t0 < 250 && Math.abs(f.x - x) < 60 && Math.abs(f.y - y) < 60).length;
+  floats.push({ x, y, dir, text: (amount > 0 ? '+' : '−') + fmt(Math.abs(amount)), color: amount > 0 ? '#12a85f' : '#ff3d63', t0: nowT });
 }
 let lastFx = 0;
 function drawFx(now) {
@@ -775,10 +781,14 @@ function drawFx(now) {
   for (let i = floats.length - 1; i >= 0; i--) {
     const f = floats[i], t = (now - f.t0) / 1300;
     if (t > 1) { floats.splice(i, 1); continue; }
-    const y = f.y - 56 * (1 - Math.pow(1 - t, 3)), s = t < 0.15 ? 0.6 + t / 0.15 * 0.4 : 1;
-    fctx.save(); fctx.globalAlpha = 1 - t * t * t; fctx.translate(f.x, y); fctx.scale(s, s);
-    fctx.lineJoin = 'round'; fctx.lineWidth = 6; fctx.strokeStyle = '#fff'; fctx.strokeText(f.text, 0, 0);
-    fctx.fillStyle = f.color; fctx.fillText(f.text, 0, 0);
+    const y = f.y + f.dir * 46 * (1 - Math.pow(1 - t, 3)), s = t < 0.15 ? 0.6 + t / 0.15 * 0.4 : 1;
+    const w = fctx.measureText(f.text).width + 20, h = 32;
+    const x = Math.min(Math.max(f.x, w / 2 + 6), innerWidth - w / 2 - 6);
+    fctx.save(); fctx.globalAlpha = 1 - t * t * t; fctx.translate(x, y); fctx.scale(s, s);
+    fctx.fillStyle = '#2b2346'; fctx.beginPath(); fctx.roundRect(-w / 2 + 2, -h / 2 + 3, w, h, h / 2); fctx.fill();
+    fctx.fillStyle = '#fff'; fctx.beginPath(); fctx.roundRect(-w / 2, -h / 2, w, h, h / 2); fctx.fill();
+    fctx.lineWidth = 2.5; fctx.strokeStyle = '#2b2346'; fctx.stroke();
+    fctx.fillStyle = f.color; fctx.fillText(f.text, 0, 1);
     fctx.restore();
   }
 }
