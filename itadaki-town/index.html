@@ -188,6 +188,21 @@
     font-weight: 800; font-size: 13px; animation: bump .4s cubic-bezier(.2, 1.6, .4, 1); }
   #auMsg { font-weight: 800; color: var(--ink); min-height: 1.5em; margin: 12px 0 0; }
   .tpartners { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .tpartners button { display: flex; flex-direction: column; align-items: center; line-height: 1.2; padding: 6px 14px; }
+  .tpartners small { color: var(--danger); font-size: 11px; letter-spacing: 1px; }
+  .opt .nm { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; min-width: 0; }
+  .hint { font-style: normal; font-size: 10px; font-weight: 800; padding: 0 5px; border-radius: 999px; border: 1.5px solid var(--ink); background: var(--paper); }
+  .hint.want { background: #ffd3e6; } .hint.crown { background: var(--yellow); } .hint.lock { background: #e3dcff; }
+  .tmood { display: flex; gap: 10px; align-items: center; margin-top: 10px; padding: 8px 12px; border: 3px solid var(--ink); border-radius: 16px;
+    background: var(--paper); color: var(--ink); line-height: 1.4; }
+  .tmood small { color: var(--muted); font-weight: 700; }
+  .tmood .face, .treply .face { font-size: 30px; line-height: 1; animation: bump .4s cubic-bezier(.2, 1.6, .4, 1); }
+  .tmood.lv0 { background: #ffd6de; } .tmood.lv1 { background: #ffe9d6; } .tmood.lv2 { background: #fff6c4; }
+  .tmood.lv3 { background: #d9f7e8; } .tmood.lv4 { background: #c6f3dc; } .tmood.sulk { background: #e9e4f5; }
+  .tbar { display: flex; gap: 3px; margin-top: 4px; }
+  .tbar i { width: 22px; height: 8px; border-radius: 4px; border: 1.5px solid var(--ink); background: var(--paper); }
+  .tbar i.on { background: var(--pink); }
+  .treply { display: flex; align-items: center; justify-content: center; gap: 8px; }
   .tcols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
   .tcol h3 { font-size: 13px; margin: 0 0 4px; color: var(--ink); }
   .tcol .opts { max-height: 200px; overflow-y: auto; }
@@ -360,7 +375,7 @@
       <li><b>休憩所</b>は1回休み。<b>宝くじ</b>はお金がもらえるかも。<b>ワープ</b>は反対の角へ飛ぶ。</li>
       <li><b>ゲームセンター</b>ではミニゲーム（スロット・ハイ＆ロー）にお金を賭けて遊べる。</li>
       <li><b>空き地</b>は200Gで買って建物を建てられる。<b>関所</b>はライバルが通るたびに通行料が上がり、<b>税務署</b>は止まったライバルから総資産の4%をもらえる。</li>
-      <li>自分の番の最初に、ほかのプレイヤーに<b>交渉</b>をもちかけられる（1ターン1回）。お店を2軒まで出す・求めることができ、お金のやり取りも加えられる。CPUはめったに応じないが、空き店がなくなって2軒以上持つエリアもないと応じやすくなる。CPUから交渉が来たときは「はい／絶対しない／いいえ」で答える（絶対しないを選ぶとその人からは来なくなる）。</li>
+      <li>自分の番の最初に、ほかのプレイヤーに<b>交渉</b>をもちかけられる。お店を2軒まで出す・求めることができ、お金のやり取りも加えられる。条件を変えると相手の気持ち（😡😒🤔😊😍）がわかる。あと少しのときは上乗せを求めてくる。ひどい条件を出しすぎると相手がすねて、しばらく交渉できない。CPUは自分のエリアの店を高く評価するので、おたがいに得する交換をさがそう。トップの人には少しきびしい。CPUどうしで取引することもある。CPUから交渉が来たときは「はい／絶対しない／いいえ」で答える（絶対しないを選ぶとその人からは来なくなる）。</li>
       <li>自分の番の最初に、お店を<b>競売</b>に出せる。売り出し価格はいまのお店の価値で、ほかのプレイヤーが順番に値段を上げていき、いちばん高い人が落札。入札の上限は「所持金＋株の価値」。入札がなければ銀行が売り出し価格で買い取る。どちらの場合もお金は売った人のものになる。</li>
       <li>所持金がマイナスになったら、まず株を売って返す。株で足りなければお店を<b>強制競売</b>にかける。返せなくなったら<b>破産</b>でゲーム終了、総資産で順位を決める。</li>
       <li>総資産（所持金＋店の価値＋株の価値）が<b>目標金額</b>以上で銀行に着いたら優勝！</li>
@@ -1157,11 +1172,14 @@ async function takeTurn(p) {
     await toast(`${pname(p)}は休憩中…`, 900);
     return;
   }
-  if (p.cpu) await cpuPropose(p);
+  if (p.cpu) {
+    if (!sulking(p) && patienceOf(p) < 3) p.patience = patienceOf(p) + 1;
+    await cpuPropose(p);
+    await cpuCpuTrade(p);
+  }
   $('status').innerHTML = `<span class="av" style="--pc:${p.color}"></span>${pname(p)}の番です…`;
   if (!p.cpu) {
     Sound.play('turn');
-    let traded = false;
     for (;;) {
       const a = await ask({
         title: 'あなたの番です',
@@ -1170,11 +1188,11 @@ async function takeTurn(p) {
           { label: '🎲 サイコロをふる', value: 'roll', primary: true },
           { label: '株を売る', value: 'stock', disabled: !p.stocks.some(n => n > 0) },
           { label: '競売に出す', value: 'shop', disabled: !ownedProps(p).length },
-          { label: '交渉する', value: 'trade', disabled: traded },
+          { label: '🤝 交渉する', value: 'trade' },
         ],
       });
       if (a === 'roll') break;
-      if (a === 'trade') traded = await humanTrade(p);
+      if (a === 'trade') await humanTrade(p);
       if (a === 'stock') await humanSellStock(p);
       if (a === 'shop') await humanSellShop(p);
       renderPanel();
@@ -1331,6 +1349,7 @@ async function landShop(p, c) {
       p.cash -= c.value; c.owner = p.id;
       Sound.play('buy'); cellPop(c.id); burstCell(c.id, 28);
       log(`${pname(p)}が${d.name}の${c.name}を <b>${fmt(c.value)}</b> で買った`);
+      checkMonopoly(p, c.id);
       await sleep(400);
     }
   } else if (c.owner === p.id) {
@@ -1396,12 +1415,11 @@ async function landPlot(p, c) {
   }
 }
 
-// ---- trading: up to 2 properties each way plus money ----
+// ---- trading: up to 2 properties each way plus money, with moods, haggling and patience ----
 const propVal = list => list.reduce((a, s) => a + cells[s].value, 0);
 const chipOf = q => `<span class="chip" style="--pc:${q.color}">${q.name}</span>`;
 
-// how much a CPU values gaining (sign +1) or losing (sign -1) a property, given its other holdings
-// (n = shops the CPU would hold in that district together with this one; `away` are shops it is giving up)
+// how much a CPU values holding property s (n = shops it would hold in that district with s; `away` are shops it gives up)
 function cpuPropWorth(q, s, away) {
   const c = cells[s];
   if (c.type !== 'shop') return c.value;
@@ -1409,15 +1427,39 @@ function cpuPropWorth(q, s, away) {
   const n = 1 + DISTRICTS[c.d].shops.filter(x => x !== s && cells[x].owner === q.id && !away.includes(x)).length;
   return c.value * (1 + 0.45 * (n - 1) + (n === total ? 1 : 0));
 }
-// CPUs rarely trade, unless the board is settled (no vacant shops and no district where they hold 2+)
-function cpuAcceptsTrade(q, give, get, moneyIn, moneyOut) {
-  const gain = get.reduce((a, s) => a + cpuPropWorth(q, s, give), 0) + moneyIn
-             - give.reduce((a, s) => a + cpuPropWorth(q, s, []), 0) - moneyOut;
-  const involved = propVal(give) + propVal(get) + moneyIn + moneyOut || 1;
+// q's gain (as a share of everything on the table) from giving qGives + mOut for qGets + mIn
+function dealRatio(q, qGives, qGets, mIn, mOut) {
+  const gain = qGets.reduce((a, s) => a + cpuPropWorth(q, s, qGives), 0) + mIn
+             - qGives.reduce((a, s) => a + cpuPropWorth(q, s, []), 0) - mOut;
+  return gain / (propVal(qGives) + propVal(qGets) + mIn + mOut || 1);
+}
+const TRADE_STYLE = {
+  bold:   { margin: 0.04, lines: ['ふざけないで！', 'ぜんぜん足りないね', 'あとひと押し！', 'いいじゃん、乗った！', '最高！即決！'] },
+  steady: { margin: 0.12, lines: ['話にならないな', 'それじゃ割に合わない', 'うーむ、もう少しだな', '悪くない取引だ', 'これはありがたい！'] },
+  shy:    { margin: 0.02, lines: ['えっ…むりです…', 'ちょっと困ります…', 'うーん、迷うなあ…', 'それなら…いいですよ', 'わあ、うれしい！'] },
+};
+const MOOD_FACE = ['😡', '😒', '🤔', '😊', '😍'];
+const tstyle = q => TRADE_STYLE[q.style] || TRADE_STYLE.steady;
+const isLeader = p => players.filter(q => !q.bankrupt).every(q => q === p || worth(q) < worth(p));
+// the share of the deal a CPU wants to keep for itself
+function tradeMargin(q, partner) {
   const settled = !vacant().length && !DISTRICTS.some((d, i) => ownedIn(q.id, i) >= 2);
-  if (q.cash - moneyOut < 100) return false;
-  if (settled) return gain > involved * 0.05;
-  return gain > involved * 0.7 && Math.random() < 0.5;
+  return tstyle(q).margin - (settled ? 0.1 : 0) + (partner && isLeader(partner) ? 0.08 : 0);
+}
+const moodLevel = (r, m) => r < m - 0.35 ? 0 : r < m - 0.12 ? 1 : r < m ? 2 : r < m + 0.25 ? 3 : 4;
+function sulking(q) {
+  if (q.sulkUntil != null && round > q.sulkUntil) { q.sulkUntil = null; q.patience = 3; }
+  return q.sulkUntil != null;
+}
+const patienceOf = q => q.patience ?? 3;
+
+function checkMonopoly(q, s) {
+  const c = cells[s];
+  if (c.type !== 'shop' || ownedIn(q.id, c.d) !== DISTRICTS[c.d].shops.length) return;
+  Sound.play('fanfare');
+  DISTRICTS[c.d].shops.forEach(x => { cellPop(x); burstCell(x, 20, 0.9); });
+  log(`👑 ${pname(q)}が${DISTRICTS[c.d].name}を独占！`);
+  toast(`👑 ${pname(q)}が<br><b>${DISTRICTS[c.d].name}</b>を独占！`, 1300);
 }
 
 function tradeSheet(a, aShops, aMoney, b, bShops, bMoney) {
@@ -1426,7 +1468,7 @@ function tradeSheet(a, aShops, aMoney, b, bShops, bMoney) {
     <div class="tprop money"><span>おかね</span><b>${fmt(money)}</b></div></div>`;
   const diff = (propVal(bShops) + bMoney) - (propVal(aShops) + aMoney);
   return `<div class="tsheet">${side(a, aShops, aMoney)}<div class="tarrow">⇄</div>${side(b, bShops, bMoney)}</div>
-    <p class="tdiff">差額 <b>${fmt(Math.abs(diff))}</b> ${diff > 0 ? `（${a.name}が得）` : diff < 0 ? `（${b.name}が得）` : ''}</p>`;
+    <p class="tdiff">店の価値の差額 <b>${fmt(Math.abs(diff))}</b> ${diff > 0 ? `（${a.name}が得）` : diff < 0 ? `（${b.name}が得）` : ''}</p>`;
 }
 
 function executeTrade(a, aShops, aMoney, b, bShops, bMoney) {
@@ -1436,85 +1478,177 @@ function executeTrade(a, aShops, aMoney, b, bShops, bMoney) {
   Sound.play('buy');
   const desc = (list, m) => [...list.map(s => cells[s].name), ...(m ? [fmt(m)] : [])].join('・') || 'なし';
   log(`🤝 交渉成立！ ${pname(a)}（${desc(aShops, aMoney)}）⇄ ${pname(b)}（${desc(bShops, bMoney)}）`);
+  aShops.forEach(s => checkMonopoly(b, s));
+  bShops.forEach(s => checkMonopoly(a, s));
   renderPanel();
 }
 
-// trade composer for the human: returns true if a proposal was sent
+// trade composer for the human
 function humanTrade(p) {
   const rivals = players.filter(q => q !== p && !q.bankrupt);
   if (!rivals.length) return Promise.resolve(false);
-  const st = { partner: rivals[0], give: [], get: [], mGive: 0, mGet: 0 };
+  const st = { partner: rivals.find(q => !sulking(q)) || rivals[0], give: [], get: [], mGive: 0, mGet: 0, reply: '', counter: null, noise: 0, done: false };
+  const reroll = () => { st.noise = (Math.random() - 0.5) * 0.08; };
+  reroll();
   return new Promise(resolve => {
     const ov = $('tradeOv');
-    const finish = v => { ov.classList.add('hidden'); resolve(v); };
+    const finish = () => { ov.classList.add('hidden'); resolve(st.done); };
+    const hint = (s, mine) => {
+      const c = cells[s], q = st.partner;
+      if (c.type !== 'shop') return '';
+      const total = DISTRICTS[c.d].shops.length;
+      if (mine) return ownedIn(q.id, c.d) >= 1 ? '<em class="hint want">♥ほしがってる</em>' : '';
+      if (ownedIn(p.id, c.d) === total - 1) return '<em class="hint crown">👑独占できる</em>';
+      if (ownedIn(q.id, c.d) === total) return '<em class="hint lock">🔒独占中</em>';
+      return ownedIn(p.id, c.d) >= 1 ? '<em class="hint">同じエリア</em>' : '';
+    };
     const list = (owner, chosen, key) => {
       const props = ownedProps(owner);
       return props.length ? props.map(s => `<label class="opt"><input type="checkbox" data-k="${key}" value="${s}" ${chosen.includes(s) ? 'checked' : ''}
-        ${!chosen.includes(s) && chosen.length >= 2 ? 'disabled' : ''}>${propLabel(s)}<span class="r">${fmt(cells[s].value)}</span></label>`).join('')
+        ${!chosen.includes(s) && chosen.length >= 2 ? 'disabled' : ''}><span class="nm">${propLabel(s)}${hint(s, key === 'give')}</span><span class="r">${fmt(cells[s].value)}</span></label>`).join('')
         : '<div class="tnone">お店なし</div>';
     };
     const money = (key, val, max) => `<div class="tmoney"><span>おかね <b>${fmt(val)}</b></span>
       ${[-100, -10, 10, 100].map(d => `<button data-m="${key}" data-d="${d}" ${val + d < 0 || val + d > max ? 'disabled' : ''}>${d > 0 ? '+' : ''}${d}</button>`).join('')}</div>`;
-    const render = () => {
+    const meter = () => {
       const q = st.partner;
+      if (sulking(q)) return `<div class="tmood sulk"><span class="face">😤</span><div><b>すねていて話を聞いてくれない…</b><br><small>ラウンド${q.sulkUntil + 1}になったら機嫌がなおります</small></div></div>`;
+      if (!st.give.length && !st.get.length) return `<div class="tmood"><span class="face">🙂</span><div><b>${q.name}「どんな話かな？」</b><br><small>お店をえらぶと、相手の気持ちがわかるよ</small></div></div>`;
+      const m = tradeMargin(q, p), r = dealRatio(q, st.get, st.give, st.mGive, st.mGet) + st.noise, lv = moodLevel(r, m);
+      return `<div class="tmood lv${lv}"><span class="face">${MOOD_FACE[lv]}</span><div><b>${q.name}「${tstyle(q).lines[lv]}」</b>
+        <div class="tbar">${[0, 1, 2, 3, 4].map(i => `<i class="${i <= lv ? 'on' : ''}"></i>`).join('')}</div>
+        ${isLeader(p) ? '<small>トップのあなたには、ちょっときびしめ</small>' : ''}</div></div>`;
+    };
+    const render = () => {
+      const q = st.partner, sulk = sulking(q);
       $('tradeBody').innerHTML = `
-        <div class="tpartners">${rivals.map(r => `<button data-p="${r.id}" class="${r === q ? 'primary' : ''}">${r.name}</button>`).join('')}</div>
+        <div class="tpartners">${rivals.map(r => `<button data-p="${r.id}" class="${r === q ? 'primary' : ''}">${r.name}
+          <small>${sulking(r) ? '😤' : '♥'.repeat(Math.max(0, patienceOf(r))) + '♡'.repeat(3 - Math.max(0, patienceOf(r)))}</small></button>`).join('')}</div>
         <div class="tcols">
           <div class="tcol"><h3>あなたが出す（2軒まで）</h3><div class="opts">${list(p, st.give, 'give')}</div>${money('mGive', st.mGive, p.cash)}</div>
           <div class="tcol"><h3>${q.name}に求める（2軒まで）</h3><div class="opts">${list(q, st.get, 'get')}</div>${money('mGet', st.mGet, q.cash)}</div>
         </div>
         ${tradeSheet(p, st.give, st.mGive, q, st.get, st.mGet)}
-        <div class="btns center-row"><button id="tSend" class="primary" ${st.give.length + st.get.length && !(st.mGive && st.mGet) ? '' : 'disabled'}>提案する</button><button id="tCancel">やめる</button></div>`;
+        ${meter()}
+        ${st.reply}
+        <div class="btns center-row">
+          ${st.counter != null ? `<button id="tAgree" class="primary">のむ（+${fmt(st.counter)}）</button><button id="tDecline">ことわる</button>`
+            : `<button id="tSend" class="primary" ${!sulk && st.give.length + st.get.length && !(st.mGive && st.mGet) ? '' : 'disabled'}>提案する</button><button id="tCancel">とじる</button>`}
+        </div>`;
       const body = $('tradeBody');
-      body.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { st.partner = players[+b.dataset.p]; st.get = []; st.mGet = 0; Sound.play('click'); render(); });
+      body.querySelectorAll('[data-p]').forEach(b => b.onclick = () => {
+        st.partner = players[+b.dataset.p]; st.get = []; st.mGet = 0; st.reply = ''; st.counter = null; reroll(); Sound.play('click'); render();
+      });
       body.querySelectorAll('input[data-k]').forEach(cb => cb.onchange = () => {
         const arr = st[cb.dataset.k], v = +cb.value;
         if (cb.checked) arr.push(v); else arr.splice(arr.indexOf(v), 1);
-        render();
+        st.reply = ''; render();
       });
-      body.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { st[b.dataset.m] += +b.dataset.d; Sound.play('click'); render(); });
-      $('tCancel').onclick = () => { Sound.play('click'); finish(false); };
-      $('tSend').onclick = async () => {
-        Sound.play('click');
-        const q = st.partner;
-        log(`${pname(p)}が${pname(q)}に交渉をもちかけた`);
-        if (cpuAcceptsTrade(q, st.get, st.give, st.mGive, st.mGet)) {
-          executeTrade(p, st.give, st.mGive, q, st.get, st.mGet);
-          $('tradeBody').insertAdjacentHTML('afterbegin', `<p class="treply ok">${chipOf(q)}「いいよ、交換しよう！」</p>`);
-        } else {
-          Sound.play('bad');
-          log(`${pname(q)}は交渉を断った`);
-          $('tradeBody').insertAdjacentHTML('afterbegin', `<p class="treply">${chipOf(q)}「うーん、やめておくよ」</p>`);
-        }
-        $('tSend').disabled = true; $('tCancel').textContent = 'とじる';
-        $('tCancel').onclick = () => finish(true);
+      body.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { st[b.dataset.m] += +b.dataset.d; st.reply = ''; Sound.play('click'); render(); });
+      if ($('tCancel')) $('tCancel').onclick = () => { Sound.play('click'); finish(); };
+      if ($('tSend')) $('tSend').onclick = send;
+      if ($('tAgree')) $('tAgree').onclick = () => {
+        const x = st.counter;
+        if (st.mGet >= x) st.mGet -= x; else { st.mGive += x - st.mGet; st.mGet = 0; }
+        st.counter = null;
+        if (st.mGive > p.cash) { say('😅', 'お金が足りないみたい…', false); return render(); }
+        accept();
       };
+      if ($('tDecline')) $('tDecline').onclick = () => { st.counter = null; say('😐', 'そっか、残念', false); Sound.play('click'); render(); };
+    };
+    const say = (face, text, ok) => {
+      st.reply = `<p class="treply ${ok ? 'ok' : ''}"><span class="face">${face}</span>${chipOf(st.partner)}「${text}」</p>`;
+    };
+    const accept = () => {
+      const q = st.partner;
+      executeTrade(p, st.give, st.mGive, q, st.get, st.mGet);
+      q.patience = Math.min(3, patienceOf(q) + 1);
+      say('🤝', tstyle(q).lines[4], true);
+      st.give = []; st.get = []; st.mGive = 0; st.mGet = 0; st.done = true; reroll();
+      render();
+    };
+    const send = () => {
+      Sound.play('click');
+      const q = st.partner, m = tradeMargin(q, p);
+      const r = dealRatio(q, st.get, st.give, st.mGive, st.mGet) + st.noise, lv = moodLevel(r, m);
+      log(`${pname(p)}が${pname(q)}に交渉をもちかけた`);
+      if (lv >= 3 && (lv === 4 || Math.random() < 0.85)) return accept();
+      if (lv >= 2) {
+        // haggle: ask for just enough extra money to clear the CPU's margin
+        const need = m + 0.03, gain = dealRatio(q, st.get, st.give, st.mGive, st.mGet) * (propVal(st.give) + propVal(st.get) + st.mGive + st.mGet);
+        const inv = propVal(st.give) + propVal(st.get) + st.mGive + st.mGet;
+        const x = Math.max(10, Math.ceil((need * inv - gain) / (1 - need) / 10) * 10);
+        if (st.mGive + Math.max(0, x - st.mGet) <= p.cash) {
+          st.counter = x;
+          Sound.play('turn');
+          say('🤔', `あと <b>${fmt(x)}</b> 上乗せしてくれたらOK！`, false);
+          return render();
+        }
+      }
+      q.patience = patienceOf(q) - (lv === 0 ? 2 : 1);
+      Sound.play('bad');
+      if (q.patience <= 0) {
+        q.sulkUntil = round + 1;
+        say('😤', 'もう話したくない！', false);
+        log(`${pname(q)}がすねてしまった…（しばらく交渉できない）`);
+      } else say(MOOD_FACE[lv], tstyle(q).lines[lv], false);
+      reroll();
+      render();
     };
     render();
     ov.classList.remove('hidden');
   });
 }
 
-// a CPU sometimes proposes a deal to the human: their shop for money, or a swap plus money
+// find a swap (plus balancing money) that q and r both like
+function findWinWin(q, r) {
+  let best = null;
+  for (const a of ownedShops(q)) for (const b of ownedShops(r)) {
+    if (cells[a].d === cells[b].d) continue;
+    for (const m of [0, 50, -50, 100, -100, 200, -200]) {
+      const mq = Math.max(0, m), mr = Math.max(0, -m);   // m > 0: q pays r
+      if (q.cash - mq < 200 || r.cash - mr < 200) continue;
+      const rq = dealRatio(q, [a], [b], mr, mq), rr = dealRatio(r, [b], [a], mq, mr);
+      if (rq > tradeMargin(q, r) + 0.1 && rr > tradeMargin(r, q) && (!best || rq > best.rq)) best = { a, b, mq, mr, rq };
+    }
+  }
+  return best;
+}
+
+// CPUs sometimes trade among themselves
+async function cpuCpuTrade(p) {
+  if (Math.random() > 0.12) return;
+  for (const r of others(p).filter(q => q.cpu).sort(() => Math.random() - 0.5)) {
+    const d = findWinWin(p, r);
+    if (!d) continue;
+    executeTrade(p, [d.a], d.mq, r, [d.b], d.mr);
+    await toast(`🤝 ${pname(p)}と${pname(r)}が取引成立！<br>${cells[d.a].name} ⇄ ${cells[d.b].name}`, 1400);
+    return;
+  }
+}
+
+// a CPU sometimes brings a deal to the human
 async function cpuPropose(p) {
   const h = players.find(q => !q.cpu && !q.bankrupt);
-  if (!h || (h.blockTrades || []).includes(p.id) || Math.random() > 0.2) return;
-  const want = ownedShops(h).filter(s => ownedIn(p.id, cells[s].d) >= 1)
-    .sort((a, b) => ownedIn(p.id, cells[b].d) - ownedIn(p.id, cells[a].d))[0];
-  if (want == null) return;
-  // offer one of our shops that helps the human's own districts, if any
-  const giveShop = ownedShops(p).filter(s => cells[s].d !== cells[want].d && ownedIn(h.id, cells[s].d) >= 1 && ownedIn(p.id, cells[s].d) === 1)[0];
-  const give = giveShop != null ? [giveShop] : [];
-  let money = Math.round((cells[want].value * (1.4 + Math.random() * 0.4) - propVal(give)) / 10) * 10;
-  money = Math.max(0, money);
-  if (p.cash - money < 300) return;
+  if (!h || (h.blockTrades || []).includes(p.id) || sulking(p) || Math.random() > 0.22) return;
+  let give = [], money = 0, want;
+  const ww = findWinWin(p, h);
+  if (ww) { give = [ww.a]; want = ww.b; money = ww.mq - ww.mr; }
+  else {
+    want = ownedShops(h).filter(s => ownedIn(p.id, cells[s].d) >= 1)
+      .sort((a, b) => ownedIn(p.id, cells[b].d) - ownedIn(p.id, cells[a].d))[0];
+    if (want == null) return;
+    money = Math.round(cells[want].value * (1.3 + Math.random() * 0.4) / 10) * 10;
+  }
+  if (money > 0 && p.cash - money < 300) return;
   Sound.play('turn');
+  const pitch = { bold: 'いい話があるんだ！', steady: 'お互いに得な話だと思うが、どうだろう？', shy: 'あの…よかったら、交換しませんか…？' }[p.style] || 'この条件で交換しない？';
   const ans = await ask({
     title: `🤝 ${p.name}から交渉`,
-    body: `「この条件で交換しない？」${tradeSheet(p, give, money, h, [want], 0)}`,
+    body: `「${pitch}」${tradeSheet(p, give, Math.max(0, money), h, [want], Math.max(0, -money))}`,
     buttons: [{ label: 'はい', value: 'yes' }, { label: '絶対しない', value: 'never' }, { label: 'いいえ', value: 'no', primary: true }],
   });
-  if (ans === 'yes') executeTrade(p, give, money, h, [want], 0);
+  if (ans === 'yes') executeTrade(p, give, Math.max(0, money), h, [want], Math.max(0, -money));
   else {
     if (ans === 'never') (h.blockTrades = h.blockTrades || []).push(p.id);
     log(`${pname(h)}は${pname(p)}の交渉を断った${ans === 'never' ? '（もう交渉しない）' : ''}`);
@@ -1789,6 +1923,7 @@ async function auction(s, seller, forced = false) {
     holder.q.cash -= price; c.owner = holder.q.id; seller.cash += price;
     Sound.play('fanfare'); cellPop(s); burstCell(s, 30);
     log(`🔨 ${pname(holder.q)}が${c.name}を <b>${fmt(price)}</b> で落札！（${pname(seller)}に ${fmt(price)}）`);
+    checkMonopoly(holder.q, s);
     if (watching) $('auMsg').innerHTML = `🔨 ${chipOf(holder.q)} が <b>${fmt(price)}</b> で落札！`;
   } else {
     seller.cash += start; c.owner = null;
