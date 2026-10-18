@@ -14,11 +14,13 @@
     --accent: #5ee6a8;
     --gold: #ffd166;
     --danger: #ff5c7a;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
     font-family: system-ui, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif; overflow: hidden; }
-  #app { display: flex; gap: 16px; padding: 16px; height: 100vh; }
+  #app { display: flex; gap: 16px; height: 100%; padding-block: 16px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   #boardWrap { flex: 1; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center; }
   #board { display: block; touch-action: manipulation; }
   #toast {
@@ -89,10 +91,10 @@
   .rank li span:last-child { margin-left: auto; color: var(--gold); font-variant-numeric: tabular-nums; }
   @media (max-width: 860px) {
     html, body { overflow: auto; height: auto; }
-    #app { flex-direction: column; height: auto; padding: 12px 16px 220px; }
+    #app { flex-direction: column; height: auto; padding-block: 12px 220px; }
     #boardWrap { flex: none; }
     #side { width: auto; overflow: visible; }
-    .dialog { left: 50%; right: auto; top: auto; bottom: 16px; transform: translateX(-50%); width: min(480px, calc(100% - 32px)); }
+    .dialog { left: 50%; right: auto; top: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(480px, calc(100% - 32px)); }
   }
 </style>
 </head>
