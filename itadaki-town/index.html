@@ -163,6 +163,49 @@
     border: 2.5px solid var(--ink); border-radius: 10px; padding: 2px 4px; }
   .ccard .tx { font-weight: 800; font-size: 16px; color: var(--ink); line-height: 1.5; }
   .ccard small { display: block; font-size: 11px; color: var(--muted); }
+  .ocard.auction, .ocard.trade { max-width: 560px; padding: 18px; }
+  .ocard.auction h1, .ocard.trade h1 { font-size: 22px; }
+  .au-shop { display: flex; gap: 12px; align-items: center; line-height: 1.5; color: var(--ink); }
+  .au-shop small { color: var(--muted); font-weight: 700; }
+  .au-tile { width: 54px; height: 54px; flex: none; display: flex; align-items: center; justify-content: center; border: 3px solid var(--ink);
+    border-radius: 12px; background: var(--k); font-family: var(--display); font-size: 24px; box-shadow: 3px 3px 0 var(--ink); }
+  .au-price { display: flex; align-items: baseline; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; color: var(--ink); }
+  .au-price small { font-weight: 800; color: var(--muted); }
+  .au-price b { font-family: var(--display); font-weight: 400; font-size: 34px; color: var(--pink); -webkit-text-stroke: 1px var(--ink); }
+  .au-bidders { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+  .au-b { position: relative; border: 3px solid var(--ink); border-radius: 14px; padding: 8px; background: color-mix(in srgb, var(--pc) 18%, var(--paper));
+    font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink); display: flex; flex-direction: column; gap: 2px; }
+  .au-b > b { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; }
+  .au-b .av { display: inline-block; vertical-align: middle; margin-right: 4px; }
+  .au-b.now { box-shadow: 0 0 0 4px var(--yellow); animation: bob 1s ease-in-out infinite; }
+  .au-b.top { background: color-mix(in srgb, var(--pc) 45%, var(--paper)); }
+  .au-b.out { opacity: .55; }
+  .au-row { display: flex; justify-content: space-between; gap: 4px; }
+  .au-row span { color: var(--muted); font-weight: 700; }
+  .au-row.sum { border-top: 1.5px dashed color-mix(in srgb, var(--ink) 30%, transparent); padding-top: 2px; font-weight: 800; }
+  .au-b .x { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 52px; color: var(--danger); -webkit-text-stroke: 2px var(--ink); }
+  .bubble { position: absolute; top: -16px; right: 6px; background: var(--paper); border: 2.5px solid var(--ink); border-radius: 999px; padding: 0 8px;
+    font-weight: 800; font-size: 13px; animation: bump .4s cubic-bezier(.2, 1.6, .4, 1); }
+  #auMsg { font-weight: 800; color: var(--ink); min-height: 1.5em; margin: 12px 0 0; }
+  .tpartners { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .tcols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .tcol h3 { font-size: 13px; margin: 0 0 4px; color: var(--ink); }
+  .tcol .opts { max-height: 200px; overflow-y: auto; }
+  .tmoney { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; color: var(--ink); font-size: 13px; }
+  .tmoney span { flex: 1 0 100%; }
+  .tmoney button { padding: 3px 8px; font-size: 12px; box-shadow: 0 2px 0 var(--ink); border-width: 2px; }
+  .tsheet { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin-top: 12px; }
+  .tside { border: 3px solid var(--ink); border-radius: 14px; padding: 8px; display: flex; flex-direction: column; gap: 4px; background: var(--paper); min-width: 0; }
+  .tprop { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; color: var(--ink); font-weight: 700; }
+  .tprop span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tprop.money { border-top: 1.5px dashed color-mix(in srgb, var(--ink) 30%, transparent); padding-top: 3px; }
+  .tnone { color: var(--muted); font-size: 12px; }
+  .tarrow { font-family: var(--display); font-size: 24px; color: var(--pink); }
+  .tdiff { text-align: center; margin: 8px 0 0; color: var(--ink) !important; font-weight: 700; }
+  .treply { text-align: center; font-weight: 800; color: var(--ink) !important; background: color-mix(in srgb, var(--danger) 15%, var(--paper));
+    border: 2.5px solid var(--ink); border-radius: 12px; padding: 6px; animation: popIn .35s; }
+  .treply.ok { background: color-mix(in srgb, var(--mint) 40%, var(--paper)); }
+  @media (max-width: 520px) { .tcols { grid-template-columns: 1fr; } .au-bidders { gap: 6px; } .au-b { font-size: 11px; padding: 6px; } }
   @keyframes glow { to { box-shadow: 0 0 0 4px var(--yellow), 0 0 18px var(--yellow); } }
   .overlay { position: fixed; inset: 0; display: flex; align-items: safe center; justify-content: center; z-index: 20; overflow-y: auto;
     background: color-mix(in srgb, var(--ink) 45%, transparent);
@@ -285,6 +328,24 @@
   </div>
 </div>
 
+<div class="overlay hidden" id="auctionOv">
+  <div class="ocard auction">
+    <h1>🔨 競売</h1>
+    <div id="auShop" class="au-shop"></div>
+    <div class="au-price"><small>いまの価格</small><b id="auPrice"></b><span id="auHolder"></span></div>
+    <div id="auBidders" class="au-bidders"></div>
+    <p class="center" id="auMsg"></p>
+    <div id="auBtns" class="btns center-row"></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="tradeOv">
+  <div class="ocard trade">
+    <h1>🤝 交渉</h1>
+    <div id="tradeBody"></div>
+  </div>
+</div>
+
 <div class="overlay hidden" id="rules">
   <div class="ocard">
     <h1>ルール</h1>
@@ -299,8 +360,9 @@
       <li><b>休憩所</b>は1回休み。<b>宝くじ</b>はお金がもらえるかも。<b>ワープ</b>は反対の角へ飛ぶ。</li>
       <li><b>ゲームセンター</b>ではミニゲーム（スロット・ハイ＆ロー）にお金を賭けて遊べる。</li>
       <li><b>空き地</b>は200Gで買って建物を建てられる。<b>関所</b>はライバルが通るたびに通行料が上がり、<b>税務署</b>は止まったライバルから総資産の4%をもらえる。</li>
-      <li>自分の番の最初に、CPUと店の売り買いを<b>交渉</b>できる（1ターン1回）。CPUから交渉をもちかけられることもある。</li>
-      <li>所持金がマイナスになったら株や店を売って返す。店は銀行に価値の75%で売られ、他のプレイヤーでオークションになる。返せなくなったら<b>破産</b>でゲーム終了、総資産で順位を決める。</li>
+      <li>自分の番の最初に、ほかのプレイヤーに<b>交渉</b>をもちかけられる（1ターン1回）。お店を2軒まで出す・求めることができ、お金のやり取りも加えられる。CPUはめったに応じないが、空き店がなくなって2軒以上持つエリアもないと応じやすくなる。CPUから交渉が来たときは「はい／絶対しない／いいえ」で答える（絶対しないを選ぶとその人からは来なくなる）。</li>
+      <li>自分の番の最初に、お店を<b>競売</b>に出せる。売り出し価格はいまのお店の価値で、ほかのプレイヤーが順番に値段を上げていき、いちばん高い人が落札。入札の上限は「所持金＋株の価値」。入札がなければ銀行が売り出し価格で買い取る。どちらの場合もお金は売った人のものになる。</li>
+      <li>所持金がマイナスになったら、まず株を売って返す。株で足りなければお店を<b>強制競売</b>にかける。返せなくなったら<b>破産</b>でゲーム終了、総資産で順位を決める。</li>
       <li>総資産（所持金＋店の価値＋株の価値）が<b>目標金額</b>以上で銀行に着いたら優勝！</li>
       <li>毎ターン自動でセーブされるので、途中で閉じても「つづきから」遊べる。</li>
     </ul>
@@ -398,9 +460,9 @@ function resetBoard() {
 // ---------- state ----------
 const PLAYER_DEFS = [
   { name: 'あなた', color: '#3ba7ff', cpu: false },
-  { name: 'ミナ',   color: '#ff5fa2', cpu: true },
-  { name: 'ゴロウ', color: '#ffa62b', cpu: true },
-  { name: 'ルイ',   color: '#2fcf6f', cpu: true },
+  { name: 'ミナ',   color: '#ff5fa2', cpu: true, style: 'bold' },
+  { name: 'ゴロウ', color: '#ffa62b', cpu: true, style: 'steady' },
+  { name: 'ルイ',   color: '#2fcf6f', cpu: true, style: 'shy' },
 ];
 const START_CASH = 1500;
 let players = [], turn = 0, round = 1, over = true, target = 8000, gameId = 0;
@@ -1107,7 +1169,7 @@ async function takeTurn(p) {
         buttons: [
           { label: '🎲 サイコロをふる', value: 'roll', primary: true },
           { label: '株を売る', value: 'stock', disabled: !p.stocks.some(n => n > 0) },
-          { label: '店を売る', value: 'shop', disabled: !ownedProps(p).length },
+          { label: '競売に出す', value: 'shop', disabled: !ownedProps(p).length },
           { label: '交渉する', value: 'trade', disabled: traded },
         ],
       });
@@ -1334,101 +1396,129 @@ async function landPlot(p, c) {
   }
 }
 
-// ---- trading ----
-function transfer(s, from, to, amount) {
+// ---- trading: up to 2 properties each way plus money ----
+const propVal = list => list.reduce((a, s) => a + cells[s].value, 0);
+const chipOf = q => `<span class="chip" style="--pc:${q.color}">${q.name}</span>`;
+
+// how much a CPU values gaining (sign +1) or losing (sign -1) a property, given its other holdings
+// (n = shops the CPU would hold in that district together with this one; `away` are shops it is giving up)
+function cpuPropWorth(q, s, away) {
   const c = cells[s];
-  to.cash -= amount; from.cash += amount; c.owner = to.id;
-  Sound.play('buy'); cellPop(s); burstCell(s, 24);
-  log(`🤝 ${pname(from)}が${pname(to)}に${c.name}を <b>${fmt(amount)}</b> で売った`);
+  if (c.type !== 'shop') return c.value;
+  const total = DISTRICTS[c.d].shops.length;
+  const n = 1 + DISTRICTS[c.d].shops.filter(x => x !== s && cells[x].owner === q.id && !away.includes(x)).length;
+  return c.value * (1 + 0.45 * (n - 1) + (n === total ? 1 : 0));
+}
+// CPUs rarely trade, unless the board is settled (no vacant shops and no district where they hold 2+)
+function cpuAcceptsTrade(q, give, get, moneyIn, moneyOut) {
+  const gain = get.reduce((a, s) => a + cpuPropWorth(q, s, give), 0) + moneyIn
+             - give.reduce((a, s) => a + cpuPropWorth(q, s, []), 0) - moneyOut;
+  const involved = propVal(give) + propVal(get) + moneyIn + moneyOut || 1;
+  const settled = !vacant().length && !DISTRICTS.some((d, i) => ownedIn(q.id, i) >= 2);
+  if (q.cash - moneyOut < 100) return false;
+  if (settled) return gain > involved * 0.05;
+  return gain > involved * 0.7 && Math.random() < 0.5;
+}
+
+function tradeSheet(a, aShops, aMoney, b, bShops, bMoney) {
+  const side = (q, list, money) => `<div class="tside">${chipOf(q)}
+    ${list.map(s => `<div class="tprop"><span>${propLabel(s)}</span><b>${fmt(cells[s].value)}</b></div>`).join('') || '<div class="tnone">お店なし</div>'}
+    <div class="tprop money"><span>おかね</span><b>${fmt(money)}</b></div></div>`;
+  const diff = (propVal(bShops) + bMoney) - (propVal(aShops) + aMoney);
+  return `<div class="tsheet">${side(a, aShops, aMoney)}<div class="tarrow">⇄</div>${side(b, bShops, bMoney)}</div>
+    <p class="tdiff">差額 <b>${fmt(Math.abs(diff))}</b> ${diff > 0 ? `（${a.name}が得）` : diff < 0 ? `（${b.name}が得）` : ''}</p>`;
+}
+
+function executeTrade(a, aShops, aMoney, b, bShops, bMoney) {
+  aShops.forEach(s => { cells[s].owner = b.id; cellPop(s); burstCell(s, 16); });
+  bShops.forEach(s => { cells[s].owner = a.id; cellPop(s); burstCell(s, 16); });
+  a.cash += bMoney - aMoney; b.cash += aMoney - bMoney;
+  Sound.play('buy');
+  const desc = (list, m) => [...list.map(s => cells[s].name), ...(m ? [fmt(m)] : [])].join('・') || 'なし';
+  log(`🤝 交渉成立！ ${pname(a)}（${desc(aShops, aMoney)}）⇄ ${pname(b)}（${desc(bShops, bMoney)}）`);
   renderPanel();
 }
-// lowest price a CPU owner will sell for
-function cpuAskPrice(owner, s) {
-  const c = cells[s];
-  if (c.type === 'plot') return c.value * 1.4;
-  const n = ownedIn(owner.id, c.d), total = DISTRICTS[c.d].shops.length;
-  return c.value * (1.2 + 0.25 * (n - 1) + (n === total ? 1 : 0));
-}
-// highest price a CPU buyer will pay
-function cpuBidPrice(buyer, s) {
-  const c = cells[s];
-  if (c.type === 'plot') return c.value * 1.1;
-  return c.value * (0.9 + 0.25 * ownedIn(buyer.id, c.d));
-}
-const whim = () => 0.9 + Math.random() * 0.2;
 
-async function humanTrade(p) {
-  const kind = await ask({
-    title: '🤝 交渉',
-    body: 'CPUと店の売り買いを交渉できます（1ターンに1回）。CPUは自分のエリアを大事にするので、独占しているエリアの店は高くないと売ってくれません。',
-    buttons: [
-      { label: '店を買いたい', value: 'buy', primary: true },
-      { label: '店を売りたい', value: 'sell', disabled: !ownedProps(p).length },
-      { label: 'やめる', value: null },
-    ],
-  });
-  if (!kind) return false;
+// trade composer for the human: returns true if a proposal was sent
+function humanTrade(p) {
   const rivals = players.filter(q => q !== p && !q.bankrupt);
-  if (kind === 'buy') {
-    const cand = [...SHOPS, ...PLOTS].filter(s => cells[s].owner != null && cells[s].owner !== p.id && !players[cells[s].owner].bankrupt);
-    if (!cand.length || p.cash <= 0) {
-      await ask({ title: '🤝 交渉', body: '買える店がありません。', buttons: [{ label: 'OK', value: 1 }] });
-      return false;
-    }
-    const r = await pickerDialog({
-      title: '買いたい店と金額を選んでね',
-      body: `所持金 <b>${fmt(p.cash)}</b>`,
-      items: cand.map(s => ({ value: s, label: `<span style="color:${players[cells[s].owner].color}">●</span>${propLabel(s)}`, right: `価値 ${cells[s].value}G` })),
-      amountMax: s => Math.min(p.cash, cells[s].value * 3),
-      amountInit: s => Math.round(cells[s].value * 1.2 / 10) * 10,
-      amountLabel: (s, a) => `${fmt(a)} で提案`,
-      okLabel: '提案する',
-    });
-    if (!r) return false;
-    const o = players[cells[r.sel].owner];
-    log(`${pname(p)}が${pname(o)}に${cells[r.sel].name}を${fmt(r.amt)}で買いたいと提案`);
-    if (r.amt >= cpuAskPrice(o, r.sel) * whim()) { transfer(r.sel, o, p, r.amt); await toast(`${pname(o)}「いいよ、売るよ！」`, 1100); }
-    else { Sound.play('bad'); log(`${pname(o)}は断った`); await toast(`${pname(o)}「その値段じゃ売れないな…」`, 1100); }
-    return true;
-  }
-  const r = await pickerDialog({
-    title: '売りたい店と金額を選んでね',
-    body: '次に、売る相手を選びます。',
-    items: ownedProps(p).map(s => ({ value: s, label: propLabel(s), right: `価値 ${cells[s].value}G` })),
-    amountMax: s => cells[s].value * 3,
-    amountInit: s => cells[s].value,
-    amountLabel: (s, a) => `${fmt(a)} で提案`,
-    okLabel: '相手を選ぶ',
+  if (!rivals.length) return Promise.resolve(false);
+  const st = { partner: rivals[0], give: [], get: [], mGive: 0, mGet: 0 };
+  return new Promise(resolve => {
+    const ov = $('tradeOv');
+    const finish = v => { ov.classList.add('hidden'); resolve(v); };
+    const list = (owner, chosen, key) => {
+      const props = ownedProps(owner);
+      return props.length ? props.map(s => `<label class="opt"><input type="checkbox" data-k="${key}" value="${s}" ${chosen.includes(s) ? 'checked' : ''}
+        ${!chosen.includes(s) && chosen.length >= 2 ? 'disabled' : ''}>${propLabel(s)}<span class="r">${fmt(cells[s].value)}</span></label>`).join('')
+        : '<div class="tnone">お店なし</div>';
+    };
+    const money = (key, val, max) => `<div class="tmoney"><span>おかね <b>${fmt(val)}</b></span>
+      ${[-100, -10, 10, 100].map(d => `<button data-m="${key}" data-d="${d}" ${val + d < 0 || val + d > max ? 'disabled' : ''}>${d > 0 ? '+' : ''}${d}</button>`).join('')}</div>`;
+    const render = () => {
+      const q = st.partner;
+      $('tradeBody').innerHTML = `
+        <div class="tpartners">${rivals.map(r => `<button data-p="${r.id}" class="${r === q ? 'primary' : ''}">${r.name}</button>`).join('')}</div>
+        <div class="tcols">
+          <div class="tcol"><h3>あなたが出す（2軒まで）</h3><div class="opts">${list(p, st.give, 'give')}</div>${money('mGive', st.mGive, p.cash)}</div>
+          <div class="tcol"><h3>${q.name}に求める（2軒まで）</h3><div class="opts">${list(q, st.get, 'get')}</div>${money('mGet', st.mGet, q.cash)}</div>
+        </div>
+        ${tradeSheet(p, st.give, st.mGive, q, st.get, st.mGet)}
+        <div class="btns center-row"><button id="tSend" class="primary" ${st.give.length + st.get.length && !(st.mGive && st.mGet) ? '' : 'disabled'}>提案する</button><button id="tCancel">やめる</button></div>`;
+      const body = $('tradeBody');
+      body.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { st.partner = players[+b.dataset.p]; st.get = []; st.mGet = 0; Sound.play('click'); render(); });
+      body.querySelectorAll('input[data-k]').forEach(cb => cb.onchange = () => {
+        const arr = st[cb.dataset.k], v = +cb.value;
+        if (cb.checked) arr.push(v); else arr.splice(arr.indexOf(v), 1);
+        render();
+      });
+      body.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { st[b.dataset.m] += +b.dataset.d; Sound.play('click'); render(); });
+      $('tCancel').onclick = () => { Sound.play('click'); finish(false); };
+      $('tSend').onclick = async () => {
+        Sound.play('click');
+        const q = st.partner;
+        log(`${pname(p)}が${pname(q)}に交渉をもちかけた`);
+        if (cpuAcceptsTrade(q, st.get, st.give, st.mGive, st.mGet)) {
+          executeTrade(p, st.give, st.mGive, q, st.get, st.mGet);
+          $('tradeBody').insertAdjacentHTML('afterbegin', `<p class="treply ok">${chipOf(q)}「いいよ、交換しよう！」</p>`);
+        } else {
+          Sound.play('bad');
+          log(`${pname(q)}は交渉を断った`);
+          $('tradeBody').insertAdjacentHTML('afterbegin', `<p class="treply">${chipOf(q)}「うーん、やめておくよ」</p>`);
+        }
+        $('tSend').disabled = true; $('tCancel').textContent = 'とじる';
+        $('tCancel').onclick = () => finish(true);
+      };
+    };
+    render();
+    ov.classList.remove('hidden');
   });
-  if (!r) return false;
-  const q = await ask({
-    title: `${cells[r.sel].name}を ${fmt(r.amt)} で誰に売る？`,
-    buttons: rivals.map(q => ({ label: `${q.name}（所持金 ${fmt(q.cash)}）`, value: q.id })).concat([{ label: 'やめる', value: null }]),
-  });
-  if (q == null) return false;
-  const b = players[q];
-  log(`${pname(p)}が${pname(b)}に${cells[r.sel].name}を${fmt(r.amt)}で売りたいと提案`);
-  if (r.amt <= cpuBidPrice(b, r.sel) * whim() && b.cash - r.amt >= 200) { transfer(r.sel, p, b, r.amt); await toast(`${pname(b)}「買った！」`, 1100); }
-  else { Sound.play('bad'); log(`${pname(b)}は断った`); await toast(`${pname(b)}「今回はやめておくよ」`, 1100); }
-  return true;
 }
 
-// a CPU sometimes asks the human to sell a shop that helps its district
+// a CPU sometimes proposes a deal to the human: their shop for money, or a swap plus money
 async function cpuPropose(p) {
   const h = players.find(q => !q.cpu && !q.bankrupt);
-  if (!h || Math.random() > 0.2) return;
-  const cand = ownedShops(h).filter(s => ownedIn(p.id, cells[s].d) >= 1)
-    .sort((a, b) => ownedIn(p.id, cells[b].d) - ownedIn(p.id, cells[a].d));
-  if (!cand.length) return;
-  const s = cand[0], offer = Math.round(cells[s].value * (1.4 + Math.random() * 0.4) / 10) * 10;
-  if (p.cash - offer < 300) return;
-  const yes = await ask({
+  if (!h || (h.blockTrades || []).includes(p.id) || Math.random() > 0.2) return;
+  const want = ownedShops(h).filter(s => ownedIn(p.id, cells[s].d) >= 1)
+    .sort((a, b) => ownedIn(p.id, cells[b].d) - ownedIn(p.id, cells[a].d))[0];
+  if (want == null) return;
+  // offer one of our shops that helps the human's own districts, if any
+  const giveShop = ownedShops(p).filter(s => cells[s].d !== cells[want].d && ownedIn(h.id, cells[s].d) >= 1 && ownedIn(p.id, cells[s].d) === 1)[0];
+  const give = giveShop != null ? [giveShop] : [];
+  let money = Math.round((cells[want].value * (1.4 + Math.random() * 0.4) - propVal(give)) / 10) * 10;
+  money = Math.max(0, money);
+  if (p.cash - money < 300) return;
+  Sound.play('turn');
+  const ans = await ask({
     title: `🤝 ${p.name}から交渉`,
-    body: `「あなたの<b>${cells[s].name}</b>（${areaName(cells[s])}・価値 ${fmt(cells[s].value)}）を <b>${fmt(offer)}</b> で売ってくれない？」`,
-    buttons: [{ label: '売る', value: true }, { label: '断る', value: false, primary: true }],
+    body: `「この条件で交換しない？」${tradeSheet(p, give, money, h, [want], 0)}`,
+    buttons: [{ label: 'はい', value: 'yes' }, { label: '絶対しない', value: 'never' }, { label: 'いいえ', value: 'no', primary: true }],
   });
-  if (yes) transfer(s, h, p, offer);
-  else log(`${pname(h)}は${pname(p)}の交渉を断った`);
+  if (ans === 'yes') executeTrade(p, give, money, h, [want], 0);
+  else {
+    if (ans === 'never') (h.blockTrades = h.blockTrades || []).push(p.id);
+    log(`${pname(h)}は${pname(p)}の交渉を断った${ans === 'never' ? '（もう交渉しない）' : ''}`);
+  }
 }
 
 // ---- arcade mini games ----
@@ -1629,58 +1719,100 @@ async function humanSellStock(p) {
   if (r) trade(p, r.sel, -r.amt);
 }
 
-async function humanSellShop(p) {
+async function humanSellShop(p, forced = false) {
   const mine = ownedProps(p);
   if (!mine.length) return;
-  let sel = mine[0];
-  const ok = await ask({
-    title: '銀行に売る店を選んでね',
-    body: `店は価値の75%で銀行に売れます。売った店はオークションにかけられます。<div class="opts">${
-      mine.map((s, i) => `<label class="opt"><input type="radio" name="sh" value="${s}" ${i ? '' : 'checked'}>${propLabel(s)}<span class="r">+${fmt(Math.round(cells[s].value * 0.75))}</span></label>`).join('')}</div>`,
-    buttons: [{ label: '売る', value: true, primary: true }, { label: 'やめる', value: false }],
-    mount: card => card.querySelectorAll('input[name=sh]').forEach(r => r.onchange = () => sel = +r.value),
-  });
-  if (ok) await sellShop(p, sel);
+  const s = await chooseFrom(p, mine, forced ? '⚠️ 競売に出すお店をえらんでね（強制競売）' : '🔨 競売に出すお店をえらんでね',
+    s => `${propLabel(s)}<span class="r">売り出し ${fmt(cells[s].value)}</span>`, null, !forced);
+  if (s != null) await auction(s, p, forced);
 }
+const sellShop = (p, s) => auction(s, p, true);
 
-async function sellShop(p, s) {
-  const c = cells[s], got = Math.round(c.value * 0.75);
-  p.cash += got; c.owner = null;
-  log(`${pname(p)}が${c.name}を銀行に ${fmt(got)} で売った`);
-  renderPanel();
-  await auction(s, p.id);
-}
-
-async function auction(s, sellerId) {
-  const c = cells[s];
-  const bids = [];
-  for (const q of players) {
-    if (q.id === sellerId || q.bankrupt || q.cash < c.value) continue;
-    let bid = 0;
-    if (q.cpu) {
-      if (q.cash - c.value >= 300) bid = Math.min(q.cash - 200, Math.round(c.value * (1 + Math.random() * 0.3)));
-    } else {
-      bid = await ask({
-        title: `オークション：${c.name}`,
-        body: `${areaName(c)}・価値 <b>${fmt(c.value)}</b>。入札額を選んでね（いちばん高い人が落札）。<br>所持金 ${fmt(q.cash)}`,
-        buttons: [1, 1.15, 1.3, 1.5].map(m => Math.round(c.value * m)).map(v => ({ label: fmt(v), value: v, disabled: v > q.cash }))
-          .concat([{ label: 'パス', value: 0 }]),
-      });
-    }
-    if (bid >= c.value) bids.push({ q, bid });
+// English auction: starts at the shop's value, bidders raise in turn up to cash + stock value
+const AI_STYLE = {
+  bold:   { base: 1.55, step: () => [50, 100, 100][rand(3)] },
+  steady: { base: 1.3,  step: () => 100 },
+  shy:    { base: 1.1,  step: () => [10, 10, 50][rand(3)] },
+};
+const bidLimit = q => q.cash + stockWorth(q);
+function cpuAuctionBid(q, c, price, held) {
+  const st = AI_STYLE[q.style] || AI_STYLE.steady;
+  let mult = st.base;
+  if (c.type === 'shop') {
+    const n = ownedIn(q.id, c.d), total = DISTRICTS[c.d].shops.length;
+    mult += 0.3 * n + (n === total - 1 ? 0.8 : 0);
   }
-  bids.sort((a, b) => b.bid - a.bid);
-  if (!bids.length) {
+  const max = Math.min(bidLimit(q) - 50, c.value * mult * (0.95 + Math.random() * 0.1));
+  const next = held ? price + st.step() : price;
+  if (next <= max) return next;
+  return held && price + 10 <= max ? price + 10 : null;
+}
+
+async function auction(s, seller, forced = false) {
+  const c = cells[s], start = c.value;
+  const human = players.find(q => !q.cpu);
+  const watching = human && !DEMO;
+  const bidders = players.filter(q => q !== seller && !q.bankrupt).map(q => ({ q, out: false, said: '' }));
+  let price = start, holder = null;
+  log(`🔨 ${pname(seller)}が${c.name}を${forced ? '強制' : ''}競売に出した（売り出し ${fmt(start)}）`);
+
+  const render = (active = null) => {
+    $('auShop').innerHTML = `<div class="au-tile" style="--k:${c.type === 'shop' ? DISTRICTS[c.d].color : '#efeae0'}">${c.type === 'shop' ? DISTRICTS[c.d].key : '地'}</div>
+      <div><b>${propLabel(s)}</b><br><small>${areaName(c)} ・ 売り主 ${chipOf(seller)}${forced ? ' ・ 強制競売' : ''}</small><br>
+      <small>売り出し価格 ${fmt(start)}${c.type === 'shop' ? ` ・ いまの買い物料 ${fmt(fee(s))}` : ''}</small></div>`;
+    $('auPrice').textContent = fmt(price);
+    $('auHolder').innerHTML = holder ? `${chipOf(holder.q)} が最高額` : 'まだ入札なし';
+    $('auBidders').innerHTML = bidders.map(b => `<div class="au-b ${b.out ? 'out' : ''} ${b === active ? 'now' : ''} ${b === holder ? 'top' : ''}" style="--pc:${b.q.color}">
+      ${b.said ? `<span class="bubble">${b.said}</span>` : ''}
+      <span class="av"></span><b>${b.q.name}</b>
+      <div class="au-row"><span>おかね</span>${fmt(b.q.cash)}</div><div class="au-row"><span>株</span>${fmt(stockWorth(b.q))}</div>
+      <div class="au-row sum"><span>上限</span>${fmt(bidLimit(b.q))}</div>${b.out ? '<span class="x">×</span>' : ''}</div>`).join('');
+  };
+  if (watching) { $('auBtns').innerHTML = ''; $('auMsg').textContent = ''; render(); $('auctionOv').classList.remove('hidden'); await sleep(700); }
+
+  for (let i = 0; ; i++) {
+    if (!bidders.some(b => !b.out && b !== holder)) break;
+    const b = bidders[i % bidders.length];
+    if (b.out || b === holder) continue;
+    const min = holder ? price + 10 : price;
+    if (bidLimit(b.q) < min) { b.out = true; b.said = ''; if (watching) { render(); await sleep(300); } continue; }
+    if (watching) { $('auMsg').innerHTML = `${chipOf(b.q)} の番`; render(b); }
+    let bid;
+    if (b.q.cpu) { if (watching) await sleep(650); bid = cpuAuctionBid(b.q, c, price, !!holder); }
+    else bid = await humanAuctionBid(b.q, price, !!holder);
+    if (bid == null) { b.out = true; b.said = 'パス'; Sound.play('bad'); }
+    else { price = bid; holder = b; b.said = fmt(bid); Sound.play('coin'); }
+    if (watching) { render(); await sleep(250); }
+  }
+
+  if (holder) {
+    holder.q.cash -= price; c.owner = holder.q.id; seller.cash += price;
+    Sound.play('fanfare'); cellPop(s); burstCell(s, 30);
+    log(`🔨 ${pname(holder.q)}が${c.name}を <b>${fmt(price)}</b> で落札！（${pname(seller)}に ${fmt(price)}）`);
+    if (watching) $('auMsg').innerHTML = `🔨 ${chipOf(holder.q)} が <b>${fmt(price)}</b> で落札！`;
+  } else {
+    seller.cash += start; c.owner = null;
     if (c.type === 'plot') Object.assign(c, { building: null, cpFee: 0 });
-    log(`${c.name}のオークションは入札なし。空き${c.type === 'plot' ? '地' : '店'}になった`);
-    return;
+    Sound.play('land');
+    log(`🔨 入札なし。銀行が${c.name}を ${fmt(start)} で買い取った`);
+    if (watching) $('auMsg').innerHTML = `入札なし。銀行が <b>${fmt(start)}</b> で買い取りました`;
   }
-  const { q, bid } = bids[0];
-  q.cash -= bid; c.owner = q.id;
-  Sound.play('buy'); cellPop(s); burstCell(s, 24);
-  log(`🔨 ${pname(q)}が${c.name}を <b>${fmt(bid)}</b> で落札`);
   renderPanel();
-  await toast(`🔨 ${pname(q)}が${c.name}を<br><b>${fmt(bid)}</b> で落札`, 1000);
+  if (watching) {
+    render();
+    if (seller.cpu && (!human || !bidders.some(b => b.q === human))) await sleep(1600);
+    else await new Promise(res => { $('auBtns').innerHTML = '<button class="primary">OK</button>'; $('auBtns').firstChild.onclick = () => { Sound.play('click'); res(); }; });
+    $('auctionOv').classList.add('hidden');
+  }
+}
+
+function humanAuctionBid(q, price, held) {
+  const lim = bidLimit(q);
+  const opts = held ? [10, 50, 100].map(d => price + d) : [price, price + 50, price + 100];
+  return new Promise(res => {
+    $('auBtns').innerHTML = opts.map(v => `<button data-v="${v}" ${v > lim ? 'disabled' : ''}>${fmt(v)}</button>`).join('') + '<button data-v="">降りる</button>';
+    $('auBtns').querySelectorAll('button').forEach(b => b.onclick = () => { Sound.play('click'); $('auBtns').innerHTML = ''; res(b.dataset.v ? +b.dataset.v : null); });
+  });
 }
 
 async function settleDebt(p) {
@@ -1699,14 +1831,11 @@ async function settleDebt(p) {
     }
     const a = await ask({
       title: '⚠️ 所持金がマイナスです',
-      body: `所持金 <b style="color:var(--danger)">${fmt(p.cash)}</b>。株や店を売ってプラスにもどしてください。`,
-      buttons: [
-        { label: '株を売る', value: 'stock', disabled: !hasStock },
-        { label: '店を売る', value: 'shop', disabled: !shops.length },
-      ],
+      body: `所持金 <b style="color:var(--danger)">${fmt(p.cash)}</b>。${hasStock ? 'まず株を売ってプラスにもどしてください。' : '株がないので、お店を競売に出してください（強制競売）。'}`,
+      buttons: hasStock ? [{ label: '株を売る', value: 'stock', primary: true }] : [{ label: 'お店を競売に出す', value: 'shop', primary: true }],
     });
     if (a === 'stock') await humanSellStock(p);
-    else await humanSellShop(p);
+    else await humanSellShop(p, true);
     renderPanel();
   }
 }
