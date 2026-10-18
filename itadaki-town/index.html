@@ -135,12 +135,41 @@
   .slotmsg { text-align: center; color: var(--ink); font-weight: 800; }
   .bigcard { display: inline-block; min-width: 46px; padding: 4px 8px; margin: 4px; border-radius: 10px; background: var(--paper); color: var(--ink);
     border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); font-family: var(--display); font-size: 26px; text-align: center; animation: flip .45s ease-out; }
-  .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 20; overflow-y: auto;
+  .tools .wide { grid-column: 1 / -1; }
+  .ocard.chance { max-width: 520px; padding: 18px 18px 14px; }
+  .ocard.chance h1 { font-size: 22px; }
+  #chanceMsg { margin: 2px 0 8px; font-weight: 700; color: var(--ink); }
+  .cgrid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; perspective: 700px; width: min(100%, 56vh); margin-inline: auto; }
+  .panel, .panel:hover:not(:disabled), .panel:active:not(:disabled), .panel:disabled {
+    position: relative; aspect-ratio: 1; padding: 0; border: none; background: none; box-shadow: none; transform: none; opacity: 1; }
+  .panel:not(:disabled) { cursor: pointer; }
+  .panel .in { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .55s cubic-bezier(.3, 1.5, .5, 1); }
+  .panel.open .in { transform: rotateY(180deg); }
+  .panel .f, .panel .b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border: 2.5px solid var(--ink);
+    border-radius: 9px; backface-visibility: hidden; -webkit-backface-visibility: hidden; font-family: var(--display); }
+  .panel .f { background: repeating-linear-gradient(45deg, #ff7ab8 0 5px, #ff5fa2 5px 10px); color: #fff; font-size: clamp(12px, 3.6vw, 20px);
+    -webkit-text-stroke: 1px var(--ink); box-shadow: 0 3px 0 var(--ink); transition: transform .12s; }
+  .panel:not(:disabled):hover .f { transform: translateY(-3px); }
+  .panel .b { transform: rotateY(180deg); background: var(--k); color: var(--ink); font-size: clamp(11px, 3.2vw, 17px); }
+  .panel .b i { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); border: 1.5px solid var(--ink); }
+  .panel.aim .f { outline: 4px solid var(--yellow); outline-offset: 1px; animation: bump .45s ease-in-out infinite; }
+  .panel.line .b { animation: glow .5s ease-in-out infinite alternate; }
+  .bonus { margin-top: 10px; text-align: center; font-family: var(--display); font-size: 20px; color: var(--pink);
+    -webkit-text-stroke: 1px var(--ink); animation: bump .5s cubic-bezier(.2, 1.6, .4, 1); }
+  .ccard { display: flex; gap: 12px; align-items: center; margin-top: 10px; padding: 10px 12px; border: 3px solid var(--ink); border-radius: 16px;
+    background: var(--k); box-shadow: 4px 4px 0 var(--ink); animation: popIn .4s cubic-bezier(.2, 1.5, .4, 1); }
+  .ccard[hidden], .bonus[hidden] { display: none; }
+  .ccard .no { font-family: var(--display); font-size: 24px; min-width: 54px; text-align: center; background: var(--paper);
+    border: 2.5px solid var(--ink); border-radius: 10px; padding: 2px 4px; }
+  .ccard .tx { font-weight: 800; font-size: 16px; color: var(--ink); line-height: 1.5; }
+  .ccard small { display: block; font-size: 11px; color: var(--muted); }
+  @keyframes glow { to { box-shadow: 0 0 0 4px var(--yellow), 0 0 18px var(--yellow); } }
+  .overlay { position: fixed; inset: 0; display: flex; align-items: safe center; justify-content: center; z-index: 20; overflow-y: auto;
     background: color-mix(in srgb, var(--ink) 45%, transparent);
     padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(16px, env(safe-area-inset-left, 0px)); }
   .overlay.hidden { display: none; }
   .ocard { position: relative; background: var(--paper); border: 3px solid var(--ink); border-radius: 26px; box-shadow: 8px 8px 0 var(--ink);
-    padding: 24px 26px; max-width: 560px; width: 100%; margin: 16px 0; line-height: 1.75; animation: popIn .5s cubic-bezier(.2, 1.5, .4, 1); }
+    padding: 24px 26px; max-width: 560px; width: 100%; margin: auto 0; line-height: 1.75; animation: popIn .5s cubic-bezier(.2, 1.5, .4, 1); }
   .ocard h1 { font-family: var(--display); font-weight: 400; font-size: 28px; margin: 0 0 4px; text-align: center; text-wrap: balance; }
   .ocard p, .ocard li { color: var(--muted); }
   .ocard li b { color: var(--ink); }
@@ -207,6 +236,7 @@
       <button id="bgmBtn">🎵 BGM ON</button>
       <button id="speedBtn">CPU速度: ふつう</button>
       <button id="rulesBtn">ルール</button>
+      <button id="chanceBtn" class="wide">🎴 チャンスボードを見る</button>
     </div>
   </aside>
 </div>
@@ -244,6 +274,17 @@
   </div>
 </div>
 
+<div class="overlay hidden" id="chanceOv">
+  <div class="ocard chance">
+    <h1>🎴 チャンスカード</h1>
+    <p class="center" id="chanceMsg"></p>
+    <div id="chanceGrid" class="cgrid"></div>
+    <div id="chanceBonus" class="bonus" hidden></div>
+    <div id="chanceCard" class="ccard" hidden></div>
+    <p class="center"><button id="chanceOk" class="primary" hidden>OK</button></p>
+  </div>
+</div>
+
 <div class="overlay hidden" id="rules">
   <div class="ocard">
     <h1>ルール</h1>
@@ -254,7 +295,8 @@
       <li><b>自分の店</b>に止まると、そのエリアの自分の店に<b>増資</b>できる。増資すると店の価値と買い物料が上がり、エリアの株価も上がる。増資の上限はエリアの持ち店数で決まる。</li>
       <li><b>株</b>は銀行か株屋で買える（1回99株まで）。売るのは自分の番の最初ならいつでもOK。10株以上の売買で株価が少し動く。そのエリアで買い物料がはらわれるたびに、株主に<b>配当</b>が入る。</li>
       <li>♠♥♦♣ の4つの<b>スート</b>を集めて銀行を通ると<b>昇進</b>し、給料（基本給＋店の価値の10%）がもらえる。</li>
-      <li><b>チャンス</b>マスではカードを引く。<b>休憩所</b>は1回休み。<b>宝くじ</b>はお金がもらえるかも。<b>ワープ</b>は反対の角へ飛ぶ。</li>
+      <li><b>チャンス</b>マスでは、8×8のチャンスボードからカードを1枚えらんでめくる（カードは100種類）。めくったカードがたて・よこ・ななめに<b>4枚以上</b>ならぶとボーナス、端から端まで8枚ならぶと<b>1,500G</b>！</li>
+      <li><b>休憩所</b>は1回休み。<b>宝くじ</b>はお金がもらえるかも。<b>ワープ</b>は反対の角へ飛ぶ。</li>
       <li><b>ゲームセンター</b>ではミニゲーム（スロット・ハイ＆ロー）にお金を賭けて遊べる。</li>
       <li><b>空き地</b>は200Gで買って建物を建てられる。<b>関所</b>はライバルが通るたびに通行料が上がり、<b>税務署</b>は止まったライバルから総資産の4%をもらえる。</li>
       <li>自分の番の最初に、CPUと店の売り買いを<b>交渉</b>できる（1ターン1回）。CPUから交渉をもちかけられることもある。</li>
@@ -347,7 +389,8 @@ const BUILDINGS = {
   tax: { label: '税務署', desc: '止まったライバルは総資産の4%を持ち主にはらう。' },
 };
 function resetBoard() {
-  for (const s of SHOPS) Object.assign(cells[s], { owner: null, value: cells[s].base });
+  for (const s of SHOPS) Object.assign(cells[s], { owner: null, value: cells[s].base, closedUntil: null });
+  feeDay = null;
   for (const s of PLOTS) Object.assign(cells[s], { owner: null, value: PLOT_PRICE, building: null, cpFee: 0 });
   DISTRICTS.forEach(d => d.mod = 1);
 }
@@ -361,7 +404,7 @@ const PLAYER_DEFS = [
 ];
 const START_CASH = 1500;
 let players = [], turn = 0, round = 1, over = true, target = 8000, gameId = 0;
-let current = null, highlight = [], selected = null, dice = null, pick = null;
+let current = null, highlight = [], selected = null, dice = null, pick = null, feeDay = null;
 let speed = DEMO ? 0.01 : 1;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms * speed));
@@ -380,9 +423,8 @@ function feeRate(s) {
 }
 function fee(s) {
   const c = cells[s];
-  if (c.owner == null) return 0;
-  const f = Math.round(c.value * feeRate(s));
-  return players[c.owner].feeDouble ? f * 2 : f;
+  if (c.owner == null || c.closedUntil != null) return 0;
+  return Math.round(c.value * feeRate(s) * (players[c.owner].feeDouble || 1) * (feeDay ? feeDay.mult : 1));
 }
 function maxValue(s) {
   const c = cells[s];
@@ -667,6 +709,13 @@ function drawTile(c, now) {
     const label = TILE_LABEL[c.type];
     ctx.font = font(400, cs * (label.length > 2 ? 0.17 : 0.3), DISPLAY_FONT);
     ctx.fillText(label, 0, 2);
+  }
+  if (c.closedUntil != null && owned) {
+    ctx.rotate(-0.35);
+    ctx.fillStyle = '#ff3d63'; rr(-w * 0.52, -cs * 0.12, w * 1.04, cs * 0.24, 6); ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = font(400, cs * 0.16, DISPLAY_FONT);
+    ctx.fillText('休業', 0, 1);
   }
   ctx.restore();
 }
@@ -1001,6 +1050,7 @@ function newGame(t) {
     stocks: DISTRICTS.map(() => 0), skip: false, feeDouble: false, freeFee: false, bankrupt: false,
   }));
   turn = 0; round = 1;
+  newChanceBoard();
   startLoop();
 }
 
@@ -1034,7 +1084,9 @@ async function gameLoop(id) {
 
 async function takeTurn(p) {
   current = p; dice = null;
-  p.feeDouble = false;
+  p.feeDouble = 0;
+  SHOPS.forEach(s => { if (cells[s].closedUntil === p.id) cells[s].closedUntil = null; });
+  if (feeDay && feeDay.until === p.id) { feeDay = null; log('買い物料がふつうにもどった'); }
   renderPanel();
   await sleep(300);
   if (p.skip) {
@@ -1227,9 +1279,11 @@ async function landShop(p, c) {
   } else {
     const o = players[c.owner];
     let f = fee(c.id);
-    if (p.freeFee) { p.freeFee = false; f = 0; log(`${pname(p)}は無料券を使った！`); }
+    if (c.closedUntil != null) log(`${c.name}は休業中なので買い物料なし！`);
+    if (p.feeTwice && f > 0) { p.feeTwice = false; f *= 2; log(`${pname(p)}は買い物料が2倍…`); }
+    if (p.freeFee && f > 0) { p.freeFee = false; f = 0; log(`${pname(p)}は無料券を使った！`); }
     p.cash -= f; o.cash += f;
-    Sound.play('pay');
+    Sound.play(f > 0 ? 'pay' : 'coin');
     log(`${pname(p)}が${pname(o)}の${c.name}で買い物料 <b>${fmt(f)}</b>`);
     renderPanel();
     await toast(`${pname(o)}の${c.name}<br>買い物料 <b>${fmt(f)}</b>`, 900);
@@ -1474,8 +1528,8 @@ function saveGame() {
   if (DEMO) return;
   const data = {
     target, turn, round, players,
-    props: [...SHOPS, ...PLOTS].map(s => { const c = cells[s]; return [s, c.owner, c.value, c.building || null, c.cpFee || 0]; }),
-    mods: DISTRICTS.map(d => d.mod),
+    props: [...SHOPS, ...PLOTS].map(s => { const c = cells[s]; return [s, c.owner, c.value, c.building || null, c.cpFee || 0, c.closedUntil ?? null]; }),
+    mods: DISTRICTS.map(d => d.mod), chance, feeDay,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
 }
@@ -1489,8 +1543,10 @@ function resumeGame() {
   if (!sv) return;
   resetBoard();
   ({ target, turn, round, players } = sv);
-  sv.props.forEach(([id, owner, value, building, cpFee]) => Object.assign(cells[id], { owner, value, building, cpFee }));
+  sv.props.forEach(([id, owner, value, building, cpFee, closedUntil = null]) => Object.assign(cells[id], { owner, value, building, cpFee, closedUntil }));
   DISTRICTS.forEach((d, i) => d.mod = sv.mods[i]);
+  feeDay = sv.feeDay || null;
+  if (sv.chance) chance = sv.chance; else newChanceBoard();
   startLoop();
 }
 function refreshResume() {
@@ -1516,8 +1572,8 @@ function invest(p, s, amt) {
   renderPanel();
 }
 
-function trade(p, d, qty) {
-  const pr = price(d), D = DISTRICTS[d];
+function trade(p, d, qty, mult = 1) {
+  const pr = qty > 0 ? buyPrice(d, mult) : price(d), D = DISTRICTS[d];
   p.stocks[d] += qty;
   Sound.play('coin');
   p.cash -= qty * pr;
@@ -1543,18 +1599,19 @@ async function humanInvest(p, shopIds, title) {
   return true;
 }
 
-async function humanBuyStock(p, title) {
+const buyPrice = (d, mult = 1) => Math.max(1, Math.round(price(d) * mult));
+async function humanBuyStock(p, title, mult = 1) {
   if (p.cash < 1) return false;
   const r = await pickerDialog({
     title,
     body: `所持金 <b>${fmt(p.cash)}</b>`,
-    items: DISTRICTS.map((d, i) => ({ value: i, label: `<span class="tag" style="background:${d.color}">${d.key}</span>${d.name}`, right: `${price(i)}G ・ ${p.stocks[i]}株` })),
-    amountMax: d => Math.min(99, Math.floor(p.cash / price(d))),
-    amountLabel: (d, a) => `${a}株 = ${fmt(a * price(d))}`,
+    items: DISTRICTS.map((d, i) => ({ value: i, label: `<span class="tag" style="background:${d.color}">${d.key}</span>${d.name}`, right: `${buyPrice(i, mult)}G ・ ${p.stocks[i]}株` })),
+    amountMax: d => Math.min(99, Math.floor(p.cash / buyPrice(d, mult))),
+    amountLabel: (d, a) => `${a}株 = ${fmt(a * buyPrice(d, mult))}`,
     okLabel: '買う', step: 1,
   });
   if (!r) return false;
-  trade(p, r.sel, r.amt);
+  trade(p, r.sel, r.amt, mult);
   return true;
 }
 
@@ -1661,42 +1718,455 @@ function bankrupt(p) {
 }
 
 // ---- chance cards ----
+// ---- chance board: 8x8 face-down cards shared by everyone ----
 const others = p => players.filter(q => q !== p && !q.bankrupt);
-const CARDS = [
-  { t: '銀行から 200G もらう', f: p => { p.cash += 200; } },
-  { t: '大もうけ！ 銀行から 500G もらう', f: p => { p.cash += 500; } },
-  { t: '全員から 50G ずつもらう', f: p => others(p).forEach(q => { q.cash -= 50; p.cash += 50; }) },
-  { t: '全員に 50G ずつくばる', f: p => others(p).forEach(q => { q.cash += 50; p.cash -= 50; }) },
-  { t: '持っている店1軒につき 40G もらう', f: p => { p.cash += ownedShops(p).length * 40; } },
-  { t: '店の修理代：持っている店1軒につき 30G はらう', f: p => { p.cash -= ownedShops(p).length * 30; } },
-  { t: '所持金の 10% を寄付する', f: p => { p.cash -= Math.max(0, Math.round(p.cash * 0.1)); } },
-  { t: 'ワイルドスートをもらう（どのスートの代わりにもなる）', f: p => { p.wild++; } },
-  { t: '足りないスートを1つもらう', f: p => { const m = missingSuits(p); if (m.length) p.suits[m[rand(m.length)]] = true; else p.cash += 100; } },
-  { t: '銀行へワープ！', f: async p => { p.pos = BANK; p.prev = null; renderPanel(); await sleep(300); await bankVisit(p, true); } },
-  { t: 'もう一度サイコロをふる', f: async p => { await rollAndMove(p); } },
-  { t: '次の自分の番まで、自分の店の買い物料が2倍', f: p => { p.feeDouble = true; } },
-  { t: '次にはらう買い物料が1回タダになる', f: p => { p.freeFee = true; } },
-  { t: 'ランダムなエリアの株価が 20% アップ', f: p => { const d = rand(DISTRICTS.length); DISTRICTS[d].mod *= 1.2; log(`${DISTRICTS[d].name}の株価が上がった`); } },
-  { t: 'ランダムなエリアの株価が 20% ダウン', f: p => { const d = rand(DISTRICTS.length); DISTRICTS[d].mod *= 0.8; log(`${DISTRICTS[d].name}の株価が下がった`); } },
-  { t: '自分の店1軒にタダで増資（最大150G）', f: p => {
-    const c = ownedShops(p).filter(s => room(s) > 0);
-    if (!c.length) { p.cash += 100; return; }
-    const s = c[rand(c.length)], a = Math.min(150, room(s));
-    cells[s].value += a;
-    log(`${cells[s].name}の価値が ${fmt(a)} 上がった`);
-  } },
-  { t: '1回休み', f: p => { p.skip = true; } },
-];
+const richest = p => others(p).sort((a, b) => b.cash - a.cash)[0];
+const poorest = p => others(p).sort((a, b) => a.cash - b.cash)[0];
+const vacant = () => SHOPS.filter(s => cells[s].owner == null);
+const rivalShops = p => SHOPS.filter(s => cells[s].owner != null && cells[s].owner !== p.id && !players[cells[s].owner].bankrupt);
+const salary = p => Math.round(300 + p.level * 100 + shopWorth(p) * 0.1);
+const shopLabel = s => {
+  const c = cells[s], o = c.owner != null ? `<span class="chip" style="--pc:${players[c.owner].color}">${players[c.owner].name[0]}</span>` : '';
+  return `${o}${propLabel(s)}<span class="r">価値 ${c.value}G${c.owner != null ? ` ・ 料 ${fee(s)}G` : ''}</span>`;
+};
 
-async function drawChance(p) {
-  const card = CARDS[rand(CARDS.length)];
+async function rollDie() {
+  dice = { n: 1, rolling: true };
+  Sound.play('dice');
+  await sleep(650);
+  const n = 1 + rand(6);
+  dice = { n, t0: performance.now() };
+  Sound.play('land');
+  log(`サイコロの目は <b>${n}</b>`);
+  await sleep(450);
+  return n;
+}
+
+async function warpTo(p, id) {
+  if (id == null) return;
+  Sound.play('warp');
+  p.anim = { from: p.pos, to: id, t0: performance.now(), dur: 700 * speed, warp: true };
+  p.pos = id; p.prev = null; selected = id;
+  renderPanel();
+  await sleep(750);
+  const c = cells[id];
+  if (c.type === 'suit' && !p.suits[c.suit]) {
+    p.suits[c.suit] = true;
+    Sound.play('card');
+    log(`${pname(p)}が ${SUITS[c.suit]} を手に入れた`);
+  }
+  if (c.type === 'bank') await bankVisit(p, true);
+  else await land(p);
+}
+
+async function gather(p, id) {
+  for (const q of players) {
+    if (q.bankrupt || q.pos === id) continue;
+    q.anim = { from: q.pos, to: id, t0: performance.now(), dur: 700 * speed, warp: true };
+    q.pos = id; q.prev = null;
+  }
+  Sound.play('warp');
+  renderPanel();
+  await sleep(800);
+}
+
+async function stepMore(p, n) {
+  dice = { n, left: n, t0: performance.now() };
+  await move(p, n);
+  if (!over) await land(p);
+}
+
+// let the player tap a square on the board (CPU uses cpuPick)
+function pickCell(p, cand, title, cpuPick) {
+  if (!cand.length) return Promise.resolve(null);
+  if (p.cpu) return Promise.resolve(cpuPick ? cpuPick(cand, p) : cand[rand(cand.length)]);
+  highlight = cand;
+  if (window.innerWidth <= 860) cv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  return new Promise(res => {
+    const done = v => { pick = null; highlight = []; closeDialog(); res(v); };
+    pick = { opts: cand, done };
+    showDialog({
+      title, body: '光っているマスをタップしてね。',
+      buttons: cand.length <= 6 ? cand.map(id => ({ label: cellName(id), value: id })) : [],
+    }, done);
+  });
+}
+
+// choose one item from a list (radio list for the player, cpuPick for CPU); allowSkip adds a "やめる" button
+async function chooseFrom(p, list, title, label, cpuPick, allowSkip = false) {
+  if (!list.length) return null;
+  if (p.cpu) return cpuPick ? cpuPick([...list]) : list[rand(list.length)];
+  let sel = list[0];
+  const ok = await ask({
+    title,
+    body: `<div class="opts">${list.map((s, i) => `<label class="opt"><input type="radio" name="cf" value="${s}" ${i ? '' : 'checked'}>${label(s)}</label>`).join('')}</div>`,
+    buttons: [{ label: '決定', value: true, primary: true }, ...(allowSkip ? [{ label: 'やめる', value: false }] : [])],
+    mount: card => card.querySelectorAll('input[name=cf]').forEach(r => r.onchange = () => sel = +r.value),
+  });
+  return ok ? sel : null;
+}
+
+function scaleShop(s, m) {
+  const c = cells[s];
+  c.value = Math.max(Math.round(c.base * 0.5), Math.round(c.value * m));
+  cellPop(s);
+}
+function scaleArea(d, m) {
+  const before = price(d);
+  DISTRICTS[d].shops.forEach(s => scaleShop(s, m));
+  log(`${DISTRICTS[d].name}の店の価値が${m > 1 ? '上がった' : '下がった'}（株価 ${before}→${price(d)}G）`);
+}
+async function boostShop(p, m) {
+  const mine = ownedShops(p);
+  if (!mine.length) { p.cash += 100; log('お店がないので代わりに100G'); return; }
+  const s = await chooseFrom(p, mine, '価値を上げるお店をえらんでね', shopLabel, l => l.sort((a, b) => cells[b].value - cells[a].value)[0]);
+  const before = cells[s].value;
+  scaleShop(s, m);
+  Sound.play('buy');
+  log(`${cells[s].name}の価値が ${before}→${cells[s].value}G`);
+}
+async function freeInvest(p, amt) {
+  const mine = ownedShops(p);
+  if (!mine.length) { p.cash += amt; log(`お店がないので代わりに${fmt(amt)}`); return; }
+  const s = await chooseFrom(p, mine, `${fmt(amt)}をタダで増資するお店をえらんでね`, shopLabel,
+    l => l.sort((a, b) => ownedIn(p.id, cells[b].d) - ownedIn(p.id, cells[a].d))[0]);
+  cells[s].value += amt;
+  cellPop(s); Sound.play('buy');
+  log(`${cells[s].name}にタダで ${fmt(amt)} 増資！`);
+}
+function swapShops(p) {
+  const mine = ownedShops(p), theirs = rivalShops(p);
+  if (!mine.length || !theirs.length) { p.cash += 100; log('交換できる店がないので代わりに100G'); return; }
+  const a = mine[rand(mine.length)], b = theirs[rand(theirs.length)], o = cells[b].owner;
+  cells[a].owner = o; cells[b].owner = p.id;
+  cellPop(a); cellPop(b); Sound.play('warp');
+  log(`🔄 ${pname(p)}の${cells[a].name}と${pname(players[o])}の${cells[b].name}を交換！`);
+}
+function closeShop(s, until) {
+  cells[s].closedUntil = until;
+  cellPop(s);
+}
+const discountStock = (p, m) => p.cpu ? cpuBuyStock(p, true, m) : humanBuyStock(p, `${Math.round((1 - m) * 100)}%引きで買う株をえらんでね`, m);
+function giftStock(p, d, n) {
+  p.stocks[d] += n;
+  Sound.play('coin');
+  log(`${pname(p)}が${DISTRICTS[d].name}の株を ${n}株 もらった`);
+}
+function moveStock(d, m, quiet = false) {
+  const before = price(d);
+  DISTRICTS[d].mod *= m;
+  if (!quiet) log(`${DISTRICTS[d].name}の株価が ${before}→${price(d)}G`);
+}
+async function instantPromote(p) {
+  const pay = salary(p);
+  p.level++; p.cash += pay;
+  Sound.play('fanfare'); burstCell(p.pos, 50, 1.1);
+  log(`🎉 ${pname(p)}がレベル${p.level}に昇進！ 給料 <b>${fmt(pay)}</b>`);
+}
+async function coinFlip(p) {
+  const bet = Math.floor(p.cash / 2);
+  if (bet <= 0) { log('賭けるお金がない…'); return; }
+  const yes = p.cpu ? Math.random() < 0.5 : await ask({
+    title: '🪙 コイン投げ勝負', body: `<b>${fmt(bet)}</b> を賭けて、表が出れば倍もらえます。`,
+    buttons: [{ label: '勝負する', value: true, primary: true }, { label: 'やめる', value: false }],
+  });
+  if (!yes) { log(`${pname(p)}は勝負しなかった`); return; }
+  const win = Math.random() < 0.5;
+  p.cash += win ? bet : -bet;
+  Sound.play(win ? 'fanfare' : 'bad');
+  log(`🪙 ${win ? '表！' : '裏…'} ${pname(p)}は ${fmt(bet)} ${win ? 'もうけた' : '失った'}`);
+  await toast(`🪙 ${win ? '表！' : '裏…'}<br>${win ? '+' : '−'}${fmt(bet)}`, 1000);
+}
+const cpuWarpPick = (l, p) => l.find(id => cells[id].type === 'shop' && cells[id].owner == null && cells[id].value <= p.cash - 100)
+  ?? l.find(id => cells[id].type === 'shop' && cells[id].owner === p.id) ?? BANK;
+
+const C = (k, t, f) => ({ k, t, f });
+const CARDS = [
+  // move
+  C('move', 'もう一回サイコロをふれる！', p => rollAndMove(p)),
+  C('move', 'あと1マス進む！', p => stepMore(p, 1)),
+  C('move', 'あと2マス進む！', p => stepMore(p, 2)),
+  C('move', 'あと3マス進む！', p => stepMore(p, 3)),
+  C('move', '好きな数（1〜6）だけ進める！', async p => stepMore(p, p.cpu ? 1 + rand(6) :
+    await ask({ title: '何マス進む？', buttons: [1, 2, 3, 4, 5, 6].map(n => ({ label: `${n}マス`, value: n })) }))),
+  C('move', '銀行へワープ！', p => warpTo(p, BANK)),
+  C('move', '好きなマスへワープ！（チャンス以外）', async p =>
+    warpTo(p, await pickCell(p, cells.filter(c => c.type !== 'chance' && c.id !== p.pos).map(c => c.id), 'ワープ先をえらんでね', cpuWarpPick))),
+  C('move', '好きな空き店へワープ！', async p => {
+    const v = vacant();
+    return warpTo(p, v.length ? await pickCell(p, v, 'ワープする空き店をえらんでね', l => l.sort((a, b) => cells[a].value - cells[b].value)[0]) : BANK);
+  }),
+  C('move', '自分のお店へワープ！', async p => {
+    const m = ownedShops(p);
+    return warpTo(p, m.length ? await pickCell(p, m, 'ワープするお店をえらんでね') : BANK);
+  }),
+  C('move', 'いちばんお金持ちのところへワープ！', p => warpTo(p, richest(p) ? richest(p).pos : BANK)),
+  C('move', 'まだ持っていないスートのマスへワープ！', p => {
+    const m = SUIT_CELLS.filter(id => !p.suits[cells[id].suit]);
+    return warpTo(p, m.length ? m[rand(m.length)] : BANK);
+  }),
+  C('move', 'パーティー！全員が自分のところに集合！', p => gather(p, p.pos)),
+  C('move', '全員、銀行に集合！', p => gather(p, BANK)),
+  C('move', 'どこかへランダムワープ！', p => {
+    const c = cells.filter(c => c.type !== 'chance' && c.id !== p.pos);
+    return warpTo(p, c[rand(c.length)].id);
+  }),
+  // money in
+  ...[50, 100, 200, 300, 500].map(n => C('gain', `銀行から ${n}G もらえる！`, p => { p.cash += n; })),
+  ...[20, 50, 100].map(n => C('gain', `全員から ${n}G ずつもらえる！`, p => others(p).forEach(q => { q.cash -= n; p.cash += n; }))),
+  C('gain', 'いちばんお金持ちから 200G もらえる！', p => { const r = richest(p); if (r) { r.cash -= 200; p.cash += 200; } }),
+  C('gain', '所持金の10%がもらえる！', p => { p.cash += Math.max(0, Math.round(p.cash * 0.1)); }),
+  C('gain', 'ボーナス！総資産の5%がもらえる！', p => { p.cash += Math.max(0, Math.round(worth(p) * 0.05)); }),
+  C('gain', '臨時給料！給料の半分がもらえる！', p => { p.cash += Math.round(salary(p) / 2); }),
+  C('gain', '持っている店1軒につき 30G もらえる！', p => { p.cash += ownedProps(p).length * 30; }),
+  C('gain', '持っている店1軒につき 50G もらえる！', p => { p.cash += ownedProps(p).length * 50; }),
+  C('gain', '株主優待！持ち株1株につき 1G もらえる！', p => { p.cash += p.stocks.reduce((a, n) => a + n, 0); }),
+  C('gain', 'いただきチャンス！サイコロの目 × 100G もらえる！', async p => { p.cash += (await rollDie()) * 100; }),
+  C('gain', 'サイコロの目 × 20G を全員からもらえる！', async p => {
+    const n = (await rollDie()) * 20;
+    others(p).forEach(q => { q.cash -= n; p.cash += n; });
+  }),
+  C('gain', '宝くじ！0〜500G のどれかがもらえる！', p => { p.cash += [0, 50, 100, 200, 300, 500][rand(6)]; }),
+  // money out
+  ...[50, 100, 200].map(n => C('loss', `${n}G はらう…`, p => { p.cash -= n; })),
+  ...[20, 50].map(n => C('loss', `全員に ${n}G ずつくばる…`, p => others(p).forEach(q => { q.cash += n; p.cash -= n; }))),
+  C('loss', '所持金の10%を寄付する…', p => { p.cash -= Math.max(0, Math.round(p.cash * 0.1)); }),
+  C('loss', '税金！総資産の3%をはらう…', p => { p.cash -= Math.max(0, Math.round(worth(p) * 0.03)); }),
+  C('loss', '修理代：店1軒につき 20G はらう…', p => { p.cash -= ownedProps(p).length * 20; }),
+  C('loss', '大修理：店1軒につき 40G はらう…', p => { p.cash -= ownedProps(p).length * 40; }),
+  C('loss', 'いちばん貧乏な人に 100G あげる…', p => { const q = poorest(p); if (q) { q.cash += 100; p.cash -= 100; } }),
+  C('loss', 'サイコロの目 × 30G はらう…', async p => { p.cash -= (await rollDie()) * 30; }),
+  // shops
+  C('shop', '好きな自分の店の価値が20%アップ！', p => boostShop(p, 1.2)),
+  C('shop', '巨大キノコ！好きな自分の店の価値が50%アップ！', p => boostShop(p, 1.5)),
+  C('shop', '自分の店すべての価値が10%アップ！', p => {
+    const m = ownedShops(p);
+    if (m.length) m.forEach(s => scaleShop(s, 1.1)); else p.cash += 100;
+  }),
+  C('shop', '自分の店1軒にタダで100G増資！', p => freeInvest(p, 100)),
+  C('shop', '自分の店1軒にタダで200G増資！', p => freeInvest(p, 200)),
+  C('shop', 'どこかのエリアの店の価値が10%アップ！', p => scaleArea(rand(DISTRICTS.length), 1.1)),
+  C('shop', 'どこかのエリアの店の価値が10%ダウン…', p => scaleArea(rand(DISTRICTS.length), 0.9)),
+  C('shop', 'どこかのエリアの店の価値が20%ダウン…', p => scaleArea(rand(DISTRICTS.length), 0.8)),
+  C('shop', '空き店を1軒タダでもらえる！', p => {
+    const v = vacant().sort((a, b) => cells[a].value - cells[b].value);
+    if (!v.length) { p.cash += 200; log('空き店がないので代わりに200G'); return; }
+    cells[v[0]].owner = p.id;
+    cellPop(v[0]); burstCell(v[0], 24); Sound.play('buy');
+    log(`${pname(p)}が${cells[v[0]].name}をタダで手に入れた！`);
+  }),
+  C('shop', '好きな空き店を半額で買える！', async p => {
+    const v = vacant().filter(s => p.cash >= Math.round(cells[s].value / 2));
+    const s = await chooseFrom(p, v, '半額で買う空き店をえらんでね', s => `${shopLabel(s)}<span class="r">→ ${fmt(Math.round(cells[s].value / 2))}</span>`,
+      l => l.sort((a, b) => cells[b].value - cells[a].value)[0], true);
+    if (s == null) return;
+    p.cash -= Math.round(cells[s].value / 2); cells[s].owner = p.id;
+    cellPop(s); burstCell(s, 24); Sound.play('buy');
+    log(`${pname(p)}が${cells[s].name}を半額で買った！`);
+  }),
+  C('shop', '銀行が自分の店1軒を2倍の値段で買い取ってくれる！', async p => {
+    const s = await chooseFrom(p, ownedShops(p), '2倍の値段で売るお店をえらんでね', s => `${shopLabel(s)}<span class="r">→ ${fmt(cells[s].value * 2)}</span>`,
+      l => l.sort((a, b) => cells[a].value - cells[b].value)[0], true);
+    if (s == null) return;
+    p.cash += cells[s].value * 2; cells[s].owner = null;
+    cellPop(s); Sound.play('coin');
+    log(`${pname(p)}が${cells[s].name}を銀行に ${fmt(cells[s].value * 2)} で売った`);
+  }),
+  C('shop', 'ライバルの店と自分の店を1軒ずつ交換！', p => swapShops(p)),
+  C('shop', '次の自分の番まで、自分の店の買い物料が2倍！', p => { p.feeDouble = 2; }),
+  C('shop', '次の自分の番まで、自分の店の買い物料が3倍！', p => { p.feeDouble = 3; }),
+  C('shop', 'ライバルの店1軒を休業させる！', async p => {
+    const s = await chooseFrom(p, rivalShops(p), '休業させるお店をえらんでね', shopLabel, l => l.sort((a, b) => fee(b) - fee(a))[0]);
+    if (s != null) { closeShop(s, cells[s].owner); log(`${cells[s].name}が休業になった`); }
+  }),
+  C('shop', 'ライバル全員のいちばん高い店が休業！', p => others(p).forEach(q => {
+    const m = ownedShops(q).sort((a, b) => fee(b) - fee(a));
+    if (m.length) closeShop(m[0], q.id);
+  })),
+  C('shop', '停電…自分の店がぜんぶ休業（次の自分の番まで）', p => ownedShops(p).forEach(s => closeShop(s, p.id))),
+  C('shop', '半額デー！次の自分の番まで全員の買い物料が半額', p => { feeDay = { mult: 0.5, until: p.id }; }),
+  C('shop', '倍額デー！次の自分の番まで全員の買い物料が2倍', p => { feeDay = { mult: 2, until: p.id }; }),
+  C('shop', '増資チャンス！好きな自分の店に増資できる', p => p.cpu ? cpuInvest(p, ownedShops(p)) : humanInvest(p, ownedShops(p), '増資するお店をえらんでね')),
+  C('shop', '自分の関所の通行料が100Gアップ！', p => {
+    const cp = PLOTS.filter(s => cells[s].owner === p.id && cells[s].building === 'cp');
+    if (cp.length) cp.forEach(s => { cells[s].cpFee += 100; cellPop(s); }); else p.cash += 100;
+  }),
+  C('shop', '行列のできる店！自分の店1軒の価値が30%アップ', p => {
+    const m = ownedShops(p);
+    if (m.length) scaleShop(m[rand(m.length)], 1.3); else p.cash += 100;
+  }),
+  C('shop', '地価上昇！全部の店の価値が5%アップ', p => SHOPS.forEach(s => scaleShop(s, 1.05))),
+  C('shop', '地価下落…全部の店の価値が5%ダウン', p => SHOPS.forEach(s => scaleShop(s, 0.95))),
+  C('shop', '臨時休業日！次の自分の番まで全員の店が休業', p => SHOPS.forEach(s => { if (cells[s].owner != null) closeShop(s, p.id); })),
+  // stocks
+  C('stock', '好きな株を10%引きで買える！', p => discountStock(p, 0.9)),
+  C('stock', '好きな株を20%引きで買える！', p => discountStock(p, 0.8)),
+  C('stock', 'どこかのエリアの株を10株もらえる！', p => giftStock(p, rand(DISTRICTS.length), 10)),
+  C('stock', 'どこかのエリアの株を20株もらえる！', p => giftStock(p, rand(DISTRICTS.length), 20)),
+  C('stock', 'いちばん株価の高いエリアの株を5株もらえる！', p => giftStock(p, DISTRICTS.map((d, i) => i).sort((a, b) => price(b) - price(a))[0], 5)),
+  C('stock', 'いちばん多く持っている株の株価が20%アップ！', p => {
+    const d = p.stocks.indexOf(Math.max(...p.stocks));
+    if (p.stocks[d] > 0) moveStock(d, 1.2); else p.cash += 100;
+  }),
+  ...[[1.1, '10%アップ！'], [1.3, '30%アップ！'], [0.9, '10%ダウン…'], [0.7, '30%ダウン…']]
+    .map(([m, w]) => C('stock', `どこかのエリアの株価が${w}`, p => moveStock(rand(DISTRICTS.length), m))),
+  C('stock', '景気回復！全エリアの株価が5%アップ', p => DISTRICTS.forEach((d, i) => moveStock(i, 1.05, true))),
+  C('stock', '不景気…全エリアの株価が5%ダウン', p => DISTRICTS.forEach((d, i) => moveStock(i, 0.95, true))),
+  C('stock', '投資ブーム！全エリアの株価が10%アップ', p => DISTRICTS.forEach((d, i) => moveStock(i, 1.1, true))),
+  C('stock', '特別配当！持ち株の価値の5%がもらえる！', p => { p.cash += Math.round(stockWorth(p) * 0.05); }),
+  // luck
+  C('luck', 'ワイルドスートがもらえる！', p => { p.wild++; }),
+  C('luck', '足りないスートを1つもらえる！', p => { const m = missingSuits(p); if (m.length) p.suits[m[rand(m.length)]] = true; else p.cash += 100; }),
+  C('luck', 'スートを1つ落とした…', p => { const h = Object.keys(SUITS).filter(k => p.suits[k]); if (h.length) delete p.suits[h[rand(h.length)]]; }),
+  C('luck', 'ライバルのスートを1つうばう！', p => {
+    for (const q of others(p).sort(() => Math.random() - 0.5)) {
+      const k = Object.keys(SUITS).find(k => q.suits[k] && !p.suits[k]);
+      if (k) { delete q.suits[k]; p.suits[k] = true; log(`${pname(p)}が${pname(q)}の ${SUITS[k]} をうばった！`); return; }
+    }
+    log('うばえるスートがなかった…');
+  }),
+  C('luck', 'いきなり昇進！給料がもらえる！', p => instantPromote(p)),
+  C('luck', '次にはらう買い物料が1回タダ！', p => { p.freeFee = true; }),
+  C('luck', '次にはらう買い物料が2倍…', p => { p.feeTwice = true; }),
+  C('luck', '1回休み…', p => { p.skip = true; }),
+  C('luck', 'ライバルのだれか1人が1回休み！', p => { const o = others(p); if (o.length) { const q = o[rand(o.length)]; q.skip = true; log(`${pname(q)}が1回休みになった`); } }),
+  C('luck', 'もう1枚チャンスカードをめくれる！', p => openChance(p)),
+  C('luck', 'みんな平等デー！全員の所持金を平均にする', p => {
+    const a = players.filter(q => !q.bankrupt), avg = Math.round(a.reduce((s, q) => s + q.cash, 0) / a.length);
+    a.forEach(q => q.cash = avg);
+  }),
+  C('luck', 'いちばんお金持ちが全員に 50G ずつくばる', p => {
+    const a = players.filter(q => !q.bankrupt), r = [...a].sort((x, y) => y.cash - x.cash)[0];
+    a.forEach(q => { if (q !== r) { q.cash += 50; r.cash -= 50; } });
+  }),
+  C('luck', 'ラッキーボックス！半分の確率で 500G', p => {
+    if (Math.random() < 0.5) { p.cash += 500; log('🎁 当たり！'); } else { Sound.play('bad'); log('🎁 からっぽ…'); }
+  }),
+  C('luck', 'コイン投げ勝負！所持金の半分を賭ける？', p => coinFlip(p)),
+  C('luck', 'ゲームセンターで遊べる！', p => arcade(p)),
+  C('luck', '宝さがし！サイコロで6が出たら 1000G', async p => { if ((await rollDie()) === 6) p.cash += 1000; else log('はずれ…'); }),
+  C('luck', '誕生日おめでとう！全員から 100G ずつもらえる', p => others(p).forEach(q => { q.cash -= 100; p.cash += 100; })),
+  C('luck', '大当たり！1000G もらえる！', p => { p.cash += 1000; }),
+];
+const CARD_COLOR = { move: '#c9b3ff', gain: '#ffe27a', loss: '#ff9fb5', shop: '#9ff0cf', stock: '#9fe4f5', luck: '#ffc08f' };
+const CARD_KIND = { move: 'いどう', gain: 'もらう', loss: 'はらう', shop: 'おみせ', stock: 'かぶ', luck: 'うんだめし' };
+const LINE_BONUS = { 4: 100, 5: 200, 6: 400, 7: 700, 8: 1500 };
+const CN = 8;
+let chance = null, chancePick = null;
+
+function newChanceBoard() {
+  const ids = CARDS.map((c, i) => i).sort(() => Math.random() - 0.5).slice(0, CN * CN);
+  chance = { cards: ids, open: Array(CN * CN).fill(null) };
+}
+
+// lines of 4+ opened panels running through panel i
+function chanceLines(i) {
+  const x0 = i % CN, y0 = Math.floor(i / CN), out = [];
+  for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
+    const run = [i];
+    for (const s of [1, -1]) {
+      for (let x = x0 + dx * s, y = y0 + dy * s; x >= 0 && y >= 0 && x < CN && y < CN && chance.open[y * CN + x] != null; x += dx * s, y += dy * s)
+        run.push(y * CN + x);
+    }
+    if (run.length >= 4) out.push(run);
+  }
+  return out;
+}
+
+function cpuChancePick() {
+  let best = -1, bs = -1;
+  chance.open.forEach((o, i) => {
+    if (o != null) return;
+    chance.open[i] = -1;
+    const s = chanceLines(i).reduce((a, l) => a + l.length * 10, 0) + Math.random() * 6;
+    chance.open[i] = null;
+    if (s > bs) { bs = s; best = i; }
+  });
+  return best;
+}
+
+function renderChanceGrid(clickable, aim = -1) {
+  $('chanceGrid').innerHTML = chance.cards.map((cid, i) => {
+    const o = chance.open[i], card = CARDS[cid];
+    const back = `<span class="b" style="--k:${CARD_COLOR[card.k]}">${cid + 1}${o != null && o >= 0 ? `<i style="--pc:${players[o].color}"></i>` : ''}</span>`;
+    return `<button class="panel ${o != null ? 'open' : ''} ${i === aim ? 'aim' : ''}" data-i="${i}" ${clickable && o == null ? '' : 'disabled'}
+      aria-label="${o != null ? `カード${cid + 1} ${card.t}` : '裏向きのカード'}"><span class="in"><span class="f">?</span>${back}</span></button>`;
+  }).join('');
+  $('chanceGrid').querySelectorAll('.panel:not(:disabled)').forEach(b => b.onclick = () => chancePick && chancePick(+b.dataset.i));
+}
+
+async function openChance(p) {
+  const ov = $('chanceOv');
+  $('chanceCard').hidden = true; $('chanceBonus').hidden = true; $('chanceOk').hidden = true;
+  $('chanceMsg').innerHTML = p.cpu ? `${pname(p)}がカードをえらんでいます…` : 'めくるカードをえらんでね！ たて・よこ・ななめに4枚以上ならぶとボーナス！';
+  renderChanceGrid(!p.cpu);
+  ov.classList.remove('hidden');
   Sound.play('card');
-  log(`${pname(p)}のチャンスカード：「${card.t}」`);
-  if (p.cpu) await toast(`🎴 チャンスカード<br><b>${card.t}</b>`, 1500);
-  else await ask({ title: '🎴 チャンスカード', body: `<b>${card.t}</b>`, buttons: [{ label: 'OK', value: 1, primary: true }] });
+  let i;
+  if (p.cpu) {
+    await sleep(600);
+    i = cpuChancePick();
+    renderChanceGrid(false, i);
+    await sleep(600);
+  } else {
+    i = await new Promise(res => chancePick = res);
+    chancePick = null;
+    Sound.play('click');
+  }
+  chance.open[i] = p.id;
+  renderChanceGrid(false);
+  const panel = $('chanceGrid').children[i];
+  panel.classList.remove('open'); void panel.offsetWidth; panel.classList.add('open', 'flipping');
+  Sound.play('stop');
+  await sleep(550);
+  const cid = chance.cards[i], card = CARDS[cid];
+  $('chanceCard').innerHTML = `<span class="no">${cid + 1}</span><span class="tx"><small>${CARD_KIND[card.k]}</small>${card.t}</span>`;
+  $('chanceCard').style.setProperty('--k', CARD_COLOR[card.k]);
+  $('chanceCard').hidden = false;
+  $('chanceMsg').innerHTML = `${pname(p)}のチャンスカード`;
+  log(`🎴 ${pname(p)}のチャンスカード No.${cid + 1}「${card.t}」`);
+
+  const lines = chanceLines(i);
+  if (lines.length) {
+    const bonus = lines.reduce((a, l) => a + LINE_BONUS[l.length], 0);
+    lines.flat().forEach(j => $('chanceGrid').children[j].classList.add('line'));
+    const longest = Math.max(...lines.map(l => l.length));
+    $('chanceBonus').innerHTML = `${longest === CN ? '🎆 ラインコンプリート！' : `✨ ${longest}枚ならんだ！`} ボーナス +${fmt(bonus)}`;
+    $('chanceBonus').hidden = false;
+    p.cash += bonus;
+    Sound.play(longest === CN ? 'win' : 'fanfare');
+    const r = $('chanceGrid').getBoundingClientRect();
+    burst(r.left + r.width / 2, r.top + r.height / 2, longest === CN ? 120 : 50, longest === CN ? 1.5 : 1);
+    log(`✨ ${pname(p)}がチャンスボードで${longest}枚ならべた！ボーナス <b>${fmt(bonus)}</b>`);
+    renderPanel();
+  }
+  if (p.cpu) await sleep(1800);
+  else {
+    $('chanceOk').hidden = false;
+    $('chanceOk').textContent = 'OK';
+    await new Promise(res => $('chanceOk').onclick = () => { Sound.play('click'); res(); });
+  }
+  ov.classList.add('hidden');
   await card.f(p);
   renderPanel();
+  if (chance.open.every(o => o != null)) {
+    newChanceBoard();
+    log('🎴 チャンスボードが全部めくられたので、新しいカードが配られた！');
+    await toast('🎴 チャンスボードが新しくなった！', 1200);
+  }
 }
+
+function viewChance() {
+  if (!chance) return;
+  $('chanceCard').hidden = true; $('chanceBonus').hidden = true;
+  $('chanceMsg').innerHTML = 'これまでにめくられたカード（数字はカード番号）';
+  renderChanceGrid(false);
+  $('chanceOk').hidden = false;
+  $('chanceOk').textContent = 'とじる';
+  $('chanceOk').onclick = () => $('chanceOv').classList.add('hidden');
+  $('chanceOv').classList.remove('hidden');
+}
+const drawChance = p => openChance(p);
 
 // ---- CPU logic ----
 function distanceTo(start, blocked, targets) {
@@ -1732,13 +2202,13 @@ async function cpuInvest(p, shopIds) {
   await sleep(500);
 }
 
-async function cpuBuyStock(p, eager = false) {
+async function cpuBuyStock(p, eager = false, mult = 1) {
   if (p.cash < (eager ? 600 : 900) || Math.random() < 0.3) return;
   const scored = DISTRICTS.map((d, i) => ({ i, s: ownedIn(p.id, i) * 3 + Math.random() * 2 })).sort((a, b) => b.s - a.s);
   const d = scored[0].i;
-  const qty = Math.min(99, Math.floor((p.cash - 500) * 0.4 / price(d)));
+  const qty = Math.min(99, Math.floor((p.cash - 500) * 0.4 / buyPrice(d, mult)));
   if (qty < 1) return;
-  trade(p, d, qty);
+  trade(p, d, qty, mult);
   await sleep(500);
 }
 
@@ -1767,6 +2237,7 @@ document.querySelectorAll('[data-target]').forEach(b => b.onclick = () => newGam
 $('again').onclick = () => { $('end').classList.add('hidden'); refreshResume(); $('title').classList.remove('hidden'); };
 $('resume').onclick = resumeGame;
 $('rulesBtn').onclick = $('titleRules').onclick = () => $('rules').classList.remove('hidden');
+$('chanceBtn').onclick = viewChance;
 $('closeRules').onclick = () => $('rules').classList.add('hidden');
 function syncSoundButtons() {
   $('seBtn').textContent = Sound.prefs.se ? '🔊 効果音 ON' : '🔇 効果音 OFF';
