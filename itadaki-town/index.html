@@ -633,9 +633,17 @@ function drawTile(c, now) {
   ctx.fillStyle = INK;
   if (c.type === 'shop') {
     ctx.font = font(800, cs * 0.15); ctx.fillText(DISTRICTS[c.d].key, 0, -h + w * 0.145);
-    ctx.font = font(800, cs * 0.23); ctx.fillText(c.value, 0, -h + w * 0.53);
-    ctx.font = font(700, cs * 0.14); ctx.fillStyle = owned ? INK : '#6d6690';
-    ctx.fillText(owned ? `料${fee(c.id)}` : c.name.slice(0, 4), 0, -h + w * 0.8);
+    if (owned) {
+      // what visitors pay is the number that matters on an owned shop
+      ctx.font = font(400, cs * 0.29, DISPLAY_FONT);
+      ctx.fillText(fee(c.id), 0, -h + w * 0.55, w * 0.92);
+      ctx.font = font(700, cs * 0.13);
+      ctx.fillText(`価値${c.value}`, 0, -h + w * 0.83, w * 0.92);
+    } else {
+      ctx.font = font(800, cs * 0.23); ctx.fillText(c.value, 0, -h + w * 0.53, w * 0.92);
+      ctx.font = font(700, cs * 0.14); ctx.fillStyle = '#6d6690';
+      ctx.fillText(c.name.slice(0, 4), 0, -h + w * 0.8, w * 0.92);
+    }
   } else if (c.type === 'plot') {
     if (!owned) {
       ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; rr(-h + 4, -h + 4, w - 8, w - 8, r * 0.6); ctx.stroke(); ctx.setLineDash([]);
