@@ -93,8 +93,25 @@
   button.primary { background: var(--yellow); }
   button.primary:hover:not(:disabled) { background: #ffdf6b; }
   button:disabled { opacity: .35; cursor: default; }
-  .dialog { position: fixed; right: 16px; top: 16px; width: 340px; z-index: 10; }
+  /* desktop: the action slot sits at the top of the right column and never covers anything */
+  #action { position: sticky; top: 0; z-index: 5; }
+  #status { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; min-height: 58px; }
+  #dialog:not(.hidden) + #status { display: none; }
   .dialog.hidden { display: none; }
+  #left { display: none; width: 260px; flex: none; flex-direction: column; gap: 12px; overflow-y: auto; padding: 2px 6px 8px 2px; }
+  @media (min-width: 1180px) {
+    #left { display: flex; }
+    #left #players { grid-template-columns: 1fr; gap: 12px; }
+    #left .pc { font-size: 14px; padding: 12px 14px; }
+    #left .pc .pn { font-size: 17px; }
+    #left .pc .cash { font-size: 28px; }
+    #left .suits span { font-size: 18px; }
+    #side { width: 380px; }
+    #side .box { font-size: 14px; }
+    .dialog h2 { font-size: 20px; }
+    .dbody { font-size: 14px; }
+    button { font-size: 15px; }
+  }
   .dialog .card { background: var(--paper); border: 3px solid var(--ink); border-radius: 22px; padding: 14px 16px;
     max-height: 62vh; overflow-y: auto; box-shadow: 6px 6px 0 var(--ink); }
   .dialog .card.pop { animation: popIn .4s cubic-bezier(.2, 1.5, .4, 1); }
@@ -160,7 +177,9 @@
     #app { flex-direction: column; height: auto; padding-block: 12px 230px; }
     #boardWrap { flex: none; }
     #side { width: auto; overflow: visible; padding: 0; }
-    .dialog { left: 50%; right: auto; top: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(480px, calc(100% - 32px)); }
+    .dialog { position: fixed; z-index: 10; left: 50%; right: auto; top: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(480px, calc(100% - 32px)); }
+    #status { display: none; }
+    #action { position: static; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -169,11 +188,16 @@
 </head>
 <body>
 <div id="app">
+  <aside id="left"></aside>
   <div id="boardWrap">
     <canvas id="board"></canvas>
     <div id="toast" class="hidden"></div>
   </div>
   <aside id="side">
+    <div id="action">
+      <div id="dialog" class="dialog hidden"><div class="card" id="dlgCard"></div></div>
+      <div id="status" class="box">タイトル画面で目標金額をえらんでね</div>
+    </div>
     <div id="players"></div>
     <div class="box" id="info">マスをタップすると詳しい情報が見られます。</div>
     <details class="box" open><summary>株価と持ち株</summary><table id="stocks"></table></details>
@@ -187,8 +211,6 @@
   </aside>
 </div>
 <canvas id="fx"></canvas>
-
-<div id="dialog" class="dialog hidden"><div class="card" id="dlgCard"></div></div>
 
 <div class="overlay sky" id="title">
   <div class="floaties" aria-hidden="true">
@@ -457,6 +479,9 @@ function resize() {
   size = mobile ? Math.min(window.innerWidth - 32, 620) : Math.min(wrap.clientWidth, wrap.clientHeight);
   if (mobile) wrap.style.height = size + 'px'; else wrap.style.height = '';
   cs = size / N;
+  const wide = window.innerWidth >= 1180, pl = $('players');
+  if (wide && pl.parentElement !== $('left')) $('left').prepend(pl);
+  if (!wide && pl.parentElement !== $('side')) $('action').after(pl);
   const dpr = window.devicePixelRatio || 1;
   cv.width = size * dpr; cv.height = size * dpr;
   cv.style.width = size + 'px'; cv.style.height = size + 'px';
@@ -485,7 +510,7 @@ const QUADS = [
 const TILE = { bank: '#ffd23f', chance: '#b892ff', stock: '#5fe0b5', rest: '#a9b8ff', lottery: '#ff9f5a', warp: '#4fd3ec',
   arcade: '#ff7ab8', suit: '#ffffff', plot: '#efeae0', shop: '#ffffff' };
 const TILE_LABEL = { stock: '株', rest: '休', lottery: 'くじ', warp: 'ワープ', arcade: 'ゲーム' };
-const OFFS = [[0.3, 0.32], [0.7, 0.32], [0.3, 0.72], [0.7, 0.72]];
+const OFFS = [[0.22, 0.2], [0.41, 0.2], [0.6, 0.2], [0.79, 0.2]];
 const cellFx = {};
 const cellPop = id => { cellFx[id] = performance.now(); };
 
@@ -712,7 +737,7 @@ function drawBoard(now) {
   const toks = players.map((p, i) => ({ p, i, t: tokenPos(p, i, now) })).filter(o => !o.p.bankrupt).sort((a, b) => a.t.y - b.t.y);
   for (const { p, i, t } of toks) {
     const isCur = p === current;
-    const r = cs * (isCur ? 0.19 : 0.16) * t.scale;
+    const r = cs * (isCur ? 0.17 : 0.14) * t.scale;
     if (r <= 0.5) continue;
     const idle = isCur && !t.moving && !REDUCED ? Math.abs(Math.sin(now / 240)) * cs * 0.06 : 0;
     ctx.fillStyle = 'rgba(43,35,70,0.28)';
@@ -1011,6 +1036,7 @@ async function takeTurn(p) {
     return;
   }
   if (p.cpu) await cpuPropose(p);
+  $('status').innerHTML = `<span class="av" style="--pc:${p.color}"></span>${pname(p)}の番です…`;
   if (!p.cpu) {
     Sound.play('turn');
     let traded = false;
