@@ -644,8 +644,6 @@ function onTap(it) {
     it.el.classList.remove('nope'); void it.el.offsetWidth; it.el.classList.add('nope');
     sfx.nope();
     g.combo = 0;
-    // say which one we're looking for, so a miss turns into a hint
-    say([g.row[g.next], 'which']);
     return;
   }
   it.done = true;
