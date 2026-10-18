@@ -150,7 +150,10 @@
   .panel .f { background: repeating-linear-gradient(45deg, #ff7ab8 0 5px, #ff5fa2 5px 10px); color: #fff; font-size: clamp(12px, 3.6vw, 20px);
     -webkit-text-stroke: 1px var(--ink); box-shadow: 0 3px 0 var(--ink); transition: transform .12s; }
   .panel:not(:disabled):hover .f { transform: translateY(-3px); }
-  .panel .b { transform: rotateY(180deg); background: var(--k); color: var(--ink); font-size: clamp(11px, 3.2vw, 17px); }
+  .panel .b { transform: rotateY(180deg); background: var(--k); color: var(--ink); font-size: clamp(10px, 2.8vw, 15px); flex-direction: column; line-height: 1.05; }
+  .panel .b em { font-style: normal; font-size: clamp(9px, 2.4vw, 14px); }
+  .clegend { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 8px; }
+  .clegend span { background: var(--k); border: 2px solid var(--ink); border-radius: 999px; padding: 0 8px; font-size: 11px; font-weight: 800; color: var(--ink); }
   .panel .b i { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); border: 1.5px solid var(--ink); }
   .panel.aim .f { outline: 4px solid var(--yellow); outline-offset: 1px; animation: bump .45s ease-in-out infinite; }
   .panel.line .b { animation: glow .5s ease-in-out infinite alternate; }
@@ -337,6 +340,7 @@
     <h1>🎴 チャンスカード</h1>
     <p class="center" id="chanceMsg"></p>
     <div id="chanceGrid" class="cgrid"></div>
+    <div id="chanceLegend" class="clegend"></div>
     <div id="chanceBonus" class="bonus" hidden></div>
     <div id="chanceCard" class="ccard" hidden></div>
     <p class="center"><button id="chanceOk" class="primary" hidden>OK</button></p>
@@ -482,6 +486,7 @@ const PLAYER_DEFS = [
 const START_CASH = 1500;
 let players = [], turn = 0, round = 1, over = true, target = 8000, gameId = 0;
 let current = null, highlight = [], selected = null, dice = null, pick = null, feeDay = null;
+let focus = { cands: [], sel: null };
 let speed = DEMO ? 0.01 : 1;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms * speed));
@@ -514,7 +519,8 @@ const shopWorth = p => ownedProps(p).reduce((a, s) => a + cells[s].value, 0);
 const areaName = c => c.type === 'shop' ? DISTRICTS[c.d].name : '空き地';
 const propLabel = s => {
   const c = cells[s];
-  return c.type === 'shop' ? `${DISTRICTS[c.d].key} ${c.name}` : `空き地（${BUILDINGS[c.building].label}）`;
+  return c.type === 'shop' ? `<span class="tag" style="background:${DISTRICTS[c.d].color}">${DISTRICTS[c.d].key}</span>${c.name}`
+    : `<span class="tag" style="background:#efeae0">地</span>${BUILDINGS[c.building] ? BUILDINGS[c.building].label : '空き地'}`;
 };
 const stockWorth = p => p.stocks.reduce((a, n, d) => a + n * price(d), 0);
 const worth = p => p.cash + shopWorth(p) + stockWorth(p);
@@ -562,7 +568,15 @@ const closeDialog = () => $('dialog').classList.add('hidden');
 const ask = o => new Promise(res => showDialog(o, v => { closeDialog(); res(v); }));
 
 // radio list + amount slider. returns { sel, amt } via mutable object
-function pickerDialog({ title, body = '', items, amountMax, amountLabel, okLabel, step = 10, amountInit }) {
+// point at shops on the board while the player chooses one in a dialog
+function focusShops(cands, sel) {
+  focus = { cands, sel };
+  if (sel != null) { selected = sel; renderInfo(); }
+  if (cands.length && window.innerWidth <= 860) cv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+const clearFocus = v => { focus = { cands: [], sel: null }; return v; };
+
+function pickerDialog({ title, body = '', items, amountMax, amountLabel, okLabel, step = 10, amountInit, cellItems = false }) {
   const st = { sel: items[0].value, amt: 0 };
   const list = items.map((it, i) =>
     `<label class="opt"><input type="radio" name="pk" value="${it.value}" ${i ? '' : 'checked'}>${it.label}<span class="r">${it.right || ''}</span></label>`).join('');
@@ -582,11 +596,12 @@ function pickerDialog({ title, body = '', items, amountMax, amountLabel, okLabel
         range.disabled = m <= 0;
         sync();
       };
-      card.querySelectorAll('input[name=pk]').forEach(r => r.onchange = () => { st.sel = +r.value; setMax(); });
+      card.querySelectorAll('input[name=pk]').forEach(r => r.onchange = () => { st.sel = +r.value; if (cellItems) focusShops(focus.cands, st.sel); setMax(); });
       range.oninput = sync;
+      if (cellItems) focusShops(items.map(it => it.value), st.sel);
       setMax();
     },
-  }).then(v => (v === 'ok' && st.amt > 0 ? st : null));
+  }).then(v => clearFocus(v === 'ok' && st.amt > 0 ? st : null));
 }
 
 // ---------- rendering ----------
@@ -877,6 +892,26 @@ function drawBoard(now) {
     ctx.fillStyle = 'rgba(43,35,70,0.28)';
     ctx.beginPath(); ctx.ellipse(t.x, t.y + r * 0.9, r * (0.85 - t.hop / cs * 0.6), r * 0.25, 0, 0, 7); ctx.fill();
     drawBlob(t.x, t.y - t.hop - idle, r, p.color, t.look, (now / 1000 + i * 0.7) % 3.4 < 0.12);
+  }
+
+  // shops offered in a dialog: soft glow on all, arrow on the chosen one
+  for (const id of focus.cands) {
+    const c = cells[id], w = cs * 0.84 + 6;
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,95,162,0.75)'; ctx.setLineDash([6, 4]);
+    rr(c.x * cs + (cs - w) / 2, c.y * cs + (cs - w) / 2, w, w, cs * 0.2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (focus.sel != null) {
+    const c = cells[focus.sel], w = cs * 0.84 + 8, cx = (c.x + 0.5) * cs;
+    const pulse = REDUCED ? 0.7 : 0.5 + 0.5 * Math.sin(now / 120), bounce = REDUCED ? 0 : Math.abs(Math.sin(now / 180)) * cs * 0.12;
+    ctx.lineWidth = 5; ctx.strokeStyle = `rgba(255,210,63,${0.6 + 0.4 * pulse})`;
+    rr(c.x * cs + (cs - w) / 2, c.y * cs + (cs - w) / 2, w, w, cs * 0.22); ctx.stroke();
+    // arrow points at the tile from above, or from below on the top row
+    const up = c.y === 0, tip = up ? (c.y + 1) * cs - 2 + bounce : c.y * cs + 2 - bounce, dir = up ? 1 : -1;
+    const ah = cs * 0.34, aw = cs * 0.24;
+    ctx.beginPath();
+    ctx.moveTo(cx, tip); ctx.lineTo(cx - aw, tip + dir * ah); ctx.lineTo(cx + aw, tip + dir * ah); ctx.closePath();
+    ctx.fillStyle = '#ffd23f'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
   }
 }
 
@@ -1812,8 +1847,9 @@ async function humanInvest(p, shopIds, title) {
   if (!cand.length || p.cash <= 0) return false;
   const r = await pickerDialog({
     title,
-    body: `所持金 <b>${fmt(p.cash)}</b>。増資すると店の価値・買い物料・株価が上がります。`,
-    items: cand.map(s => ({ value: s, label: `${DISTRICTS[cells[s].d].key} ${cells[s].name}`, right: `${cells[s].value} / ${maxValue(s)}G` })),
+    body: `所持金 <b>${fmt(p.cash)}</b>。増資すると店の価値・買い物料・株価が上がります。<br>えらんだお店は盤面で<b>▼</b>が付きます。`,
+    items: cand.map(s => ({ value: s, label: propLabel(s), right: `${cells[s].value} / ${maxValue(s)}G` })),
+    cellItems: true,
     amountMax: s => Math.min(room(s), p.cash),
     amountLabel: (s, a) => `${fmt(a)} 増資`,
     okLabel: '増資する',
@@ -2065,8 +2101,12 @@ async function chooseFrom(p, list, title, label, cpuPick, allowSkip = false) {
     title,
     body: `<div class="opts">${list.map((s, i) => `<label class="opt"><input type="radio" name="cf" value="${s}" ${i ? '' : 'checked'}>${label(s)}</label>`).join('')}</div>`,
     buttons: [{ label: '決定', value: true, primary: true }, ...(allowSkip ? [{ label: 'やめる', value: false }] : [])],
-    mount: card => card.querySelectorAll('input[name=cf]').forEach(r => r.onchange = () => sel = +r.value),
+    mount: card => {
+      card.querySelectorAll('input[name=cf]').forEach(r => r.onchange = () => { sel = +r.value; focusShops(list, sel); });
+      focusShops(list, sel);
+    },
   });
+  clearFocus();
   return ok ? sel : null;
 }
 
@@ -2312,7 +2352,8 @@ const CARDS = [
   C('luck', '誕生日おめでとう！全員から 100G ずつもらえる', p => others(p).forEach(q => { q.cash -= 100; p.cash += 100; })),
   C('luck', '大当たり！1000G もらえる！', p => { p.cash += 1000; }),
 ];
-const CARD_COLOR = { move: '#c9b3ff', gain: '#ffe27a', loss: '#ff9fb5', shop: '#9ff0cf', stock: '#9fe4f5', luck: '#ffc08f' };
+const CARD_COLOR = { move: '#c7b2ff', gain: '#ffe066', loss: '#ff8a8a', shop: '#8de8b5', stock: '#8ccff5', luck: '#ffffff' };
+const CARD_ICON = { move: '🚀', gain: '💰', loss: '💸', shop: '🏠', stock: '📈', luck: '🎲' };
 const CARD_KIND = { move: 'いどう', gain: 'もらう', loss: 'はらう', shop: 'おみせ', stock: 'かぶ', luck: 'うんだめし' };
 const LINE_BONUS = { 4: 100, 5: 200, 6: 400, 7: 700, 8: 1500 };
 const CN = 8;
@@ -2350,9 +2391,10 @@ function cpuChancePick() {
 }
 
 function renderChanceGrid(clickable, aim = -1) {
+  $('chanceLegend').innerHTML = Object.keys(CARD_COLOR).map(k => `<span style="--k:${CARD_COLOR[k]}">${CARD_ICON[k]} ${CARD_KIND[k]}</span>`).join('');
   $('chanceGrid').innerHTML = chance.cards.map((cid, i) => {
     const o = chance.open[i], card = CARDS[cid];
-    const back = `<span class="b" style="--k:${CARD_COLOR[card.k]}">${cid + 1}${o != null && o >= 0 ? `<i style="--pc:${players[o].color}"></i>` : ''}</span>`;
+    const back = `<span class="b" style="--k:${CARD_COLOR[card.k]}"><em>${CARD_ICON[card.k]}</em>${cid + 1}${o != null && o >= 0 ? `<i style="--pc:${players[o].color}"></i>` : ''}</span>`;
     return `<button class="panel ${o != null ? 'open' : ''} ${i === aim ? 'aim' : ''}" data-i="${i}" ${clickable && o == null ? '' : 'disabled'}
       aria-label="${o != null ? `カード${cid + 1} ${card.t}` : '裏向きのカード'}"><span class="in"><span class="f">?</span>${back}</span></button>`;
   }).join('');
@@ -2384,7 +2426,7 @@ async function openChance(p) {
   Sound.play('stop');
   await sleep(550);
   const cid = chance.cards[i], card = CARDS[cid];
-  $('chanceCard').innerHTML = `<span class="no">${cid + 1}</span><span class="tx"><small>${CARD_KIND[card.k]}</small>${card.t}</span>`;
+  $('chanceCard').innerHTML = `<span class="no">${cid + 1}</span><span class="tx"><small>${CARD_ICON[card.k]} ${CARD_KIND[card.k]}</small>${card.t}</span>`;
   $('chanceCard').style.setProperty('--k', CARD_COLOR[card.k]);
   $('chanceCard').hidden = false;
   $('chanceMsg').innerHTML = `${pname(p)}のチャンスカード`;
