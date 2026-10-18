@@ -4,104 +4,166 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>いただきタウン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
 <style>
   :root {
-    --bg: #0c1020;
-    --panel: #151a30;
-    --cell: #1d2342;
-    --text: #eef1ff;
-    --muted: #8a93b8;
-    --accent: #5ee6a8;
-    --gold: #ffd166;
-    --danger: #ff5c7a;
-    color-scheme: dark;
+    /* Layout: toy-box board on a polka-dot sky, chunky sticker panels beside it (stacked on phones) */
+    --ink: #2b2346;
+    --paper: #ffffff;
+    --sky: #a9e1ff;
+    --sky-dot: #c6ecff;
+    --pink: #ff5fa2;
+    --yellow: #ffd23f;
+    --mint: #5fe0b5;
+    --muted: #6d6690;
+    --danger: #ff3d63;
+    --good: #12a85f;
+    --display: 'Dela Gothic One', 'M PLUS Rounded 1c', system-ui, sans-serif;
+    --body: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', system-ui, sans-serif;
+    color-scheme: light;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
-    font-family: system-ui, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif; overflow: hidden; }
-  #app { display: flex; gap: 16px; height: 100%; padding-block: 16px;
+  html, body { margin: 0; height: 100%; color: var(--ink); font-family: var(--body); font-weight: 500; overflow: hidden; }
+  body, .overlay.sky {
+    background-color: var(--sky);
+    background-image: radial-gradient(var(--sky-dot) 17%, transparent 18%), radial-gradient(var(--sky-dot) 17%, transparent 18%);
+    background-size: 38px 38px; background-position: 0 0, 19px 19px;
+  }
+  #app { display: flex; gap: 18px; height: 100%; padding-block: 16px;
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   #boardWrap { flex: 1; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center; }
   #board { display: block; touch-action: manipulation; }
+  #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
   #toast {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: min(360px, 90%);
-    padding: 14px 18px; border-radius: 14px; background: rgba(21, 26, 48, 0.96); border: 1px solid var(--gold);
-    text-align: center; line-height: 1.6; pointer-events: none; transition: opacity .25s;
+    padding: 14px 20px; border-radius: 20px; background: var(--paper); border: 3px solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
+    text-align: center; line-height: 1.6; font-weight: 800; pointer-events: none; transition: opacity .2s;
   }
+  #toast.show { animation: toastIn .45s cubic-bezier(.2, 1.6, .4, 1); }
   #toast.hidden { opacity: 0; }
-  #side { width: 340px; flex: none; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  #side { width: 340px; flex: none; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 2px 6px 8px 2px; }
   #side > * { flex: none; }
-  .box { background: var(--panel); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
-  .box summary { cursor: pointer; color: var(--muted); }
-  #players { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .pc { background: var(--panel); border: 2px solid transparent; border-radius: 12px; padding: 8px 10px; font-size: 12px;
-    font-variant-numeric: tabular-nums; line-height: 1.55; }
-  .pc.now { border-color: var(--pc); box-shadow: 0 0 12px color-mix(in srgb, var(--pc) 40%, transparent); }
-  .pc.out { opacity: .4; }
-  .pc .pn { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; }
-  .pc .pn i { width: 12px; height: 12px; border-radius: 50%; background: var(--pc); display: inline-block; }
-  .pc .pn small { color: var(--muted); font-weight: 400; margin-left: auto; }
-  .pc b { color: var(--gold); }
-  .suits span { opacity: .22; margin-right: 2px; font-size: 14px; }
+  .box { background: var(--paper); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 4px 4px 0 var(--ink); padding: 10px 12px; font-size: 13px; }
+  .box summary { cursor: pointer; font-weight: 800; }
+  #players { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pc { background: var(--paper); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 4px 4px 0 var(--ink);
+    padding: 8px 10px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 1.5; position: relative; }
+  .pc.now { background: color-mix(in srgb, var(--pc) 24%, var(--paper)); animation: bob 1.4s ease-in-out infinite; }
+  .pc.out { opacity: .45; filter: grayscale(1); }
+  .pc.up { animation: bump .5s cubic-bezier(.2, 1.6, .4, 1); }
+  .pc.down { animation: shake .4s; }
+  .pc.up .cash { color: var(--good); }
+  .pc.down .cash { color: var(--danger); }
+  .pc .pn { font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .pc .pn small { color: var(--muted); font-weight: 800; margin-left: auto; font-size: 11px; background: var(--paper);
+    border: 2px solid var(--ink); border-radius: 999px; padding: 0 7px; }
+  .av { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink); flex: none;
+    background: radial-gradient(circle at 34% 45%, var(--ink) 11%, #fff 12% 22%, transparent 23%),
+                radial-gradient(circle at 66% 45%, var(--ink) 11%, #fff 12% 22%, transparent 23%), var(--pc); }
+  .pc .cash { font-family: var(--display); font-size: 18px; transition: color .3s; }
+  .pc .sub b { font-weight: 800; }
+  .suits span { opacity: .2; margin-right: 2px; font-size: 15px; }
   .suits span.on { opacity: 1; }
-  .suits .w { color: var(--gold); opacity: 1; font-size: 11px; }
+  .suits span.red.on { color: var(--danger); }
+  .suits .w { color: var(--ink); background: var(--yellow); border-radius: 6px; padding: 0 4px; opacity: 1; font-size: 11px; font-weight: 800; }
+  .chip { display: inline-block; background: var(--pc); color: var(--ink); font-weight: 800; border: 2px solid var(--ink);
+    border-radius: 999px; padding: 0 7px; line-height: 1.35; margin: 0 1px; }
   #stocks { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 6px; }
-  #stocks th, #stocks td { padding: 2px 3px; text-align: right; font-weight: 400; }
-  #stocks th { color: var(--muted); font-size: 11px; }
+  #stocks th, #stocks td { padding: 2px 3px; text-align: right; font-weight: 500; }
+  #stocks th { color: var(--muted); font-size: 11px; font-weight: 800; }
   #stocks td:first-child, #stocks th:first-child { text-align: left; }
-  .tag { display: inline-block; min-width: 16px; text-align: center; border-radius: 4px; color: #0c1020; font-weight: 700; font-size: 11px; margin-right: 4px; }
+  #stocks tr + tr td { border-top: 1px dashed color-mix(in srgb, var(--ink) 18%, transparent); }
+  .tag { display: inline-block; min-width: 18px; text-align: center; border-radius: 6px; border: 2px solid var(--ink); color: var(--ink);
+    font-weight: 800; font-size: 11px; margin-right: 4px; line-height: 1.3; }
   #info { line-height: 1.7; min-height: 60px; }
-  #info h3 { margin: 0 0 2px; font-size: 15px; }
-  #log { max-height: 220px; overflow-y: auto; line-height: 1.6; }
-  #log div { border-bottom: 1px solid rgba(255,255,255,0.05); padding: 2px 0; }
-  .tools { display: flex; gap: 8px; }
-  .tools button { flex: 1; }
+  #info h3 { margin: 0 0 2px; font-size: 16px; font-family: var(--display); font-weight: 400; }
+  #log { max-height: 220px; overflow-y: auto; line-height: 1.75; }
+  #log div { border-bottom: 1px dashed color-mix(in srgb, var(--ink) 18%, transparent); padding: 2px 0; }
+  #log div:first-child { animation: slideIn .35s ease-out; }
+  .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   button {
-    padding: 9px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18);
-    background: rgba(255,255,255,0.07); color: var(--text); font: inherit; font-size: 14px; cursor: pointer;
+    padding: 9px 14px; border-radius: 14px; border: 3px solid var(--ink); background: var(--paper); color: var(--ink);
+    font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 var(--ink);
+    transition: transform .08s, box-shadow .08s, background .15s;
   }
-  button:hover:not(:disabled), button:focus-visible { background: rgba(94, 230, 168, 0.2); border-color: var(--accent); outline: none; }
-  button.primary { background: rgba(94, 230, 168, 0.22); border-color: var(--accent); }
+  button:hover:not(:disabled), button:focus-visible { background: color-mix(in srgb, var(--yellow) 35%, var(--paper)); outline: none; transform: translateY(-1px); box-shadow: 0 5px 0 var(--ink); }
+  button:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+  button.primary { background: var(--yellow); }
+  button.primary:hover:not(:disabled) { background: #ffdf6b; }
   button:disabled { opacity: .35; cursor: default; }
-  /* desktop: dialog sits over the side panel so the board stays visible */
   .dialog { position: fixed; right: 16px; top: 16px; width: 340px; z-index: 10; }
   .dialog.hidden { display: none; }
-  .dialog .card { background: rgba(21, 26, 48, 0.97); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px;
-    padding: 14px 16px; max-height: 62vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-  .dialog h2 { font-size: 16px; margin: 0 0 6px; }
-  .dbody { color: var(--muted); font-size: 13px; line-height: 1.7; }
-  .dbody b { color: var(--text); }
-  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .opts { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
-  .opt { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 8px; background: rgba(255,255,255,0.04); cursor: pointer; color: var(--text); }
-  .opt:has(input:checked) { background: rgba(94, 230, 168, 0.16); }
+  .dialog .card { background: var(--paper); border: 3px solid var(--ink); border-radius: 22px; padding: 14px 16px;
+    max-height: 62vh; overflow-y: auto; box-shadow: 6px 6px 0 var(--ink); }
+  .dialog .card.pop { animation: popIn .4s cubic-bezier(.2, 1.5, .4, 1); }
+  .dialog h2 { font-family: var(--display); font-weight: 400; font-size: 18px; margin: 0 0 6px; }
+  .dbody { color: var(--muted); font-size: 13px; line-height: 1.75; }
+  .dbody b { color: var(--ink); }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .opts { display: flex; flex-direction: column; gap: 5px; margin: 6px 0; }
+  .opt { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 12px; border: 2px solid color-mix(in srgb, var(--ink) 15%, transparent);
+    cursor: pointer; color: var(--ink); font-weight: 700; }
+  .opt:has(input:checked) { background: color-mix(in srgb, var(--mint) 35%, var(--paper)); border-color: var(--ink); }
+  .opt input { accent-color: var(--pink); }
   .opt .r { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .amt { display: flex; align-items: center; gap: 10px; margin-top: 8px; color: var(--text); }
-  .amt input { flex: 1; accent-color: var(--accent); }
-  .amt output { min-width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+  .amt { display: flex; align-items: center; gap: 10px; margin-top: 8px; color: var(--ink); }
+  .amt input { flex: 1; accent-color: var(--pink); }
+  .amt output { min-width: 110px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 800; }
   .slot { display: flex; gap: 10px; justify-content: center; margin: 10px 0; }
-  .reel { width: 64px; height: 72px; display: flex; align-items: center; justify-content: center; font-size: 38px; font-weight: 800;
-    color: var(--gold); background: var(--bg); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; }
-  .reel.stop { border-color: var(--accent); }
-  .slotmsg { text-align: center; color: var(--text); }
-  .bigcard { display: inline-block; min-width: 44px; padding: 4px 8px; margin: 4px; border-radius: 8px; background: var(--text); color: var(--bg);
-    font-size: 26px; font-weight: 800; text-align: center; }
-  .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: rgba(8, 10, 22, 0.82); backdrop-filter: blur(4px); z-index: 20; overflow-y: auto; }
+  .reel { width: 66px; height: 74px; display: flex; align-items: center; justify-content: center; font-size: 38px; font-family: var(--display);
+    color: var(--pink); background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; box-shadow: inset 0 -6px 0 color-mix(in srgb, var(--ink) 10%, transparent); }
+  .reel.stop { background: color-mix(in srgb, var(--yellow) 40%, var(--paper)); animation: bump .35s cubic-bezier(.2, 1.6, .4, 1); }
+  .slotmsg { text-align: center; color: var(--ink); font-weight: 800; }
+  .bigcard { display: inline-block; min-width: 46px; padding: 4px 8px; margin: 4px; border-radius: 10px; background: var(--paper); color: var(--ink);
+    border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); font-family: var(--display); font-size: 26px; text-align: center; animation: flip .45s ease-out; }
+  .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 20; overflow-y: auto;
+    background: color-mix(in srgb, var(--ink) 45%, transparent);
+    padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(16px, env(safe-area-inset-left, 0px)); }
   .overlay.hidden { display: none; }
-  .ocard { padding: 24px 28px; max-width: 560px; margin: 16px; line-height: 1.75; }
-  .ocard h1 { font-size: 30px; margin: 0 0 4px; text-align: center; }
+  .ocard { position: relative; background: var(--paper); border: 3px solid var(--ink); border-radius: 26px; box-shadow: 8px 8px 0 var(--ink);
+    padding: 24px 26px; max-width: 560px; width: 100%; margin: 16px 0; line-height: 1.75; animation: popIn .5s cubic-bezier(.2, 1.5, .4, 1); }
+  .ocard h1 { font-family: var(--display); font-weight: 400; font-size: 28px; margin: 0 0 4px; text-align: center; text-wrap: balance; }
   .ocard p, .ocard li { color: var(--muted); }
-  .ocard .center { text-align: center; }
+  .ocard li b { color: var(--ink); }
+  .center { text-align: center; }
+  .center-row { justify-content: center; }
+  .logo { display: flex; justify-content: center; flex-wrap: wrap; font-family: var(--display); font-size: clamp(36px, 10vw, 62px); line-height: 1.1; margin: 4px 0 8px; }
+  .logo span { display: inline-block; color: var(--c); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill;
+    text-shadow: 3px 4px 0 var(--ink); animation: hopChar 1.6s ease-in-out infinite; animation-delay: calc(var(--i) * 90ms); }
+  .tagline { text-align: center; font-weight: 700; color: var(--ink) !important; text-wrap: balance; word-break: keep-all; }
+  .crew { display: flex; justify-content: center; gap: 14px; margin: 10px 0 6px; }
+  .crew .av { width: 42px; height: 42px; border-width: 3px; animation: hop 1.1s ease-in-out infinite; animation-delay: calc(var(--i) * 140ms); }
+  .label { font-weight: 800; color: var(--ink) !important; margin: 12px 0 0; text-wrap: balance; word-break: keep-all; }
+  .floaties { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .floaties i { position: absolute; width: var(--s); height: var(--s); border-radius: 50%; border: 3px solid var(--ink); background: var(--c);
+    left: var(--x); top: var(--y); animation: drift var(--d) ease-in-out infinite alternate; }
   .rank { list-style: none; padding: 0; margin: 12px 0; }
-  .rank li { display: flex; gap: 10px; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.05); margin-bottom: 6px; color: var(--text); }
-  .rank li span:last-child { margin-left: auto; color: var(--gold); font-variant-numeric: tabular-nums; }
+  .rank li { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 14px; border: 3px solid var(--ink);
+    background: var(--paper); margin-bottom: 8px; color: var(--ink); font-weight: 800; animation: slideIn .4s ease-out backwards; }
+  .rank li:nth-child(1) { background: var(--yellow); }
+  .rank li:nth-child(2) { animation-delay: .1s; } .rank li:nth-child(3) { animation-delay: .2s; } .rank li:nth-child(4) { animation-delay: .3s; }
+  .rank li .w { margin-left: auto; font-variant-numeric: tabular-nums; }
+  @keyframes popIn { from { transform: translateY(16px) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes toastIn { from { transform: translate(-50%, -50%) scale(.5); } to { transform: translate(-50%, -50%) scale(1); } }
+  @keyframes bob { 50% { transform: translateY(-3px); } }
+  @keyframes bump { 40% { transform: scale(1.07); } }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  @keyframes slideIn { from { transform: translateX(-10px); opacity: 0; } }
+  @keyframes hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-12px); } }
+  @keyframes hopChar { 0%, 60%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-10px) rotate(-4deg); } }
+  @keyframes drift { to { transform: translate(18px, -26px) rotate(40deg); } }
+  @keyframes flip { from { transform: rotateY(90deg); } }
   @media (max-width: 860px) {
     html, body { overflow: auto; height: auto; }
-    #app { flex-direction: column; height: auto; padding-block: 12px 220px; }
+    #app { flex-direction: column; height: auto; padding-block: 12px 230px; }
     #boardWrap { flex: none; }
-    #side { width: auto; overflow: visible; }
+    #side { width: auto; overflow: visible; padding: 0; }
     .dialog { left: 50%; right: auto; top: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(480px, calc(100% - 32px)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -117,27 +179,46 @@
     <details class="box" open><summary>株価と持ち株</summary><table id="stocks"></table></details>
     <div class="box" id="log"></div>
     <div class="tools">
+      <button id="seBtn">🔊 効果音 ON</button>
+      <button id="bgmBtn">🎵 BGM ON</button>
       <button id="speedBtn">CPU速度: ふつう</button>
       <button id="rulesBtn">ルール</button>
     </div>
   </aside>
 </div>
+<canvas id="fx"></canvas>
 
 <div id="dialog" class="dialog hidden"><div class="card" id="dlgCard"></div></div>
 
-<div class="overlay" id="title">
+<div class="overlay sky" id="title">
+  <div class="floaties" aria-hidden="true">
+    <i style="--s:34px;--c:#ff5fa2;--x:8%;--y:12%;--d:5s"></i>
+    <i style="--s:22px;--c:#ffd23f;--x:84%;--y:8%;--d:6s"></i>
+    <i style="--s:46px;--c:#5fe0b5;--x:88%;--y:70%;--d:7s"></i>
+    <i style="--s:26px;--c:#b892ff;--x:6%;--y:78%;--d:5.5s"></i>
+    <i style="--s:18px;--c:#ff9f5a;--x:50%;--y:4%;--d:4.5s"></i>
+    <i style="--s:30px;--c:#4fd3ec;--x:20%;--y:90%;--d:6.5s"></i>
+  </div>
   <div class="ocard">
-    <h1>🏙️ いただきタウン</h1>
-    <p class="center">お店を買って、増資して、株でもうけて。<br>目標の総資産をためて銀行にもどった人の勝ち！</p>
-    <p class="center">あなた 対 CPU 3人</p>
-    <p class="center"><button id="resume" class="primary" hidden>つづきから</button></p>
-    <p class="center">目標金額をえらんでスタート</p>
-    <div class="btns" style="justify-content:center">
-      <button data-target="5000">5,000G（短め）</button>
-      <button data-target="8000" class="primary">8,000G（ふつう）</button>
-      <button data-target="12000">12,000G（長め）</button>
+    <div class="logo" aria-label="いただきタウン">
+      <span style="--i:0;--c:#ff5fa2">い</span><span style="--i:1;--c:#ffd23f">た</span><span style="--i:2;--c:#5fe0b5">だ</span><span style="--i:3;--c:#4fd3ec">き</span><span style="--i:4;--c:#b892ff">タ</span><span style="--i:5;--c:#ff9f5a">ウ</span><span style="--i:6;--c:#ff5fa2">ン</span>
     </div>
-    <p class="center" style="margin-top:14px"><button id="titleRules">ルールを読む</button></p>
+    <div class="crew" aria-hidden="true">
+      <span class="av" style="--pc:#3ba7ff;--i:0"></span><span class="av" style="--pc:#ff5fa2;--i:1"></span>
+      <span class="av" style="--pc:#ffa62b;--i:2"></span><span class="av" style="--pc:#2fcf6f;--i:3"></span>
+    </div>
+    <p class="tagline">お店を買って、増資して、株でもうけて。<br>目標の総資産をためて銀行にもどった人の勝ち！</p>
+    <p class="center"><button id="resume" class="primary" hidden>つづきから</button></p>
+    <p class="center label">目標金額をえらんでスタート（あなた 対 CPU 3人）</p>
+    <div class="btns center-row">
+      <button data-target="5000">5,000G 短め</button>
+      <button data-target="8000" class="primary">8,000G ふつう</button>
+      <button data-target="12000">12,000G 長め</button>
+    </div>
+    <div class="btns center-row">
+      <button id="titleRules">ルールを読む</button>
+      <button id="titleSound">🔊 音あり</button>
+    </div>
   </div>
 </div>
 
@@ -251,10 +332,10 @@ function resetBoard() {
 
 // ---------- state ----------
 const PLAYER_DEFS = [
-  { name: 'あなた', color: '#4da3ff', cpu: false },
-  { name: 'ミナ',   color: '#ff5c7a', cpu: true },
-  { name: 'ゴロウ', color: '#ffb43f', cpu: true },
-  { name: 'ルイ',   color: '#3fd17a', cpu: true },
+  { name: 'あなた', color: '#3ba7ff', cpu: false },
+  { name: 'ミナ',   color: '#ff5fa2', cpu: true },
+  { name: 'ゴロウ', color: '#ffa62b', cpu: true },
+  { name: 'ルイ',   color: '#2fcf6f', cpu: true },
 ];
 const START_CASH = 1500;
 let players = [], turn = 0, round = 1, over = true, target = 8000, gameId = 0;
@@ -307,11 +388,13 @@ function log(msg) {
   while ($('log').children.length > 80) $('log').lastChild.remove();
   if (DEMO) console.log(el.textContent);
 }
-const pname = p => `<span style="color:${p.color};font-weight:700">${p.name}</span>`;
+const pname = p => `<span class="chip" style="--pc:${p.color}">${p.name}</span>`;
 let toastTimer;
 async function toast(html, ms = 1400) {
   $('toast').innerHTML = html;
-  $('toast').classList.remove('hidden');
+  $('toast').classList.remove('hidden', 'show');
+  void $('toast').offsetWidth;
+  $('toast').classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => $('toast').classList.add('hidden'), ms * speed);
   await sleep(ms);
@@ -325,10 +408,13 @@ function showDialog({ title, body = '', buttons = [], mount }, onPick) {
     el.textContent = b.label;
     if (b.primary) el.className = 'primary';
     el.disabled = !!b.disabled;
-    el.onclick = () => onPick(b.value);
+    el.onclick = () => { Sound.play('click'); onPick(b.value); };
     card.querySelector('.btns').append(el);
   }
   if (mount) mount(card);
+  card.classList.remove('pop');
+  void card.offsetWidth;
+  card.classList.add('pop');
   $('dialog').classList.remove('hidden');
 }
 const closeDialog = () => $('dialog').classList.add('hidden');
@@ -375,6 +461,7 @@ function resize() {
   cv.width = size * dpr; cv.height = size * dpr;
   cv.style.width = size + 'px'; cv.style.height = size + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  resizeFx();
 }
 window.addEventListener('resize', resize);
 
@@ -384,135 +471,443 @@ function rr(x, y, w, h, r) {
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
 
-function drawBoard(now) {
-  ctx.clearRect(0, 0, size, size);
-  const font = (w, px) => `${w} ${Math.max(8, px)}px system-ui, "Hiragino Sans", "Yu Gothic UI", sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+const INK = '#2b2346';
+const BODY_FONT = "'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', system-ui, sans-serif";
+const DISPLAY_FONT = "'Dela Gothic One', 'M PLUS Rounded 1c', system-ui, sans-serif";
+const font = (w, px, fam = BODY_FONT) => `${w} ${Math.max(8, px)}px ${fam}`;
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const QUADS = [
+  { x: 1, y: 1, fill: '#fff1a8' },
+  { x: 5, y: 1, fill: '#ffd3e6' },
+  { x: 1, y: 5, fill: '#d7ecff' },
+  { x: 5, y: 5, fill: '#e3dcff' },
+];
+const TILE = { bank: '#ffd23f', chance: '#b892ff', stock: '#5fe0b5', rest: '#a9b8ff', lottery: '#ff9f5a', warp: '#4fd3ec',
+  arcade: '#ff7ab8', suit: '#ffffff', plot: '#efeae0', shop: '#ffffff' };
+const TILE_LABEL = { stock: '株', rest: '休', lottery: 'くじ', warp: 'ワープ', arcade: 'ゲーム' };
+const OFFS = [[0.3, 0.32], [0.7, 0.32], [0.3, 0.72], [0.7, 0.72]];
+const cellFx = {};
+const cellPop = id => { cellFx[id] = performance.now(); };
 
-  // centre decorations in the four empty blocks
-  ctx.fillStyle = 'rgba(255,255,255,0.03)';
-  for (const [bx, by] of [[1,1],[5,1],[1,5],[5,5]]) { rr(bx * cs + 4, by * cs + 4, cs * 3 - 8, cs * 3 - 8, 12); ctx.fill(); }
-  ctx.fillStyle = '#8a93b8';
-  ctx.font = font(400, cs * 0.24);
-  ctx.fillText('目標', 6.5 * cs, 2.1 * cs);
-  ctx.fillStyle = '#ffd166';
-  ctx.font = font(700, cs * 0.4);
-  ctx.fillText(fmt(target), 6.5 * cs, 2.6 * cs);
-  ctx.fillStyle = '#8a93b8';
-  ctx.font = font(400, cs * 0.24);
-  ctx.fillText(`ラウンド ${round}`, 2.5 * cs, 6.5 * cs);
-  if (dice) {
-    const dx = 2.5 * cs, dy = 2.5 * cs, ds = cs * 1.3;
-    ctx.fillStyle = '#eef1ff';
-    rr(dx - ds / 2, dy - ds / 2, ds, ds, ds * 0.18); ctx.fill();
-    ctx.fillStyle = '#0c1020';
-    ctx.font = font(800, cs * 0.8);
-    ctx.fillText(dice.n, dx, dy + 2);
-    if (dice.left != null) {
-      ctx.fillStyle = '#8a93b8';
-      ctx.font = font(400, cs * 0.22);
-      ctx.fillText(`のこり ${dice.left}`, dx, dy + ds / 2 + cs * 0.3);
-    }
-  }
-  if (current) {
-    ctx.fillStyle = current.color;
-    ctx.font = font(700, cs * 0.3);
-    ctx.fillText(`${current.name}の番`, 6.5 * cs, 6.5 * cs);
-  }
-
-  for (const c of cells) {
-    const x = c.x * cs + 2, y = c.y * cs + 2, w = cs - 4;
-    let bg = '#1d2342';
-    const owned = (c.type === 'shop' || c.type === 'plot') && c.owner != null;
-    if (owned) bg = players[c.owner].color;
-    else if (c.type === 'plot') bg = '#2a3050';
-    else if (c.type === 'warp') bg = '#1e3f73';
-    else if (c.type === 'arcade') bg = '#5b2a4f';
-    else if (c.type === 'bank') bg = '#ffd166';
-    else if (c.type === 'chance') bg = '#3a2f6b';
-    else if (c.type === 'stock') bg = '#1f4d57';
-    else if (c.type === 'rest') bg = '#3b3346';
-    else if (c.type === 'lottery') bg = '#5a3b2a';
-    ctx.fillStyle = bg;
-    rr(x, y, w, w, cs * 0.12); ctx.fill();
-
-    const dark = owned || c.type === 'bank';
-    if (c.type === 'shop') {
-      const d = DISTRICTS[c.d];
-      ctx.save(); rr(x, y, w, w, cs * 0.12); ctx.clip();
-      ctx.fillStyle = d.color; ctx.fillRect(x, y, w, cs * 0.24);
-      ctx.restore();
-      ctx.fillStyle = '#0c1020';
-      ctx.font = font(700, cs * 0.17);
-      ctx.fillText(d.key, x + w / 2, y + cs * 0.12);
-      ctx.fillStyle = dark ? '#0c1020' : '#eef1ff';
-      ctx.font = font(700, cs * 0.22);
-      ctx.fillText(c.value, x + w / 2, y + cs * 0.47);
-      ctx.font = font(400, cs * 0.16);
-      ctx.fillStyle = dark ? 'rgba(12,16,32,0.8)' : '#8a93b8';
-      ctx.fillText(c.owner != null ? `料 ${fee(c.id)}` : c.name.slice(0, 4), x + w / 2, y + cs * 0.73);
-    } else if (c.type === 'plot') {
-      ctx.fillStyle = dark ? '#0c1020' : '#eef1ff';
-      ctx.font = font(700, cs * 0.2);
-      ctx.fillText(c.owner == null ? '空き地' : BUILDINGS[c.building].label, x + w / 2, y + cs * 0.36);
-      ctx.font = font(400, cs * 0.16);
-      ctx.fillStyle = dark ? 'rgba(12,16,32,0.8)' : '#8a93b8';
-      ctx.fillText(c.owner == null ? fmt(PLOT_PRICE) : c.building === 'cp' ? `料 ${c.cpFee}` : '資産4%', x + w / 2, y + cs * 0.66);
-    } else if (c.type === 'suit') {
-      ctx.fillStyle = c.suit === 'h' || c.suit === 'd' ? '#ff6b88' : '#eef1ff';
-      ctx.font = font(700, cs * 0.55);
-      ctx.fillText(SUITS[c.suit], x + w / 2, y + w / 2 + 1);
-    } else {
-      const label = { bank: '銀行', chance: '？', stock: '株', rest: '休', lottery: 'くじ', warp: 'ワープ', arcade: 'ゲーム' }[c.type];
-      ctx.fillStyle = dark ? '#0c1020' : '#eef1ff';
-      ctx.font = font(800, cs * (c.type === 'chance' ? 0.5 : label.length > 2 ? 0.22 : 0.3));
-      ctx.fillText(label, x + w / 2, y + w / 2 + 1);
-    }
-    if (selected === c.id) {
-      ctx.strokeStyle = '#eef1ff'; ctx.lineWidth = 2;
-      rr(x, y, w, w, cs * 0.12); ctx.stroke();
-    }
-    if (highlight.includes(c.id)) {
-      ctx.strokeStyle = `rgba(94,230,168,${0.55 + 0.45 * Math.sin(now / 160)})`;
-      ctx.lineWidth = 4;
-      rr(x - 1, y - 1, w + 2, w + 2, cs * 0.14); ctx.stroke();
-    }
-  }
-
-  // tokens
-  const offs = [[0.27, 0.27], [0.73, 0.27], [0.27, 0.73], [0.73, 0.73]];
-  players.forEach((p, i) => {
-    if (p.bankrupt) return;
-    const c = cells[p.pos];
-    const tx = (c.x + offs[i][0]) * cs, ty = (c.y + offs[i][1]) * cs;
-    const r = cs * (p === current ? 0.19 : 0.15);
-    ctx.beginPath(); ctx.arc(tx, ty, r, 0, 7);
-    ctx.fillStyle = p.color; ctx.fill();
-    ctx.lineWidth = p === current ? 3 : 2; ctx.strokeStyle = '#0c1020'; ctx.stroke();
-    if (p === current) {
-      ctx.beginPath(); ctx.arc(tx, ty, r + 3 + Math.sin(now / 200) * 1.5, 0, 7);
-      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
-    }
-    ctx.fillStyle = '#0c1020';
-    ctx.font = font(800, r * 1.1);
-    ctx.fillText(p.name[0], tx, ty + 1);
-  });
+function outlined(txt, x, y, fill, stroke = INK, lw = 3) {
+  ctx.lineJoin = 'round'; ctx.lineWidth = lw; ctx.strokeStyle = stroke; ctx.strokeText(txt, x, y);
+  ctx.fillStyle = fill; ctx.fillText(txt, x, y);
 }
 
+function star(x, y, r, fill) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r * 0.48 : r;
+    ctx.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
+  }
+  ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+}
+
+function tokenPos(p, i, now) {
+  const spot = id => [(cells[id].x + OFFS[i][0]) * cs, (cells[id].y + OFFS[i][1]) * cs];
+  let [x, y] = spot(p.pos), hop = 0, scale = 1, look = [0, 0], moving = false;
+  const a = p.anim;
+  if (a && now < a.t0 + a.dur) {
+    const t = Math.max(0, (now - a.t0) / a.dur);
+    const [fx, fy] = spot(a.from), [tx, ty] = spot(a.to);
+    moving = true;
+    if (a.warp) {
+      scale = Math.abs(1 - 2 * t);
+      if (t < 0.5) [x, y] = [fx, fy];
+    } else {
+      x = fx + (tx - fx) * t; y = fy + (ty - fy) * t;
+      hop = REDUCED ? 0 : Math.sin(Math.PI * t) * cs * 0.38;
+      look = [Math.sign(tx - fx), Math.sign(ty - fy)];
+    }
+  }
+  return { x, y, hop, scale, look, moving };
+}
+
+function drawBlob(x, y, r, color, look = [0, 0], blink = false) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 7);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.lineWidth = Math.max(2, r * 0.17); ctx.strokeStyle = INK; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.beginPath(); ctx.ellipse(x - r * 0.42, y - r * 0.45, r * 0.22, r * 0.12, -0.6, 0, 7); ctx.fill();
+  for (const s of [-1, 1]) {
+    const ex = x + s * r * 0.34 + look[0] * r * 0.12, ey = y - r * 0.05 + look[1] * r * 0.1;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.ellipse(ex, ey, r * 0.2, blink ? r * 0.04 : r * 0.27, 0, 0, 7); ctx.fill();
+    if (!blink) {
+      ctx.fillStyle = INK;
+      ctx.beginPath(); ctx.arc(ex + look[0] * r * 0.07, ey + r * 0.05 + look[1] * r * 0.06, r * 0.11, 0, 7); ctx.fill();
+    }
+  }
+  ctx.fillStyle = 'rgba(255,95,162,0.45)';
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(x + s * r * 0.58, y + r * 0.3, r * 0.14, r * 0.08, 0, 0, 7); ctx.fill(); }
+}
+
+function drawDice(x, y, now) {
+  if (!dice) {
+    ctx.fillStyle = 'rgba(43,35,70,0.4)';
+    ctx.font = font(800, cs * 0.22);
+    ctx.fillText('サイコロ', x, y);
+    return;
+  }
+  let face = dice.n, ang = 0, s = 1;
+  if (dice.rolling) {
+    face = 1 + Math.floor(now / 70) % 6;
+    ang = Math.sin(now / 45) * 0.5;
+    s = 1 + Math.sin(now / 60) * 0.06;
+  } else if (dice.t0 && !REDUCED) {
+    const t = now - dice.t0;
+    s = 1 + 0.3 * Math.exp(-t / 140) * Math.cos(t / 28);
+  }
+  const d = cs * 1.15;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s);
+  ctx.fillStyle = INK; rr(-d / 2 + 3, -d / 2 + 5, d, d, d * 0.22); ctx.fill();
+  ctx.fillStyle = '#fff'; rr(-d / 2, -d / 2, d, d, d * 0.22); ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+  const pips = { 1: [[0,0]], 2: [[-1,-1],[1,1]], 3: [[-1,-1],[0,0],[1,1]], 4: [[-1,-1],[1,-1],[-1,1],[1,1]],
+    5: [[-1,-1],[1,-1],[0,0],[-1,1],[1,1]], 6: [[-1,-1],[1,-1],[-1,0],[1,0],[-1,1],[1,1]] }[face];
+  ctx.fillStyle = face === 1 ? '#ff3d63' : INK;
+  for (const [px, py] of pips) { ctx.beginPath(); ctx.arc(px * d * 0.27, py * d * 0.27, d * (face === 1 ? 0.14 : 0.085), 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+
+function drawSkyline(x0, y0, w) {
+  const blds = [[0.02, 0.55, '#ff9fc8'], [0.2, 0.8, '#ffd23f'], [0.4, 0.62, '#5fe0b5'], [0.58, 0.9, '#b892ff'], [0.78, 0.5, '#ff9f5a']];
+  const bw = w * 0.18, base = y0 + w * 0.92;
+  for (const [fx, fh, col] of blds) {
+    const bx = x0 + fx * w, bh = fh * w * 0.55;
+    ctx.fillStyle = col; rr(bx, base - bh, bw, bh, 4); ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    for (let wy = base - bh + bw * 0.25; wy < base - bw * 0.35; wy += bw * 0.42)
+      for (const wx of [0.22, 0.58]) ctx.fillRect(bx + bw * wx, wy, bw * 0.2, bw * 0.2);
+  }
+}
+
+function drawTile(c, now) {
+  const w = cs * 0.84, r = cs * 0.16, h = w / 2;
+  let s = 1;
+  if (cellFx[c.id]) {
+    const t = now - cellFx[c.id];
+    if (t < 700 && !REDUCED) s = 1 + 0.28 * Math.exp(-t / 160) * Math.cos(t / 35);
+    else delete cellFx[c.id];
+  }
+  const owned = (c.type === 'shop' || c.type === 'plot') && c.owner != null;
+  ctx.save();
+  ctx.translate((c.x + 0.5) * cs, (c.y + 0.5) * cs); ctx.scale(s, s);
+  ctx.fillStyle = INK; rr(-h + 2, -h + 3, w, w, r); ctx.fill();
+  ctx.fillStyle = owned ? players[c.owner].color : TILE[c.type];
+  rr(-h, -h, w, w, r); ctx.fill();
+  if (c.type === 'shop') {
+    ctx.save(); ctx.clip();
+    ctx.fillStyle = DISTRICTS[c.d].color; ctx.fillRect(-h, -h, w, w * 0.28);
+    ctx.fillStyle = INK; ctx.fillRect(-h, -h + w * 0.28 - 1, w, 2);
+    ctx.restore();
+  }
+  ctx.lineWidth = 2.2; ctx.strokeStyle = INK; rr(-h, -h, w, w, r); ctx.stroke();
+  ctx.fillStyle = INK;
+  if (c.type === 'shop') {
+    ctx.font = font(800, cs * 0.15); ctx.fillText(DISTRICTS[c.d].key, 0, -h + w * 0.145);
+    ctx.font = font(800, cs * 0.23); ctx.fillText(c.value, 0, -h + w * 0.53);
+    ctx.font = font(700, cs * 0.14); ctx.fillStyle = owned ? INK : '#6d6690';
+    ctx.fillText(owned ? `料${fee(c.id)}` : c.name.slice(0, 4), 0, -h + w * 0.8);
+  } else if (c.type === 'plot') {
+    if (!owned) {
+      ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; rr(-h + 4, -h + 4, w - 8, w - 8, r * 0.6); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.font = font(800, cs * 0.18);
+    ctx.fillText(owned ? BUILDINGS[c.building].label : '空き地', 0, -h + w * 0.38);
+    ctx.font = font(700, cs * 0.14);
+    ctx.fillText(!owned ? fmt(PLOT_PRICE) : c.building === 'cp' ? `料${c.cpFee}` : '資産4%', 0, -h + w * 0.7);
+  } else if (c.type === 'suit') {
+    ctx.font = font(800, cs * 0.5);
+    ctx.fillStyle = c.suit === 'h' || c.suit === 'd' ? '#ff3d63' : INK;
+    ctx.fillText(SUITS[c.suit], 0, 2);
+  } else if (c.type === 'bank') {
+    star(0, 0, w * 0.44, '#fff6b8');
+    ctx.font = font(400, cs * 0.2, DISPLAY_FONT); ctx.fillStyle = INK;
+    ctx.fillText('銀行', 0, 2);
+  } else if (c.type === 'chance') {
+    ctx.font = font(400, cs * 0.46, DISPLAY_FONT);
+    outlined('?', 0, 3, '#fff', INK, 4);
+  } else {
+    const label = TILE_LABEL[c.type];
+    ctx.font = font(400, cs * (label.length > 2 ? 0.17 : 0.3), DISPLAY_FONT);
+    ctx.fillText(label, 0, 2);
+  }
+  ctx.restore();
+}
+
+function drawBoard(now) {
+  ctx.clearRect(0, 0, size, size);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  // island
+  ctx.fillStyle = INK; rr(4, 6, size - 6, size - 7, cs * 0.45); ctx.fill();
+  ctx.fillStyle = '#8fe0a8'; rr(1, 1, size - 6, size - 7, cs * 0.45); ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  for (let gy = 1; gy < N * 2; gy += 2) for (let gx = 1 + (gy % 4 === 1 ? 0 : 1); gx < N * 2; gx += 2) {
+    ctx.beginPath(); ctx.arc(gx * cs / 2, gy * cs / 2, cs * 0.035, 0, 7); ctx.fill();
+  }
+
+  // town blocks
+  for (const q of QUADS) {
+    const x = q.x * cs + cs * 0.14, y = q.y * cs + cs * 0.14, w = cs * 3 - cs * 0.28;
+    ctx.fillStyle = INK; rr(x + 3, y + 4, w, w, cs * 0.3); ctx.fill();
+    ctx.fillStyle = q.fill; rr(x, y, w, w, cs * 0.3); ctx.fill();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
+  }
+
+  // road connecting the squares
+  ctx.lineCap = 'round';
+  for (const [lw, col] of [[cs * 0.42, INK], [cs * 0.3, '#fff6c4']]) {
+    ctx.lineWidth = lw; ctx.strokeStyle = col; ctx.beginPath();
+    for (const c of cells) for (const n of c.nb) if (n > c.id) {
+      ctx.moveTo((c.x + 0.5) * cs, (c.y + 0.5) * cs); ctx.lineTo((cells[n].x + 0.5) * cs, (cells[n].y + 0.5) * cs);
+    }
+    ctx.stroke();
+  }
+
+  // block contents: dice / goal / skyline / whose turn
+  drawDice(2.5 * cs, 2.35 * cs, now);
+  if (dice && dice.left != null && !dice.rolling) {
+    ctx.font = font(800, cs * 0.22); ctx.fillStyle = INK;
+    ctx.fillText(dice.left ? `のこり ${dice.left}マス` : 'とうちゃく！', 2.5 * cs, 3.4 * cs);
+  }
+  ctx.font = font(800, cs * 0.24); ctx.fillStyle = INK;
+  ctx.fillText('目標', 6.5 * cs, 1.75 * cs);
+  ctx.font = font(400, cs * 0.44, DISPLAY_FONT);
+  outlined(fmt(target), 6.5 * cs, 2.35 * cs, '#ff5fa2', INK, 4);
+  ctx.font = font(800, cs * 0.22); ctx.fillStyle = INK;
+  ctx.fillText(`ラウンド ${round}`, 6.5 * cs, 3.05 * cs);
+  drawSkyline(1.4 * cs, 5.3 * cs, cs * 2.2);
+  ctx.font = font(400, cs * 0.26, DISPLAY_FONT);
+  outlined('いただきタウン', 2.5 * cs, 5.62 * cs, '#ffd23f', INK, 3);
+  if (current) {
+    const bob = REDUCED ? 0 : Math.abs(Math.sin(now / 260)) * cs * 0.12;
+    ctx.fillStyle = 'rgba(43,35,70,0.2)';
+    ctx.beginPath(); ctx.ellipse(6.5 * cs, 6.75 * cs, cs * 0.45, cs * 0.1, 0, 0, 7); ctx.fill();
+    drawBlob(6.5 * cs, 6.2 * cs - bob, cs * 0.5, current.color, [0, 0], (now / 1000) % 3.2 < 0.12);
+    ctx.font = font(800, cs * 0.26); ctx.fillStyle = INK;
+    ctx.fillText(`${current.name}の番`, 6.5 * cs, 7.15 * cs);
+  }
+
+  for (const c of cells) drawTile(c, now);
+
+  for (const id of highlight) {
+    const c = cells[id], w = cs * 0.84 + 6, pulse = REDUCED ? 0.6 : 0.5 + 0.5 * Math.sin(now / 130);
+    ctx.fillStyle = `rgba(255,95,162,${0.2 + 0.25 * pulse})`;
+    rr(c.x * cs + (cs - w) / 2, c.y * cs + (cs - w) / 2, w, w, cs * 0.2); ctx.fill();
+    ctx.lineWidth = 4; ctx.strokeStyle = '#ff5fa2'; ctx.stroke();
+  }
+  if (selected != null) {
+    const c = cells[selected], w = cs * 0.84 + 4;
+    ctx.setLineDash([5, 4]); ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+    rr(c.x * cs + (cs - w) / 2, c.y * cs + (cs - w) / 2, w, w, cs * 0.2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // tokens, back to front
+  const toks = players.map((p, i) => ({ p, i, t: tokenPos(p, i, now) })).filter(o => !o.p.bankrupt).sort((a, b) => a.t.y - b.t.y);
+  for (const { p, i, t } of toks) {
+    const isCur = p === current;
+    const r = cs * (isCur ? 0.19 : 0.16) * t.scale;
+    if (r <= 0.5) continue;
+    const idle = isCur && !t.moving && !REDUCED ? Math.abs(Math.sin(now / 240)) * cs * 0.06 : 0;
+    ctx.fillStyle = 'rgba(43,35,70,0.28)';
+    ctx.beginPath(); ctx.ellipse(t.x, t.y + r * 0.9, r * (0.85 - t.hop / cs * 0.6), r * 0.25, 0, 0, 7); ctx.fill();
+    drawBlob(t.x, t.y - t.hop - idle, r, p.color, t.look, (now / 1000 + i * 0.7) % 3.4 < 0.12);
+  }
+}
+
+// ---------- particles on a full-screen layer ----------
+const fx = $('fx'), fctx = fx.getContext('2d');
+const confetti = [], floats = [];
+const CONFETTI_COLORS = ['#ff5fa2', '#ffd23f', '#5fe0b5', '#4fd3ec', '#b892ff', '#ff9f5a'];
+function resizeFx() {
+  const dpr = window.devicePixelRatio || 1;
+  fx.width = innerWidth * dpr; fx.height = innerHeight * dpr;
+  fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function boardPoint(bx, by) {
+  const r = cv.getBoundingClientRect();
+  return [r.left + bx, r.top + by];
+}
+function burst(x, y, n, power = 1) {
+  if (REDUCED || DEMO) return;
+  for (let i = 0; i < n; i++) confetti.push({
+    x, y, vx: (Math.random() - 0.5) * 380 * power, vy: -(160 + Math.random() * 320) * power, g: 700,
+    rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14, color: CONFETTI_COLORS[rand(CONFETTI_COLORS.length)],
+    w: 6 + rand(6), h: 4 + rand(5), life: 1.4 + Math.random(),
+  });
+}
+const burstCell = (id, n, power) => burst(...boardPoint((cells[id].x + 0.5) * cs, (cells[id].y + 0.5) * cs), n, power);
+function rain(n) {
+  if (REDUCED || DEMO) return;
+  for (let i = 0; i < n; i++) confetti.push({
+    x: Math.random() * innerWidth, y: -20 - Math.random() * innerHeight * 0.6, vx: (Math.random() - 0.5) * 60, vy: 80 + Math.random() * 120, g: 30,
+    rot: Math.random() * 6, vr: (Math.random() - 0.5) * 8, color: CONFETTI_COLORS[rand(CONFETTI_COLORS.length)],
+    w: 7 + rand(6), h: 5 + rand(5), life: 7,
+  });
+}
+function floatMoney(p, amount) {
+  if (DEMO || over && !players.includes(p)) return;
+  const t = tokenPos(p, players.indexOf(p), performance.now());
+  const [x, y] = boardPoint(t.x, t.y - cs * 0.35);
+  floats.push({ x, y, text: (amount > 0 ? '+' : '−') + fmt(Math.abs(amount)), color: amount > 0 ? '#12a85f' : '#ff3d63', t0: performance.now() });
+}
+let lastFx = 0;
+function drawFx(now) {
+  const dt = Math.min(0.05, (now - (lastFx || now)) / 1000);
+  lastFx = now;
+  fctx.clearRect(0, 0, innerWidth, innerHeight);
+  for (let i = confetti.length - 1; i >= 0; i--) {
+    const c = confetti[i];
+    c.vy += c.g * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.rot += c.vr * dt; c.life -= dt;
+    if (c.life <= 0 || c.y > innerHeight + 40) { confetti.splice(i, 1); continue; }
+    fctx.save(); fctx.translate(c.x, c.y); fctx.rotate(c.rot);
+    fctx.fillStyle = c.color; fctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h * Math.abs(Math.cos(c.rot * 1.7)) + 1);
+    fctx.restore();
+  }
+  fctx.textAlign = 'center'; fctx.textBaseline = 'middle';
+  fctx.font = `400 22px ${DISPLAY_FONT}`;
+  for (let i = floats.length - 1; i >= 0; i--) {
+    const f = floats[i], t = (now - f.t0) / 1300;
+    if (t > 1) { floats.splice(i, 1); continue; }
+    const y = f.y - 56 * (1 - Math.pow(1 - t, 3)), s = t < 0.15 ? 0.6 + t / 0.15 * 0.4 : 1;
+    fctx.save(); fctx.globalAlpha = 1 - t * t * t; fctx.translate(f.x, y); fctx.scale(s, s);
+    fctx.lineJoin = 'round'; fctx.lineWidth = 6; fctx.strokeStyle = '#fff'; fctx.strokeText(f.text, 0, 0);
+    fctx.fillStyle = f.color; fctx.fillText(f.text, 0, 0);
+    fctx.restore();
+  }
+}
+
+// ---------- sound: tiny synth, no audio files ----------
+const Sound = (() => {
+  let ac = null, master, bgmBus, noiseBuf, bgmTimer = null, bgmNext = 0, bgmStep = 0;
+  const prefs = { se: true, bgm: true };
+  try { Object.assign(prefs, JSON.parse(localStorage.getItem('itadaki-town-sound')) || {}); } catch {}
+  const savePrefs = () => { try { localStorage.setItem('itadaki-town-sound', JSON.stringify(prefs)); } catch {} };
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+  const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const midi = s => 12 * (+s[1] + 1) + NOTE[s[0]];
+
+  function ensure() {
+    if (DEMO) return null;
+    if (!ac) {
+      try {
+        ac = new (window.AudioContext || window.webkitAudioContext)();
+        master = ac.createGain(); master.gain.value = 0.55; master.connect(ac.destination);
+        bgmBus = ac.createGain(); bgmBus.gain.value = 1; bgmBus.connect(master);
+        noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      } catch { ac = null; return null; }
+    }
+    if (ac.state === 'suspended') ac.resume().catch(() => {});
+    return ac;
+  }
+  function tone(f, t, dur, type = 'square', vol = 0.1, slide = 1, dest = master) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (slide !== 1) o.frequency.exponentialRampToValueAtTime(f * slide, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function noise(t, dur, vol, freq, dest = master) {
+    const src = ac.createBufferSource(), flt = ac.createBiquadFilter(), g = ac.createGain();
+    src.buffer = noiseBuf; flt.type = 'bandpass'; flt.frequency.value = freq; flt.Q.value = 1.2;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(flt); flt.connect(g); g.connect(dest); src.start(t); src.stop(t + dur + 0.02);
+  }
+  const seq = (t, notes, step, type, vol, len = step * 1.4) => notes.forEach((n, i) => n && tone(hz(n), t + i * step, len, type, vol));
+  const SFX = {
+    click: t => tone(1250, t, 0.05, 'triangle', 0.09),
+    step: t => tone(560 + Math.random() * 90, t, 0.08, 'square', 0.045, 1.7),
+    dice: t => { for (let i = 0; i < 9; i++) noise(t + i * 0.065, 0.045, 0.3, 1800 + Math.random() * 1500); },
+    land: t => { tone(330, t, 0.14, 'triangle', 0.2, 0.55); noise(t, 0.06, 0.15, 900); },
+    buy: t => { seq(t, [72, 76, 79, 84], 0.07, 'square', 0.07); tone(hz(96), t + 0.3, 0.3, 'sine', 0.06); },
+    coin: t => { tone(988, t, 0.07, 'square', 0.07); tone(1319, t + 0.07, 0.28, 'square', 0.07); },
+    pay: t => seq(t, [72, 68, 64, 60], 0.08, 'triangle', 0.13),
+    card: t => seq(t, [84, 88, 91, 96, 100], 0.05, 'sine', 0.08, 0.2),
+    warp: t => { tone(160, t, 0.6, 'sawtooth', 0.05, 9); tone(240, t + 0.05, 0.55, 'square', 0.03, 6); },
+    rest: t => { tone(hz(67), t, 0.3, 'sine', 0.12); tone(hz(64), t + 0.3, 0.5, 'sine', 0.12); },
+    bad: t => { tone(220, t, 0.15, 'square', 0.07); tone(175, t + 0.16, 0.32, 'square', 0.07); },
+    turn: t => { tone(hz(79), t, 0.1, 'triangle', 0.13); tone(hz(86), t + 0.1, 0.22, 'triangle', 0.13); },
+    stop: t => tone(hz(81), t, 0.08, 'square', 0.08),
+    fanfare: t => { seq(t, [72, 76, 79, 84, null, 79, 84], 0.09, 'square', 0.07); seq(t, [48, null, 55, null, 60], 0.09, 'triangle', 0.12, 0.3); },
+    win: t => {
+      seq(t, [67, 67, 67, 72, null, null, 76, 74, 76, 79, null, null, 84], 0.12, 'square', 0.07, 0.2);
+      seq(t, [48, null, 55, null, 52, null, 55, null, 48, null, 55, null, 60], 0.12, 'triangle', 0.13, 0.25);
+    },
+    lose: t => { seq(t, [67, 66, 65], 0.28, 'triangle', 0.13, 0.3); tone(hz(64), t + 0.84, 0.9, 'triangle', 0.13, 0.7); },
+  };
+  function play(name) {
+    if (!prefs.se || !ensure()) return;
+    SFX[name](ac.currentTime + 0.01);
+  }
+
+  // cheerful 8-bar loop in C major, eighth notes
+  const MEL = ('E5 G5 C6 G5 A5 G5 E5 - F5 A5 C6 A5 G5 E5 C5 - D5 F5 A5 F5 E5 G5 C6 - D5 E5 F5 D5 G5 - G5 - ' +
+               'E5 G5 C6 G5 A5 G5 E5 - F5 A5 C6 A5 G5 E5 C5 - D5 F5 A5 F5 E5 G5 B5 C6 E6 D6 B5 D6 C6 - - -').split(' ');
+  const BASS = [48, 45, 41, 43, 48, 45, 41, 43];
+  const EIGHTH = 60 / 138 / 2;
+  function schedule() {
+    while (bgmNext < ac.currentTime + 0.4) {
+      const i = bgmStep % MEL.length, n = MEL[i];
+      if (n !== '-') tone(hz(midi(n)), bgmNext, EIGHTH * 0.85, 'square', 0.028, 1, bgmBus);
+      if (i % 2 === 0) tone(hz(BASS[Math.floor(i / 8)] + [0, 7, 12, 7][(i % 8) / 2]), bgmNext, EIGHTH * 1.7, 'triangle', 0.075, 1, bgmBus);
+      else noise(bgmNext, 0.03, 0.035, 7000, bgmBus);
+      bgmNext += EIGHTH; bgmStep++;
+    }
+  }
+  function startBgm() {
+    if (!prefs.bgm || bgmTimer || !ensure()) return;
+    bgmNext = ac.currentTime + 0.15; bgmStep = 0;
+    schedule();
+    bgmTimer = setInterval(schedule, 120);
+  }
+  function stopBgm() { clearInterval(bgmTimer); bgmTimer = null; }
+  document.addEventListener('visibilitychange', () => {
+    if (!ac) return;
+    if (document.hidden) ac.suspend().catch(() => {}); else ac.resume().catch(() => {});
+  });
+  return {
+    play, startBgm, stopBgm, prefs,
+    unlock: ensure,
+    toggle(kind, playing) {
+      prefs[kind] = !prefs[kind];
+      savePrefs();
+      if (kind === 'bgm') { if (prefs.bgm && playing) startBgm(); else stopBgm(); }
+    },
+  };
+})();
+
 function renderPanel() {
+  const changed = {};
+  for (const p of players) {
+    if (p._last != null && p.cash !== p._last) {
+      floatMoney(p, p.cash - p._last);
+      changed[p.id] = p.cash > p._last ? 'up' : 'down';
+    }
+    p._last = p.cash;
+  }
   $('players').innerHTML = players.map(p => {
-    const suits = Object.entries(SUITS).map(([k, s]) => `<span class="${p.suits[k] ? 'on' : ''}">${s}</span>`).join('') +
+    const suits = Object.entries(SUITS).map(([k, s]) => `<span class="${p.suits[k] ? 'on' : ''} ${k === 'h' || k === 'd' ? 'red' : ''}">${s}</span>`).join('') +
       (p.wild ? `<span class="w">ワイルド×${p.wild}</span>` : '');
     const status = p.bankrupt ? '破産' : p.skip ? '休み' : `Lv${p.level}`;
-    return `<div class="pc ${p === current ? 'now' : ''} ${p.bankrupt ? 'out' : ''}" style="--pc:${p.color}">
-      <div class="pn"><i></i>${p.name}<small>${status}</small></div>
-      <div>所持金 <b>${fmt(p.cash)}</b></div>
-      <div>総資産 ${fmt(worth(p))}</div>
-      <div>店${ownedProps(p).length} ・ 株${fmt(stockWorth(p))}</div>
+    return `<div class="pc ${p === current ? 'now' : ''} ${p.bankrupt ? 'out' : ''} ${changed[p.id] || ''}" style="--pc:${p.color}">
+      <div class="pn"><span class="av"></span>${p.name}<small>${status}</small></div>
+      <div class="cash">${fmt(p.cash)}</div>
+      <div class="sub">総資産 <b>${fmt(worth(p))}</b></div>
+      <div class="sub">店${ownedProps(p).length} ・ 株${fmt(stockWorth(p))}</div>
       <div class="suits">${suits}</div></div>`;
   }).join('');
 
-  $('stocks').innerHTML = `<tr><th>エリア</th><th>株価</th>${players.map(p => `<th style="color:${p.color}">${p.name[0]}</th>`).join('')}</tr>` +
+  $('stocks').innerHTML = `<tr><th>エリア</th><th>株価</th>${players.map(p => `<th><span class="chip" style="--pc:${p.color}">${p.name[0]}</span></th>`).join('')}</tr>` +
     DISTRICTS.map((d, i) => `<tr><td><span class="tag" style="background:${d.color}">${d.key}</span>${d.name}</td><td>${price(i)}G</td>` +
       players.map(p => `<td>${p.stocks[i] || '·'}</td>`).join('') + '</tr>').join('');
   renderInfo();
@@ -541,6 +936,7 @@ function renderInfo() {
 
 function frame(now) {
   drawBoard(now);
+  drawFx(now);
   requestAnimationFrame(frame);
 }
 
@@ -567,6 +963,8 @@ function newGame(t) {
 
 function startLoop() {
   over = false; current = null; dice = null; selected = null; highlight = [];
+  players.forEach(p => { p._last = p.cash; delete p.anim; });
+  Sound.startBgm();
   $('log').innerHTML = '';
   ['title', 'end'].forEach(id => $(id).classList.add('hidden'));
   log(round === 1 && turn === 0 ? `ゲームスタート！目標は <b>${fmt(target)}</b>` : `ラウンド${round}から再開しました`);
@@ -604,6 +1002,7 @@ async function takeTurn(p) {
   }
   if (p.cpu) await cpuPropose(p);
   if (!p.cpu) {
+    Sound.play('turn');
     let traded = false;
     for (;;) {
       const a = await ask({
@@ -627,11 +1026,14 @@ async function takeTurn(p) {
 }
 
 async function rollAndMove(p) {
-  for (let i = 0; i < 6; i++) { dice = { n: 1 + rand(6) }; await sleep(60); }
+  dice = { n: 1, rolling: true };
+  Sound.play('dice');
+  await sleep(650);
   const n = 1 + rand(6);
-  dice = { n, left: n };
+  dice = { n, left: n, t0: performance.now() };
+  Sound.play('land');
   log(`${pname(p)}はサイコロで <b>${n}</b> を出した`);
-  await sleep(400);
+  await sleep(450);
   await move(p, n);
   if (over) return;
   await land(p);
@@ -642,13 +1044,16 @@ async function move(p, n) {
     let opts = cells[p.pos].nb.filter(id => id !== p.prev);
     if (!opts.length) opts = cells[p.pos].nb;
     const next = opts.length === 1 ? opts[0] : p.cpu ? cpuDirection(p, opts) : await humanDirection(p, opts, n - i);
+    p.anim = { from: p.pos, to: next, t0: performance.now(), dur: 230 * speed };
     p.prev = p.pos; p.pos = next;
+    Sound.play('step');
     dice.left = n - i - 1;
-    await sleep(p.cpu ? 200 : 170);
+    await sleep(240);
     const c = cells[next];
     if (c.type === 'plot' && c.building === 'cp' && c.owner != null && c.owner !== p.id) c.cpFee += 10;
     if (c.type === 'suit' && !p.suits[c.suit]) {
       p.suits[c.suit] = true;
+      Sound.play('card'); cellPop(c.id); burstCell(c.id, 14, 0.6);
       log(`${pname(p)}が ${SUITS[c.suit]} を手に入れた`);
       renderPanel();
     }
@@ -688,6 +1093,7 @@ async function bankVisit(p, landed) {
     const pay = Math.round(300 + p.level * 100 + shopWorth(p) * 0.1);
     p.level++;
     p.cash += pay;
+    Sound.play('fanfare'); burstCell(BANK, 70, 1.3);
     p.suits = {};
     p.wild -= used;
     log(`🎉 ${pname(p)}がレベル${p.level}に昇進！ 給料 <b>${fmt(pay)}</b>`);
@@ -730,19 +1136,23 @@ async function land(p) {
     else await humanBuyStock(p, '株屋：買う株を選んでね（99株まで）');
   } else if (c.type === 'rest') {
     p.skip = true;
+    Sound.play('rest');
     log(`${pname(p)}は休憩所でひと休み（次は1回休み）`);
     await toast(`${pname(p)}は休憩所でひと休み<br>次は1回休み`, 1000);
   } else if (c.type === 'warp') {
     const to = WARPS.find(id => id !== c.id);
     log(`${pname(p)}はワープした！`);
-    await toast(`🌀 ${pname(p)}はワープした！`, 800);
+    Sound.play('warp');
+    p.anim = { from: c.id, to, t0: performance.now(), dur: 700 * speed, warp: true };
     p.pos = to; p.prev = null; selected = to;
+    await toast(`🌀 ${pname(p)}はワープした！`, 900);
   } else if (c.type === 'arcade') {
     await arcade(p);
   } else if (c.type === 'plot') {
     await landPlot(p, c);
   } else if (c.type === 'lottery') {
     const win = [0, 0, 50, 100, 100, 200, 400][rand(7)];
+    Sound.play(win ? 'coin' : 'bad');
     p.cash += win;
     log(`${pname(p)}の宝くじ… ${win ? `<b>${fmt(win)}</b> 当たり！` : 'はずれ'}`);
     await toast(`🎫 宝くじ… ${win ? `<b>${fmt(win)}</b> 当たり！` : 'はずれ…'}`, 1000);
@@ -761,6 +1171,7 @@ async function landShop(p, c) {
     });
     if (yes) {
       p.cash -= c.value; c.owner = p.id;
+      Sound.play('buy'); cellPop(c.id); burstCell(c.id, 28);
       log(`${pname(p)}が${d.name}の${c.name}を <b>${fmt(c.value)}</b> で買った`);
       await sleep(400);
     }
@@ -774,6 +1185,7 @@ async function landShop(p, c) {
     let f = fee(c.id);
     if (p.freeFee) { p.freeFee = false; f = 0; log(`${pname(p)}は無料券を使った！`); }
     p.cash -= f; o.cash += f;
+    Sound.play('pay');
     log(`${pname(p)}が${pname(o)}の${c.name}で買い物料 <b>${fmt(f)}</b>`);
     renderPanel();
     await toast(`${pname(o)}の${c.name}<br>買い物料 <b>${fmt(f)}</b>`, 900);
@@ -787,6 +1199,7 @@ async function landShop(p, c) {
       });
       if (yes) {
         p.cash -= cost; o.cash += c.value * 3; c.owner = p.id;
+        Sound.play('warp'); cellPop(c.id); burstCell(c.id, 50, 1.2);
         log(`💥 ${pname(p)}が${pname(o)}の${c.name}を <b>${fmt(cost)}</b> で買い取った！`);
         await toast(`💥 ${pname(p)}が${c.name}を買い取った！`, 1100);
       }
@@ -805,6 +1218,7 @@ async function landPlot(p, c) {
     if (!b) return;
     p.cash -= PLOT_PRICE;
     Object.assign(c, { owner: p.id, building: b, cpFee: 10 });
+    Sound.play('buy'); cellPop(c.id); burstCell(c.id, 28);
     log(`${pname(p)}が空き地に${BUILDINGS[b].label}を建てた`);
     await sleep(400);
   } else if (c.owner === p.id) {
@@ -814,6 +1228,7 @@ async function landPlot(p, c) {
     let f = c.building === 'cp' ? c.cpFee : Math.max(0, Math.round(worth(p) * 0.04));
     if (p.freeFee) { p.freeFee = false; f = 0; log(`${pname(p)}は無料券を使った！`); }
     p.cash -= f; o.cash += f;
+    Sound.play('pay');
     const what = c.building === 'cp' ? '通行料' : '税金';
     log(`${pname(p)}が${pname(o)}の${BUILDINGS[c.building].label}で${what} <b>${fmt(f)}</b>`);
     renderPanel();
@@ -825,6 +1240,7 @@ async function landPlot(p, c) {
 function transfer(s, from, to, amount) {
   const c = cells[s];
   to.cash -= amount; from.cash += amount; c.owner = to.id;
+  Sound.play('buy'); cellPop(s); burstCell(s, 24);
   log(`🤝 ${pname(from)}が${pname(to)}に${c.name}を <b>${fmt(amount)}</b> で売った`);
   renderPanel();
 }
@@ -874,7 +1290,7 @@ async function humanTrade(p) {
     const o = players[cells[r.sel].owner];
     log(`${pname(p)}が${pname(o)}に${cells[r.sel].name}を${fmt(r.amt)}で買いたいと提案`);
     if (r.amt >= cpuAskPrice(o, r.sel) * whim()) { transfer(r.sel, o, p, r.amt); await toast(`${pname(o)}「いいよ、売るよ！」`, 1100); }
-    else { log(`${pname(o)}は断った`); await toast(`${pname(o)}「その値段じゃ売れないな…」`, 1100); }
+    else { Sound.play('bad'); log(`${pname(o)}は断った`); await toast(`${pname(o)}「その値段じゃ売れないな…」`, 1100); }
     return true;
   }
   const r = await pickerDialog({
@@ -895,7 +1311,7 @@ async function humanTrade(p) {
   const b = players[q];
   log(`${pname(p)}が${pname(b)}に${cells[r.sel].name}を${fmt(r.amt)}で売りたいと提案`);
   if (r.amt <= cpuBidPrice(b, r.sel) * whim() && b.cash - r.amt >= 200) { transfer(r.sel, p, b, r.amt); await toast(`${pname(b)}「買った！」`, 1100); }
-  else { log(`${pname(b)}は断った`); await toast(`${pname(b)}「今回はやめておくよ」`, 1100); }
+  else { Sound.play('bad'); log(`${pname(b)}は断った`); await toast(`${pname(b)}「今回はやめておくよ」`, 1100); }
   return true;
 }
 
@@ -967,6 +1383,7 @@ function slotGame(bet) {
     }, () => {
       if (done) { closeDialog(); res(win); return; }
       stopped[stopped.indexOf(false)] = true;
+      Sound.play('stop');
       paint();
       if (stopped.includes(false)) return;
       clearInterval(timer);
@@ -974,6 +1391,8 @@ function slotGame(bet) {
       const [a, b, c] = reels;
       if (a === b && b === c) win = bet * (SLOT[a] === '7' ? 20 : 8);
       else if (a === b || b === c || a === c) win = bet * 2;
+      Sound.play(win ? 'fanfare' : 'bad');
+      if (win) burst(innerWidth / 2, innerHeight * 0.6, 40);
       card.querySelector('.slotmsg').innerHTML = win ? `🎉 <b>${fmt(win)}</b> 獲得！` : 'ざんねん、はずれ…';
       card.querySelector('.btns button').textContent = 'OK';
     });
@@ -997,6 +1416,7 @@ async function hiloGame(bet) {
     let next;
     do next = 1 + rand(13); while (next === card);
     const ok = g === 'hi' ? next > card : next < card;
+    Sound.play(ok ? 'coin' : 'bad');
     await ask({ title: ok ? '🎉 あたり！' : 'はずれ…', body: `次のカードは <span class="bigcard">${cardName(next)}</span>`, buttons: [{ label: 'OK', value: 1, primary: true }] });
     if (!ok) return 0;
     pot *= 2; card = next;
@@ -1039,7 +1459,7 @@ function payDividends(d, f) {
   for (const q of players) {
     if (q.bankrupt || !q.stocks[d]) continue;
     const div = Math.round(f * q.stocks[d] * 0.004);
-    if (div > 0) { q.cash += div; log(`${pname(q)}に${DISTRICTS[d].name}株の配当 ${fmt(div)}`); }
+    if (div > 0) { Sound.play('coin'); q.cash += div; log(`${pname(q)}に${DISTRICTS[d].name}株の配当 ${fmt(div)}`); }
   }
   renderPanel();
 }
@@ -1047,6 +1467,7 @@ function payDividends(d, f) {
 function invest(p, s, amt) {
   const c = cells[s], before = price(c.d);
   c.value += amt; p.cash -= amt;
+  Sound.play('buy'); cellPop(s);
   log(`${pname(p)}が${c.name}に <b>${fmt(amt)}</b> 増資（株価 ${before}→${price(c.d)}G）`);
   renderPanel();
 }
@@ -1054,6 +1475,7 @@ function invest(p, s, amt) {
 function trade(p, d, qty) {
   const pr = price(d), D = DISTRICTS[d];
   p.stocks[d] += qty;
+  Sound.play('coin');
   p.cash -= qty * pr;
   if (Math.abs(qty) >= 10) D.mod *= 1 + Math.sign(qty) * 0.015 * Math.floor(Math.abs(qty) / 10);
   log(`${pname(p)}が${D.name}の株を ${Math.abs(qty)}株 ${qty > 0 ? '買った' : '売った'}（1株 ${pr}G → ${price(d)}G）`);
@@ -1154,6 +1576,7 @@ async function auction(s, sellerId) {
   }
   const { q, bid } = bids[0];
   q.cash -= bid; c.owner = q.id;
+  Sound.play('buy'); cellPop(s); burstCell(s, 24);
   log(`🔨 ${pname(q)}が${c.name}を <b>${fmt(bid)}</b> で落札`);
   renderPanel();
   await toast(`🔨 ${pname(q)}が${c.name}を<br><b>${fmt(bid)}</b> で落札`, 1000);
@@ -1223,6 +1646,7 @@ const CARDS = [
 
 async function drawChance(p) {
   const card = CARDS[rand(CARDS.length)];
+  Sound.play('card');
   log(`${pname(p)}のチャンスカード：「${card.t}」`);
   if (p.cpu) await toast(`🎴 チャンスカード<br><b>${card.t}</b>`, 1500);
   else await ask({ title: '🎴 チャンスカード', body: `<b>${card.t}</b>`, buttons: [{ label: 'OK', value: 1, primary: true }] });
@@ -1279,12 +1703,15 @@ function endGame(winner, reason) {
   if (over) return;
   over = true;
   clearSave();
+  Sound.stopBgm();
+  Sound.play(winner && !winner.cpu ? 'win' : winner ? 'fanfare' : 'lose');
+  if (winner) rain(winner.cpu ? 60 : 160);
   closeDialog(); pick = null; highlight = [];
   const ranked = [...players].sort((a, b) => (b === winner) - (a === winner) || a.bankrupt - b.bankrupt || worth(b) - worth(a));
   $('endTitle').textContent = winner ? `🏆 ${winner.name}の優勝！` : 'ゲーム終了';
   $('endMsg').textContent = winner ? `総資産 ${fmt(worth(winner))} で目標達成！（${round}ラウンド）` : reason;
   $('ranking').innerHTML = ranked.map((p, i) =>
-    `<li><span>${i + 1}位</span><span style="color:${p.color};font-weight:700">${p.name}</span>${p.bankrupt ? '<span>（破産）</span>' : ''}<span>${fmt(worth(p))}</span></li>`).join('');
+    `<li><span>${i + 1}位</span><span class="av" style="--pc:${p.color}"></span><span>${p.name}</span>${p.bankrupt ? '<span>（破産）</span>' : ''}<span class="w">${fmt(worth(p))}</span></li>`).join('');
   log(winner ? `🏆 ${pname(winner)}の優勝！` : reason);
   renderPanel();
   $('end').classList.remove('hidden');
@@ -1297,6 +1724,22 @@ $('again').onclick = () => { $('end').classList.add('hidden'); refreshResume(); 
 $('resume').onclick = resumeGame;
 $('rulesBtn').onclick = $('titleRules').onclick = () => $('rules').classList.remove('hidden');
 $('closeRules').onclick = () => $('rules').classList.add('hidden');
+function syncSoundButtons() {
+  $('seBtn').textContent = Sound.prefs.se ? '🔊 効果音 ON' : '🔇 効果音 OFF';
+  $('bgmBtn').textContent = Sound.prefs.bgm ? '🎵 BGM ON' : '🎵 BGM OFF';
+  $('titleSound').textContent = Sound.prefs.se || Sound.prefs.bgm ? '🔊 音あり' : '🔇 音なし';
+}
+$('seBtn').onclick = () => { Sound.toggle('se'); Sound.play('click'); syncSoundButtons(); };
+$('bgmBtn').onclick = () => { Sound.toggle('bgm', !over); syncSoundButtons(); };
+$('titleSound').onclick = () => {
+  const on = !(Sound.prefs.se || Sound.prefs.bgm);
+  if (Sound.prefs.se !== on) Sound.toggle('se');
+  if (Sound.prefs.bgm !== on) Sound.toggle('bgm', false);
+  Sound.play('click');
+  syncSoundButtons();
+};
+document.addEventListener('pointerdown', () => Sound.unlock());
+syncSoundButtons();
 $('speedBtn').onclick = () => {
   if (DEMO) return;
   speed = speed === 1 ? 0.4 : speed === 0.4 ? 0.15 : 1;
