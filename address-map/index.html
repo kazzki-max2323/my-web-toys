@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>住所だけマップ</title>
+<title>新潟市 住所マップ</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root {
@@ -79,7 +79,7 @@
 
 <div class="top">
   <form class="search" id="search">
-    <input id="q" type="search" placeholder="住所を入力（例: 東京都新宿区西新宿2-8-1）" autocomplete="off" enterkeyhint="search">
+    <input id="q" type="search" placeholder="新潟市の住所（例: 中央区東大通1-1）" autocomplete="off" enterkeyhint="search">
     <button class="primary">検索</button>
   </form>
   <ul class="results" id="results"></ul>
@@ -118,8 +118,15 @@
   const nearEl = document.getElementById('near');
   const resultsEl = document.getElementById('results');
 
-  const start = parseHash() || { z: 17, lat: 35.6896, lng: 139.6922 };
-  const map = L.map(mapEl, { zoomControl: false, maxZoom: 20 }).setView([start.lat, start.lng], start.z);
+  // 新潟市の範囲だけ表示する
+  const CITY = '新潟県新潟市';
+  const CITY_BOUNDS = L.latLngBounds([37.60, 138.72], [38.06, 139.34]);
+  const hash = parseHash();
+  const start = hash && CITY_BOUNDS.contains([hash.lat, hash.lng]) ? hash : { z: 17, lat: 37.9145, lng: 139.0590 };
+  const map = L.map(mapEl, {
+    zoomControl: false, maxZoom: 20, minZoom: 11,
+    maxBounds: CITY_BOUNDS, maxBoundsViscosity: 1,
+  }).setView([start.lat, start.lng], start.z);
   L.control.zoom({ position: 'bottomright' }).addTo(map);
 
   const bases = {
@@ -268,14 +275,19 @@
   // ---------- 住所検索 ----------
   document.getElementById('search').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const q = document.getElementById('q').value.trim();
+    let q = document.getElementById('q').value.trim();
     if (!q) return;
+    // 「中央区東大通1-1」のように市名を省いても新潟市内として探す
+    q = q.replace(/^新潟県/, '').replace(/^新潟市/, '');
+    q = CITY + q;
     resultsEl.innerHTML = '';
     setStatus('検索中…');
     try {
       const res = await fetch(GSI_SEARCH + encodeURIComponent(q));
-      const list = (await res.json()).slice(0, 8);
-      setStatus(list.length ? '' : '見つかりませんでした');
+      const list = (await res.json())
+        .filter((f) => CITY_BOUNDS.contains([f.geometry.coordinates[1], f.geometry.coordinates[0]]))
+        .slice(0, 8);
+      setStatus(list.length ? '' : '新潟市内で見つかりませんでした');
       if (list.length === 1) return goTo(list[0]);
       for (const f of list) {
         const li = document.createElement('li');
