@@ -89,8 +89,8 @@
   <div class="here"><span id="here">—</span><small id="near"></small></div>
   <div class="row">
     <div class="row seg" id="bases">
-      <button data-base="plain" aria-pressed="true">文字なし地図</button>
-      <button data-base="gsi" aria-pressed="false">地理院 淡色</button>
+      <button data-base="gsi" aria-pressed="true">淡色地図</button>
+      <button data-base="plain" aria-pressed="false">文字なし地図</button>
     </div>
     <span class="status" id="status"></span>
   </div>
@@ -123,16 +123,16 @@
   L.control.zoom({ position: 'bottomright' }).addTo(map);
 
   const bases = {
-    plain: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd', maxZoom: 20, maxNativeZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    plain: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 20, maxNativeZoom: 16,
+      attribution: '&copy; Esri &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }),
     gsi: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
       maxZoom: 20, maxNativeZoom: 18,
       attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }),
   };
-  let base = bases.plain.addTo(map);
+  let base = bases.gsi.addTo(map);
   document.getElementById('bases').addEventListener('click', (e) => {
     const key = e.target.dataset.base;
     if (!key || bases[key] === base) return;
