@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>住所だけマップ</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --text: #1d2433;
+    --muted: #6b7385;
+    --accent: #2f6fe0;
+    --memo: #c2410c;
+    --panel: rgba(255, 255, 255, 0.95);
+    --line: rgba(0, 0, 0, 0.12);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #f2f2ee; color: var(--text);
+    font-family: system-ui, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif; }
+  #map { position: fixed; inset: 0; background: #f2f2ee; }
+
+  .top { position: fixed; top: 12px; left: 12px; right: 12px; z-index: 1000;
+    display: flex; flex-direction: column; gap: 6px; max-width: 520px; margin: 0 auto; }
+  .search { display: flex; gap: 6px; }
+  .search input { flex: 1; min-width: 0; padding: 10px 12px; font: inherit; font-size: 15px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button { padding: 9px 14px; font: inherit; font-size: 14px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+  button:hover, button:focus-visible { border-color: var(--accent); outline: none; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .results { list-style: none; margin: 0; padding: 4px; background: var(--panel); border-radius: 10px;
+    border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-height: 40vh; overflow: auto; }
+  .results:empty { display: none; }
+  .results li { padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .results li:hover { background: rgba(47, 111, 224, 0.1); }
+
+  .bottom { position: fixed; left: 12px; bottom: 12px; z-index: 1000; display: flex; flex-direction: column;
+    gap: 6px; max-width: calc(100% - 80px); }
+  .here { padding: 8px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .here small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .here small:empty { display: none; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .seg button { padding: 6px 10px; font-size: 13px; }
+  .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .status { font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 6px; }
+  .status:empty { display: none; }
+
+  .crosshair { position: fixed; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px;
+    z-index: 900; pointer-events: none; opacity: 0.55; }
+  .crosshair::before, .crosshair::after { content: ""; position: absolute; background: var(--text); }
+  .crosshair::before { left: 8px; top: 0; width: 2px; height: 18px; }
+  .crosshair::after { top: 8px; left: 0; height: 2px; width: 18px; }
+
+  /* 建物ラベル */
+  .lbl { width: 0 !important; height: 0 !important; }
+  .lbl > div { transform: translate(-50%, -50%); white-space: nowrap; text-align: center; line-height: 1.25;
+    font-size: 11px; color: #4a5160;
+    text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff; }
+  .lbl .nm { display: block; font-size: 12px; font-weight: 700; color: #1f3a68; }
+  .lbl.memo .nm { color: var(--memo); }
+  .lbl.memo > div { cursor: pointer; }
+  #map.z17 .lbl.num { display: none; }
+  #map.far .lbl:not(.memo) { display: none; }
+
+  .leaflet-popup-content { font-size: 13px; line-height: 1.6; margin: 10px 14px; }
+  .pop-addr { font-weight: 700; }
+  .pop-sub { color: var(--muted); }
+  .pop-form { display: flex; gap: 4px; margin-top: 6px; }
+  .pop-form input { flex: 1; min-width: 0; padding: 5px 7px; font: inherit; border: 1px solid var(--line); border-radius: 6px; }
+  .pop-form button { padding: 5px 9px; font-size: 13px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="crosshair"></div>
+
+<div class="top">
+  <form class="search" id="search">
+    <input id="q" type="search" placeholder="住所を入力（例: 東京都新宿区西新宿2-8-1）" autocomplete="off" enterkeyhint="search">
+    <button class="primary">検索</button>
+  </form>
+  <ul class="results" id="results"></ul>
+</div>
+
+<div class="bottom">
+  <div class="here"><span id="here">—</span><small id="near"></small></div>
+  <div class="row">
+    <div class="row seg" id="bases">
+      <button data-base="plain" aria-pressed="true">文字なし地図</button>
+      <button data-base="gsi" aria-pressed="false">地理院 淡色</button>
+    </div>
+    <span class="status" id="status"></span>
+  </div>
+</div>
+
+<script>window.GSI = window.GSI || {};</script>
+<script src="https://maps.gsi.go.jp/js/muni.js" async></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(() => {
+  // 建物名・番地は OpenStreetMap（Overpass API）、住所検索と町丁目は国土地理院のAPIを使う。
+  // 店舗・施設のタグが付いたものは表示しない。
+  const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+  const GSI_SEARCH = 'https://msearch.gsi.go.jp/address-search/AddressSearch?q=';
+  const GSI_REVERSE = 'https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress';
+  const MIN_FETCH_ZOOM = 16;
+  const RESIDENTIAL = '^(apartments|residential|dormitory|house|detached|terrace|semidetached_house)$';
+  const NAME_HINT = 'マンション|ハイツ|コーポ|アパート|荘|レジデン|パレス|メゾン|ハイム|ヴィラ|コート|テラス|ハウス|ガーデン|タワー|ヒルズ|シャトー|団地|住宅|寮';
+  const NON_RESIDENTIAL = ['shop', 'amenity', 'office', 'tourism', 'craft', 'leisure', 'healthcare', 'railway', 'public_transport'];
+  const MEMO_KEY = 'address-map-memos';
+
+  const mapEl = document.getElementById('map');
+  const statusEl = document.getElementById('status');
+  const hereEl = document.getElementById('here');
+  const nearEl = document.getElementById('near');
+  const resultsEl = document.getElementById('results');
+
+  const start = parseHash() || { z: 17, lat: 35.6896, lng: 139.6922 };
+  const map = L.map(mapEl, { zoomControl: false, maxZoom: 20 }).setView([start.lat, start.lng], start.z);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  const bases = {
+    plain: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd', maxZoom: 20, maxNativeZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    }),
+    gsi: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+      maxZoom: 20, maxNativeZoom: 18,
+      attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }),
+  };
+  let base = bases.plain.addTo(map);
+  document.getElementById('bases').addEventListener('click', (e) => {
+    const key = e.target.dataset.base;
+    if (!key || bases[key] === base) return;
+    map.removeLayer(base);
+    base = bases[key].addTo(map);
+    base.bringToBack();
+    for (const b of e.currentTarget.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b === e.target));
+  });
+
+  // ---------- OSM の建物名・番地 ----------
+  const labelLayer = L.layerGroup().addTo(map);
+  const places = new Map(); // "way/123" -> { lat, lng, name, short, full }
+  let fetchedBounds = null;
+  let inflight = null;
+
+  function shortAddr(t) {
+    const block = t['addr:block_number'];
+    const hn = t['addr:housenumber'];
+    if (block && hn) return `${block}-${hn}`;
+    return hn || block || '';
+  }
+  function fullAddr(t) {
+    if (t['addr:full']) return t['addr:full'];
+    return ['addr:province', 'addr:city', 'addr:suburb', 'addr:quarter', 'addr:neighbourhood']
+      .map((k) => t[k]).filter(Boolean).join('') + shortAddr(t);
+  }
+
+  function addPlace(el) {
+    const t = el.tags || {};
+    if (NON_RESIDENTIAL.some((k) => t[k])) return;
+    const key = `${el.type}/${el.id}`;
+    if (places.has(key)) return;
+    const lat = el.lat ?? el.center?.lat;
+    const lng = el.lon ?? el.center?.lon;
+    if (lat == null || lng == null) return;
+    const p = { lat, lng, name: t.name || t['addr:housename'] || '', short: shortAddr(t), full: fullAddr(t) };
+    if (!p.name && !p.short) return;
+    places.set(key, p);
+    const html = (p.name ? `<span class="nm">${esc(p.name)}</span>` : '') + (p.short ? esc(p.short) : '');
+    L.marker([lat, lng], {
+      interactive: false, keyboard: false,
+      icon: L.divIcon({ className: `lbl${p.name ? '' : ' num'}`, html: `<div>${html}</div>`, iconSize: null }),
+    }).addTo(labelLayer);
+  }
+
+  async function loadPlaces() {
+    if (map.getZoom() < MIN_FETCH_ZOOM) {
+      setStatus('ズームすると建物名・番地を表示します');
+      return;
+    }
+    const view = map.getBounds();
+    if (fetchedBounds && fetchedBounds.contains(view)) { setStatus(''); return; }
+    const b = view.pad(0.4);
+    const bbox = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map((n) => n.toFixed(6)).join(',');
+    const query = `[out:json][timeout:25];(
+      nwr["building"~"${RESIDENTIAL}"]["name"](${bbox});
+      nwr["building"]["name"~"${NAME_HINT}"](${bbox});
+      nwr["addr:housenumber"](${bbox});
+      nwr["addr:block_number"](${bbox});
+    );out tags center 3000;`;
+
+    inflight?.abort();
+    const ctrl = inflight = new AbortController();
+    setStatus('建物データを読み込み中…');
+    for (const url of OVERPASS) {
+      try {
+        const res = await fetch(url, { method: 'POST', body: new URLSearchParams({ data: query }), signal: ctrl.signal });
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        if (places.size > 8000) { places.clear(); labelLayer.clearLayers(); }
+        data.elements.forEach(addPlace);
+        fetchedBounds = b;
+        setStatus('');
+        updateNear();
+        return;
+      } catch (err) {
+        if (ctrl.signal.aborted) return;
+      }
+    }
+    setStatus('建物データを取得できませんでした（少し待って動かすと再試行します）');
+  }
+
+  function nearestPlace(latlng, maxMeters) {
+    let best = null, bestD = maxMeters;
+    for (const p of places.values()) {
+      if (!p.short && !p.name) continue;
+      const d = map.distance(latlng, [p.lat, p.lng]);
+      if (d < bestD) { best = p; bestD = d; }
+    }
+    return best;
+  }
+
+  // ---------- 国土地理院: 町丁目の逆ジオコーディング ----------
+  const reverseCache = new Map();
+  async function reverseGeocode(latlng) {
+    const key = `${latlng.lat.toFixed(4)},${latlng.lng.toFixed(4)}`;
+    if (reverseCache.has(key)) return reverseCache.get(key);
+    const res = await fetch(`${GSI_REVERSE}?lat=${latlng.lat}&lon=${latlng.lng}`);
+    const r = (await res.json())?.results;
+    let text = '';
+    if (r) {
+      const muni = window.GSI.MUNI_ARRAY?.[r.muniCd] || window.GSI.MUNI_ARRAY?.[String(r.muniCd).replace(/^0/, '')];
+      const [, pref = '', , city = ''] = muni ? muni.split(',') : [];
+      const town = r.lv01Nm && r.lv01Nm !== '－' ? r.lv01Nm : '';
+      text = (pref + city + town).replace(/[\s　]/g, '');
+    }
+    reverseCache.set(key, text);
+    return text;
+  }
+
+  function placeLine(p) {
+    if (!p) return '';
+    return [p.name, p.short && `${p.short}番`].filter(Boolean).join(' ・ ');
+  }
+
+  let hereSeq = 0;
+  async function updateHere() {
+    const seq = ++hereSeq;
+    const c = map.getCenter();
+    try {
+      const text = await reverseGeocode(c);
+      if (seq === hereSeq) hereEl.textContent = text || '住所が見つかりません';
+    } catch {
+      if (seq === hereSeq) hereEl.textContent = '住所を取得できませんでした';
+    }
+    updateNear();
+  }
+  function updateNear() {
+    const p = map.getZoom() >= MIN_FETCH_ZOOM ? nearestPlace(map.getCenter(), 40) : null;
+    nearEl.textContent = p ? `付近: ${placeLine(p)}` : '';
+  }
+
+  // ---------- 住所検索 ----------
+  document.getElementById('search').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const q = document.getElementById('q').value.trim();
+    if (!q) return;
+    resultsEl.innerHTML = '';
+    setStatus('検索中…');
+    try {
+      const res = await fetch(GSI_SEARCH + encodeURIComponent(q));
+      const list = (await res.json()).slice(0, 8);
+      setStatus(list.length ? '' : '見つかりませんでした');
+      if (list.length === 1) return goTo(list[0]);
+      for (const f of list) {
+        const li = document.createElement('li');
+        li.textContent = f.properties.title;
+        li.addEventListener('click', () => { resultsEl.innerHTML = ''; goTo(f); });
+        resultsEl.appendChild(li);
+      }
+    } catch {
+      setStatus('検索に失敗しました');
+    }
+  });
+
+  let searchMarker = null;
+  function goTo(f) {
+    const [lng, lat] = f.geometry.coordinates;
+    searchMarker?.remove();
+    searchMarker = L.circleMarker([lat, lng], { radius: 7, color: '#fff', weight: 2, fillColor: '#2f6fe0', fillOpacity: 1 })
+      .addTo(map).bindPopup(`<div class="pop-addr">${esc(f.properties.title)}</div>`);
+    map.setView([lat, lng], 18);
+    searchMarker.openPopup();
+  }
+
+  // ---------- 自分メモ（建物名を自分で追加） ----------
+  const memoLayer = L.layerGroup().addTo(map);
+  let memos = loadMemos();
+  function loadMemos() {
+    try { return JSON.parse(localStorage.getItem(MEMO_KEY)) || []; } catch { return []; }
+  }
+  function saveMemos() {
+    try { localStorage.setItem(MEMO_KEY, JSON.stringify(memos)); } catch {}
+    drawMemos();
+  }
+  function drawMemos() {
+    memoLayer.clearLayers();
+    memos.forEach((m, i) => {
+      L.marker([m.lat, m.lng], {
+        icon: L.divIcon({ className: 'lbl memo', html: `<div><span class="nm">${esc(m.name)}</span></div>`, iconSize: null }),
+      }).on('click', () => {
+        const box = document.createElement('div');
+        box.innerHTML = `<div class="pop-addr">${esc(m.name)}</div><div class="pop-sub">自分で追加したメモ</div>`;
+        const del = document.createElement('button');
+        del.textContent = '削除';
+        del.style.marginTop = '6px';
+        del.addEventListener('click', () => { memos.splice(i, 1); saveMemos(); map.closePopup(); });
+        box.appendChild(del);
+        L.popup().setLatLng([m.lat, m.lng]).setContent(box).openOn(map);
+      }).addTo(memoLayer);
+    });
+  }
+  drawMemos();
+
+  map.on('click', async (e) => {
+    const box = document.createElement('div');
+    const addr = document.createElement('div');
+    addr.className = 'pop-addr';
+    addr.textContent = '住所を確認中…';
+    const sub = document.createElement('div');
+    sub.className = 'pop-sub';
+    sub.textContent = placeLine(nearestPlace(e.latlng, 25));
+    const form = document.createElement('form');
+    form.className = 'pop-form';
+    form.innerHTML = '<input placeholder="建物名をメモ" maxlength="40"><button>追加</button>';
+    form.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const name = form.querySelector('input').value.trim();
+      if (!name) return;
+      memos.push({ lat: e.latlng.lat, lng: e.latlng.lng, name });
+      saveMemos();
+      map.closePopup();
+    });
+    box.append(addr, sub, form);
+    L.popup().setLatLng(e.latlng).setContent(box).openOn(map);
+    try {
+      addr.textContent = (await reverseGeocode(e.latlng)) || '住所が見つかりません';
+    } catch {
+      addr.textContent = '住所を取得できませんでした';
+    }
+  });
+
+  // ---------- 共通 ----------
+  let moveTimer = 0;
+  function onMove() {
+    const z = map.getZoom();
+    mapEl.classList.toggle('z17', z < 18);
+    mapEl.classList.toggle('far', z < MIN_FETCH_ZOOM);
+    const c = map.getCenter();
+    history.replaceState(null, '', `#${z}/${c.lat.toFixed(5)}/${c.lng.toFixed(5)}`);
+    clearTimeout(moveTimer);
+    moveTimer = setTimeout(() => { loadPlaces(); updateHere(); }, 400);
+  }
+  map.on('moveend', onMove);
+  onMove();
+
+  function parseHash() {
+    const m = location.hash.match(/^#(\d+)\/(-?[\d.]+)\/(-?[\d.]+)/);
+    return m && { z: +m[1], lat: +m[2], lng: +m[3] };
+  }
+  function setStatus(text) { statusEl.textContent = text; }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+})();
+</script>
+</body>
+</html>
