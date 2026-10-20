@@ -1,0 +1,9 @@
+<!-- index.html の </body> の直前に貼る。 -->
+<script>
+if('serviceWorker' in navigator){addEventListener('load',()=>{
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{document.addEventListener('visibilitychange',()=>{if(!document.hidden)r.update().catch(()=>{})})}).catch(()=>{});
+  /* 新しい版に入れかわったら、安全なときに1回だけ読みこみ直す。
+     ゲームの途中などで読みこみ直したくないときは、アプリ側で window.canReload=()=>false を返すようにする */
+  let had=!!navigator.serviceWorker.controller,want=false;const go=()=>{if(want&&(!window.canReload||window.canReload()))location.reload()};
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had){want=true;go()}});setInterval(go,3000)})}
+</script>
