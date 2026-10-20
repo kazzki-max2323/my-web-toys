@@ -1,0 +1,1245 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="影法師の夜">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>影法師の夜</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --text: #f1f0ea;
+    --muted: #9aa3bd;
+    --accent: #e8c26a;
+    --blood: #c4162f;
+    --sil: #2c4f9e;
+    --panel: rgba(9, 11, 20, 0.95);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; color: var(--text); overflow: hidden;
+    -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  body { font-family: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif; }
+  button { font-family: inherit; }
+  #app { position: fixed; inset: 0; overflow: hidden; touch-action: manipulation; }
+  .bg { position: absolute; inset: 0; transition: opacity 1.4s ease; }
+  #fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #deco { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 42%; pointer-events: none; transition: opacity 1.4s; }
+  #stage { position: absolute; left: 0; right: 0; bottom: 0; height: 66%; display: flex; justify-content: center;
+    align-items: flex-end; gap: 1.5%; pointer-events: none; }
+  .sil { opacity: 0; transform: translateY(14px); transition: opacity .7s, transform .7s;
+    filter: drop-shadow(0 0 10px rgba(80, 130, 255, .35)); }
+  .sil.on { opacity: .6; transform: none; }
+  .sil.talk { opacity: .95; }
+  .sil svg { display: block; width: 100%; height: auto; }
+  .sil .b { fill: var(--sil); transition: fill 1.2s; }
+  .sil.red { opacity: 1; filter: drop-shadow(0 0 16px rgba(255, 40, 60, .65)); }
+  .sil.red .b { fill: var(--blood); }
+  #scrim { position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(rgba(0,0,0,.62), rgba(0,0,0,.3) 45%, rgba(0,0,0,.58)); }
+  #flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+  #flash.red { animation: redf 1.8s ease-out; }
+  #flash.white { animation: whitef .9s ease-out; }
+  @keyframes redf { 0% { opacity: .85; background: #b0001a; } 100% { opacity: 0; background: #b0001a; } }
+  @keyframes whitef { 0% { opacity: .7; background: #dfe8ff; } 100% { opacity: 0; background: #dfe8ff; } }
+
+  #top { position: absolute; left: 0; right: 0; top: 0; z-index: 5; display: flex; align-items: center; gap: 6px;
+    padding: calc(env(safe-area-inset-top) + 8px) 10px 6px 16px; font-family: system-ui, sans-serif; }
+  #place { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); letter-spacing: .08em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #place b { color: var(--accent); font-weight: 600; margin-left: 6px; }
+  .ib { width: 38px; height: 38px; border-radius: 10px; border: 1px solid rgba(255,255,255,.16);
+    background: rgba(10,12,24,.55); color: var(--text); font-size: 17px; cursor: pointer; padding: 0; }
+  .ib.on { border-color: var(--accent); background: rgba(232,194,106,.2); }
+  .ib[hidden] { display: none; }
+
+  #text { position: absolute; left: 0; right: 0; z-index: 3;
+    top: calc(env(safe-area-inset-top) + 52px); bottom: calc(env(safe-area-inset-bottom) + 12px);
+    overflow-y: auto; padding: 4px max(20px, calc(50% - 330px)) 28px;
+    font-size: clamp(16px, 4.4vw, 19px); line-height: 2;
+    text-shadow: 0 1px 3px #000, 0 0 14px rgba(0,0,0,.95); }
+  #text p { margin: 0 0 .7em; }
+  #text p.center { text-align: center; }
+  .nm { display: block; font-size: .78em; color: var(--accent); letter-spacing: .12em; line-height: 1.5; }
+  .cur { display: inline-block; margin-left: .3em; color: var(--accent); font-size: .75em; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .choices { display: grid; gap: 8px; margin: 14px 0 8px; }
+  .choices.two { grid-template-columns: 1fr 1fr; }
+  .choices h3 { grid-column: 1 / -1; margin: 8px 0 -2px; font: 400 12px system-ui, sans-serif; color: var(--muted); letter-spacing: .2em; text-shadow: none; }
+  .ch { font-size: .9em; text-align: left; padding: 10px 14px; border-radius: 8px; line-height: 1.5; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.22); background: rgba(12,16,32,.78); color: var(--text); text-shadow: none; }
+  .ch:hover, .ch:focus-visible { border-color: var(--accent); background: rgba(70,56,22,.8); outline: none; }
+  .ch.done { color: var(--muted); }
+  .ch.done::after { content: " ✓"; color: var(--accent); }
+  .ch.danger { border-color: rgba(220,40,60,.75); }
+  .ch.wide { grid-column: 1 / -1; }
+
+  .ov { position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+    padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px); }
+  .ov[hidden] { display: none; }
+  #title { flex-direction: column; text-align: center; background: radial-gradient(ellipse at 50% 35%, rgba(20,34,70,.35), rgba(0,0,0,.75) 75%); }
+  #title h1 { font-size: clamp(38px, 12vw, 64px); letter-spacing: .25em; margin: 0 0 0 .25em; font-weight: 700;
+    text-shadow: 0 0 24px rgba(80,130,255,.6), 0 2px 4px #000; }
+  #title .sub { color: var(--muted); font-size: 14px; letter-spacing: .2em; margin: 10px 0 34px; }
+  .bigbtn { display: block; width: min(300px, 100%); margin: 10px auto; padding: 14px 18px; font-size: 17px; letter-spacing: .1em;
+    border-radius: 10px; border: 1px solid rgba(255,255,255,.28); background: rgba(10,14,30,.7); color: var(--text); cursor: pointer; }
+  .bigbtn:hover, .bigbtn:focus-visible { border-color: var(--accent); background: rgba(70,56,22,.8); outline: none; }
+  .bigbtn.main { border-color: var(--accent); }
+  #title .rec { margin-top: 26px; font: 13px/1.8 system-ui, sans-serif; color: var(--muted); }
+  #title .hp { margin-top: 6px; font: 12px system-ui, sans-serif; color: #6c7390; }
+
+  #panel { background: rgba(0,0,0,.6); z-index: 12; }
+  .pbox { width: min(560px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel); border: 1px solid rgba(255,255,255,.14);
+    border-radius: 14px; padding: 20px 18px 16px; font: 14px/1.75 system-ui, "Hiragino Sans", sans-serif; }
+  .pbox h2 { font-family: "Noto Serif JP", serif; font-size: 20px; margin: 0 0 4px; letter-spacing: .1em; }
+  .pbox h4 { margin: 18px 0 6px; font-size: 12px; color: var(--accent); letter-spacing: .2em; font-weight: 600; }
+  .pbox ul { margin: 0; padding-left: 1.2em; }
+  .pbox li { margin: 3px 0; }
+  .pbox .muted { color: var(--muted); }
+  .pbox .bigbtn { font-size: 15px; padding: 11px; }
+  table.grid { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.grid th, table.grid td { border-bottom: 1px solid rgba(255,255,255,.1); padding: 6px 4px; text-align: center; }
+  table.grid th:first-child, table.grid td:first-child { text-align: left; }
+  table.grid th { color: var(--muted); font-weight: 500; font-size: 11px; }
+  .y { color: #ff8a9a; font-weight: 700; }
+  .n { color: #6c7390; }
+  .dead { color: #6c7390; text-decoration: line-through; }
+
+  #ending { flex-direction: column; text-align: center; background: rgba(0,0,0,.72); }
+  #ending .k { font-size: clamp(30px, 10vw, 52px); letter-spacing: .2em; margin: 0; }
+  #ending .k.true { color: var(--accent); text-shadow: 0 0 22px rgba(232,194,106,.5); }
+  #ending .k.normal { color: #b9c6dd; }
+  #ending .k.bad { color: var(--blood); text-shadow: 0 0 22px rgba(255,30,50,.5); }
+  #ending .t { font-size: 18px; letter-spacing: .15em; margin: 10px 0 30px; color: var(--text); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="bg" id="bgA"></div>
+  <div class="bg" id="bgB" style="opacity:0"></div>
+  <canvas id="fx"></canvas>
+  <svg id="deco" viewBox="0 0 400 160" preserveAspectRatio="none"></svg>
+  <div id="stage"></div>
+  <div id="scrim"></div>
+  <div id="flash"></div>
+  <div id="text" aria-live="polite"></div>
+  <div id="top">
+    <div id="place"></div>
+    <button class="ib" id="bNote" title="手帳" hidden>📓</button>
+    <button class="ib" id="bSkip" title="早送り">⏩</button>
+    <button class="ib" id="bSnd" title="音">🔊</button>
+  </div>
+
+  <div class="ov" id="title">
+    <h1>影法師の夜</h1>
+    <div class="sub">やるたびに 犯人が変わる サウンドノベル</div>
+    <button class="bigbtn main" id="bStart">新しい事件をはじめる</button>
+    <button class="bigbtn" id="bRec">これまでの記録</button>
+    <div class="rec" id="recLine"></div>
+    <div class="hp">🎧 音が出ます　／　画面をタップして読みすすめます</div>
+  </div>
+  <div class="ov" id="panel" hidden><div class="pbox" id="pbox"></div></div>
+  <div class="ov" id="ending" hidden>
+    <p class="k" id="endK"></p>
+    <p class="t" id="endT"></p>
+    <button class="bigbtn main" id="bTruth">事件の真相を見る</button>
+    <button class="bigbtn" id="bAgain">新しい事件へ</button>
+    <button class="bigbtn" id="bToTitle">タイトルへ</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  乱数（事件番号から毎回ちがう事件を作る）
+// ============================================================
+let rnd = Math.random;
+function seeded(a) {
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const pick = a => a[Math.floor(rnd() * a.length)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const $ = s => document.querySelector(s);
+
+// ============================================================
+//  舞台
+// ============================================================
+const SETTINGS = [
+  { id: 'snow', name: 'ペンション「白樺荘」', short: '白樺荘', amb: 'snow', wet: '雪', rel: '大学のサークル仲間',
+    hostRole: () => 'オーナー',
+    arrive: c => [`大学最後の冬休み。僕は${c}に誘われて、信州の山奥にあるペンション「白樺荘」へやってきた。`,
+      '駅からバスで一時間。そこから雪道をさらに三十分。たどり着いたときには、空はもう鉛色に沈みかけていた。',
+      '丸太を組んだ二階建て。窓からこぼれるオレンジ色の灯りが、雪の上にやわらかく落ちている。'],
+    dinnerRoom: '食堂', dish: '鹿肉のシチューと焼きたてのパン',
+    isolate: h => ['夕食が終わるころ、窓の外の雪は、横なぐりの吹雪に変わっていた。',
+      `${h}が受話器を置いて、首を振った。電話が通じない。ラジオによれば、ふもとへ下りる一本道が雪崩でふさがれたらしい。`,
+      'つまり僕たちは、この白樺荘に閉じこめられたのだ。'],
+    help: '吹雪もやみ、ふもとへ助けを呼びに行ける',
+    dawn: ['夜が明けると、吹雪はうそのようにやんでいた。', '昼すぎ、除雪車のうなりとともに、警察がやってきた。'],
+    flee: x => `翌朝、${x}の姿はどこにもなかった。雪の上に、森へと続く足跡だけが残っていた。`,
+    home: '帰りのバス',
+    locs: { lounge: 'ラウンジ', kitchen: '厨房', store: '地下の物置', outside: '裏の薪小屋', corridor: '二階の廊下' },
+    spots: { lounge: '暖炉の灰の中', kitchen: '流しの下の戸棚', store: '古いスキー板の陰', outside: '積みあげた薪のすき間', corridor: '突きあたりの飾り棚' },
+    weapons: ['ブロンズの置物', '暖炉の火かき棒', '重い燭台'],
+    flavor: {
+      lounge: ['暖炉の火は小さくなり、薪がときおりはぜる音だけが響いている。', '棚に古いボードゲームが並んでいる。ソファの下ものぞいてみたが、変わったところはない。'],
+      kitchen: ['ステンレスの調理台は、きれいに片づいている。包丁も、全部そろっていた。', '大きな冷蔵庫が低くうなっている。中には明日の朝食の材料。それだけだ。'],
+      store: ['裸電球の下に、スキー板やスノーシューが並んでいる。', '古い段ボール箱を開けてみたが、中身は季節外れのクリスマスの飾りだけだった。'],
+      outside: ['吹雪が顔をたたく。薪小屋の屋根が、風にきしんでいる。', '薪が整然と積まれている。斧は、壁にきちんと掛けられたままだ。'],
+      corridor: ['客室のドアが並ぶ、薄暗い廊下。どの部屋も、しんと静まりかえっている。', '窓の外は真っ白だ。吹雪の音が、壁ごしに低く響いている。'] } },
+  { id: 'island', name: '孤島の洋館「鴉館」', short: '鴉館', amb: 'storm', wet: '雨', rel: '同じゼミの友人',
+    hostRole: () => '館の主',
+    arrive: c => [`${c}が懸賞で当てたのは、瀬戸内の小さな島に建つ洋館「鴉館（からすやかた）」への招待状だった。`,
+      '定期船は週に一度だけ。桟橋に降りたつと、灰色の海を背に、黒い屋根の館がそびえていた。',
+      '古い煉瓦の壁に、蔦が血管のようにからみついている。'],
+    dinnerRoom: '食堂', dish: '魚介のスープと、館の地下で寝かせたという赤ワイン',
+    isolate: h => ['夜になって、嵐が島をのみこんだ。窓ガラスが鳴り、遠くで雷が落ちる。',
+      `${h}によれば、この天気では迎えの船は出せない。電話線も、どこかで切れてしまったらしい。`,
+      '島には、僕たちしかいない。'],
+    help: '嵐もおさまり、船を呼べる',
+    dawn: ['夜明けとともに、嵐は去った。', '昼前、警察の船が桟橋に着いた。'],
+    flee: x => `翌朝、${x}の姿はどこにもなかった。桟橋につないであったボートが、一艘だけ消えていた。`,
+    home: '帰りの船',
+    locs: { lounge: '大広間', kitchen: '厨房', store: '書庫', outside: '温室', corridor: '東の回廊' },
+    spots: { lounge: '暖炉の灰の中', kitchen: '食器棚の奥', store: '古い百科事典のうしろ', outside: '枯れた鉢植えの土の中', corridor: '甲冑の置物の陰' },
+    weapons: ['ブロンズの胸像', '鉄の燭台', 'ワインの瓶'],
+    flavor: {
+      lounge: ['大きな暖炉と、壁一面の肖像画。描かれた人びとの目が、こちらを見ているような気がする。', '長いソファがいくつも並んでいる。クッションの下まで探ったが、何もない。'],
+      kitchen: ['よく磨かれた銅鍋が並んでいる。夕食の片づけは、きちんとすんでいるようだ。', '冷蔵庫のモーター音だけが、低くうなっている。'],
+      store: ['天井まで届く本棚に、古い洋書がぎっしり詰まっている。', 'ほこりっぽい空気。誰かが最近ここに入った様子はない。'],
+      outside: ['ガラスの天井を、雨が激しくたたいている。南国の植物の葉が、ぬるい空気のなかで揺れていた。', '鉢植えのあいだを探したが、見つかったのは古いじょうろだけだった。'],
+      corridor: ['肖像画と甲冑がずらりと並ぶ、長い回廊。燭台の灯りが、すきま風に揺れている。', '窓の外で、稲妻が光った。一瞬、甲冑たちが動いたように見えた。'] } },
+  { id: 'onsen', name: '山あいの温泉宿「霧ノ湯」', short: '霧ノ湯', amb: 'rain', wet: '雨', rel: '同じゼミの仲間',
+    hostRole: c => c.sex === 'f' ? '女将' : '主人',
+    arrive: c => [`ゼミの卒業旅行。${c}が見つけてきたのは、地図にもほとんど載っていない山あいの温泉宿「霧ノ湯」だった。`,
+      'つり橋を渡り、杉林の石段をのぼる。霧の向こうから、湯けむりと古い木造の建物があらわれた。',
+      '玄関の提灯が、風もないのに、ゆらりと揺れた。'],
+    dinnerRoom: '大広間', dish: '山菜の天ぷらと、鮎の塩焼き',
+    isolate: h => ['夕方から降りだした雨は、夜には滝のような大雨になった。',
+      `来るときに渡ったつり橋が、増水で流された──${h}が青い顔で告げた。電話も、この雨で通じなくなっている。`,
+      '僕たちは、この宿から出られない。'],
+    help: '雨もおさまり、救助を呼べる',
+    dawn: ['明け方、雨はようやく小降りになった。', '昼すぎ、救助のヘリコプターの音が、谷に響きわたった。'],
+    flee: x => `翌朝、${x}の姿はどこにもなかった。ぬかるんだ山道に、谷へと下りていく足跡だけが残っていた。`,
+    home: '帰りのヘリコプター',
+    locs: { lounge: '囲炉裏の間', kitchen: '台所', store: '古い蔵', outside: '露天風呂', corridor: '離れへの渡り廊下' },
+    spots: { lounge: '囲炉裏の灰の中', kitchen: 'かまどの裏', store: '古い長持ちの陰', outside: '湯船のわきの岩かげ', corridor: '廊下の床下' },
+    weapons: ['鉄瓶', '石の文鎮', '重い燭台'],
+    flavor: {
+      lounge: ['囲炉裏の火が、ぱちりとはぜた。自在鉤に吊るされた鉄瓶から、湯気が細くのぼっている。', '古い柱時計が、こち、こちと時を刻んでいる。'],
+      kitchen: ['土間に、大きなかまどがふたつ。夕食の残りの、だしの匂いがした。', '水がめの水面が、ろうそくの灯りを映して揺れている。'],
+      store: ['ひんやりとした蔵のなかに、古い長持ちや掛け軸が積まれている。', 'ほこりの上に、新しい足跡はない。ここには誰も来ていないようだ。'],
+      outside: ['雨に打たれる湯船から、白い湯けむりが立ちのぼっている。', '岩のあいだを探したが、見つかったのは誰かの忘れた手ぬぐいだけだった。'],
+      corridor: ['軒から落ちる雨だれが、すだれのように廊下を包んでいる。', 'ぎし、ぎし、と床板が鳴る。誰かが歩いても、すぐにわかりそうだ。'] } },
+];
+
+// ============================================================
+//  話し方（丁寧・男・女・年配）
+// ============================================================
+const ST = {
+  pol: {
+    alone: (I, t, a) => `「${t}ごろですか？ ${I}は自分の部屋で${a}いました。……ひとりでしたから、証明してくれる人はいませんけど」`,
+    with: (I, t, P, pl, a) => `「${t}ごろなら、${P}さんと${pl}で${a}いました。${P}さんに聞いてもらえれば、わかります」`,
+    withMe: (t, pl) => `「${t}ごろは、あなたと${pl}でお話ししていたじゃありませんか」`,
+    react: '「そんな……どうして、こんなことに……」',
+    protest: I => `「ち、ちがいます！ ${I}じゃありません！ 信じてください！」`,
+    deny: '「……面白い推理ですね。でも、証拠はあるんですか？」',
+    broken: '「……ふふ。完璧だと思っていたのに」',
+    wet: '「ああ、これですか。眠れなくて、少し外の様子を見に出たんです」',
+    cut: '「この絆創膏ですか？ 夕方、割れたグラスを片づけていて、切ってしまったんです」',
+    comp: '「すてきなところですね。思いきって来てよかった」',
+    fear: '「警察が来るまで……ここで待つしかないんですね」',
+    kill: '「……あなたは、まちがえたんですよ」',
+    bye: '「……しばらく、旅行はいいです」' },
+  m: {
+    alone: (I, t, a) => `「${t}ごろ？ 部屋で${a}たよ。ひとりだったから、証明しろって言われても困るけどな」`,
+    with: (I, t, P, pl, a) => `「${t}ごろなら、${P}と${pl}で${a}たぜ。嘘だと思うなら、${P}に聞いてみな」`,
+    withMe: (t, pl) => `「${t}ごろなら、おまえと${pl}で話してただろ」`,
+    react: '「おい……冗談だろ……」',
+    protest: I => `「ふざけるな！ ${I}じゃない！」`,
+    deny: '「へえ。で、証拠は？ 推測だけで人を犯人呼ばわりかよ」',
+    broken: '「……ちくしょう。そこまでわかってるなら、隠しても無駄か」',
+    wet: '「ああ、これか。眠れなくてな、ちょっと外の様子を見に出たんだよ」',
+    cut: '「これか？ 夕方、薪を運んでて、ちょっとやっちまったんだ」',
+    comp: '「どうだ、いいとこだろ？ たまにはこういう場所でのんびりしようぜ」',
+    fear: '「警察が来るまで、ここで待つしかねえのかよ……」',
+    kill: '「……おまえは、まちがえたんだよ」',
+    bye: '「……次は、もっとふつうの場所にしようぜ」' },
+  f: {
+    alone: (I, t, a) => `「${t}ごろ？ 部屋で${a}たわ。ひとりだったけど……まさか、疑ってるの？」`,
+    with: (I, t, P, pl, a) => `「${t}ごろなら、${P}さんと${pl}で${a}たわ。本人に聞いてみて」`,
+    withMe: (t, pl) => `「${t}ごろなら、あなたと${pl}で話してたじゃない」`,
+    react: '「いや……いやよ、こんなの……」',
+    protest: I => `「ちょっと待ってよ！ ${I}じゃない！ どうしてわからないの！」`,
+    deny: '「証拠は？ ないんでしょ。だったら、勝手なこと言わないで」',
+    broken: '「……あーあ。バレちゃった」',
+    wet: '「これ？ 眠れなくて、ちょっと外の空気を吸いに出てたの」',
+    cut: '「これ？ 夕方グラスを割っちゃって。ドジでしょ」',
+    comp: '「ねえ、来てよかったでしょ？ こういうところ、一度泊まってみたかったんだ」',
+    fear: '「ねえ……警察が来るまで、待つしかないの……？」',
+    kill: '「……あなたは、まちがえたのよ」',
+    bye: '「……ねえ。次は、もっと明るいところに行こうね」' },
+  old: {
+    alone: (I, t, a) => `「${t}ごろか。${I}は部屋で${a}おった。ひとりじゃったから、証人はおらんがの」`,
+    with: (I, t, P, pl, a) => `「${t}ごろなら、${P}さんと${pl}で${a}おったよ。嘘だと思うなら、聞いてみるがいい」`,
+    withMe: (t, pl) => `「なにを言うとる。${t}ごろは、おまえさんと${pl}で話しておったじゃろう」`,
+    react: '「なんと……むごいことを……」',
+    protest: I => `「ば、馬鹿なことを言うでない！ ${I}ではない！」`,
+    deny: '「ふん。証拠もなしに、年寄りを人殺し扱いか」',
+    broken: '「……見事じゃ。若いのに、よう見ておる」',
+    wet: '「これか。年寄りは眠りが浅くての。外の様子を見に出たんじゃ」',
+    cut: '「この傷か。夕方、薪を割っておって、ちょいとな」',
+    comp: '「よい宿じゃろう」',
+    fear: '「夜明けまで、待つしかないのう……」',
+    kill: '「……おまえさんは、まちがえたんじゃよ」',
+    bye: '「……長生きはするもんじゃないのう」' },
+};
+
+// ============================================================
+//  登場人物（毎回このなかから6人が選ばれる）
+//  h: 背の高さ, hair/body: 影法師の形
+// ============================================================
+const PEOPLE = [
+  { id: 'haruka', name: '春日 遥', short: '遥', sex: 'f', st: 'f', I: 'わたし', hair: 'long', body: 'dress', h: .9, comp: true,
+    intro: '「春日遥です。大学で心理学をやってます。……あ、人の心が読めるわけじゃないですよ？」',
+    chat: '「お料理、すっごくおいしいです！ 来てよかったぁ」' },
+  { id: 'tatsuya', name: '森永 達也', short: '森永', sex: 'm', st: 'm', I: '俺', hair: 'short', body: 'pants', h: 1, comp: true,
+    intro: '「森永だ。商社で営業やってる。ま、ここでは仕事の話はなしにしようぜ」',
+    chat: '「ワイン、もう一本開けようぜ。今夜は飲むぞ」' },
+  { id: 'reiko', name: '九条 玲子', short: '九条', sex: 'f', st: 'pol', I: 'わたくし', hair: 'bun', body: 'dress', h: .94,
+    intro: '「九条玲子と申します。舞台に立っておりますの。……あら、ご存じない？ それは残念」',
+    chat: '「この雰囲気……まるで舞台のセットみたい。幕が上がる前の、あの静けさね」' },
+  { id: 'genzo', name: '大河内 源蔵', short: '大河内', sex: 'm', st: 'old', I: 'わし', hair: 'bald', body: 'coat', h: .9, host: true,
+    intro: '「大河内じゃ。不動産をちいとばかりやっておる。若いの、よろしく頼むぞ」',
+    hostIntro: s => `「よう来なすった。${s}の主、大河内じゃ。道楽で始めた宿じゃが、ゆっくりしていきなされ」`,
+    chat: '「わしが若いころは、こんな山奥でも歩いて登ったもんじゃ」' },
+  { id: 'toru', name: '志村 透', short: '志村', sex: 'm', st: 'pol', I: '僕', hair: 'messy', body: 'coat', h: .98,
+    intro: '「志村です。売れないミステリーを書いています。こういう場所に来ると、つい殺人事件を想像してしまって……悪い癖ですね」',
+    chat: '「外の世界から切り離された館に、ひと癖ある客たち……ミステリーなら、そろそろ最初の死体が出るころですね」' },
+  { id: 'aya', name: '早乙女 綾', short: '綾', sex: 'f', st: 'pol', I: '私', hair: 'bob', body: 'dress', h: .9, comp: true, medic: '看護師',
+    intro: '「早乙女綾です。看護師をしています。久しぶりのお休みなんです」',
+    chat: '「皆さん、飲みすぎには気をつけてくださいね。職業柄、つい言っちゃうんです」' },
+  { id: 'tsuyoshi', name: '黒木 剛', short: '黒木', sex: 'm', st: 'm', I: '俺', hair: 'cap', body: 'coat', h: 1.05,
+    intro: '「黒木だ。昔は警察にいた。今はただの無職だがな」',
+    chat: '「……刑事の勘ってやつかな。今夜は、どうも胸騒ぎがする」' },
+  { id: 'sayuri', name: '白石 小百合', short: '白石', sex: 'f', st: 'pol', I: '私', hair: 'bun', body: 'dress', h: .92, host: true,
+    intro: '「白石です。小さな花屋をやっています。今日はひとり旅なんです」',
+    hostIntro: s => `「ようこそおいでくださいました。${s}を預かっております、白石と申します。どうぞごゆっくり」`,
+    chat: '「このお料理、どんなハーブを使っているのかしら」' },
+  { id: 'shunsuke', name: '間宮 俊介', short: '間宮', sex: 'm', st: 'pol', I: '私', hair: 'short', body: 'pants', h: 1.02, medic: '医者',
+    intro: '「間宮です。東京の病院で外科医をしています。……ここでは、ただの宿泊客ですよ」',
+    chat: '「……失礼。病院からの電話かと思いましたが、圏外でした」' },
+  { id: 'kaoru', name: '桐生 カオル', short: 'カオル', sex: 'f', st: 'f', I: 'あたし', hair: 'long', body: 'pants', h: .96,
+    intro: '「桐生カオル。絵を描いてる。……ここの景色を描きに来たの。邪魔しないでね」',
+    chat: '「……この窓の外、夜の色がきれい。黒じゃなくて、深い青」' },
+  { id: 'kenta', name: '野々村 健太', short: '健太', sex: 'm', st: 'm', I: '俺', hair: 'spiky', body: 'pants', h: .97, comp: true,
+    intro: '「野々村健太っす！ バイト代ためて、やっと来られたんすよ」',
+    chat: '「うめえ！ これ、マジでうまいっす！」' },
+  { id: 'masato', name: '藤堂 雅人', short: '藤堂', sex: 'm', st: 'pol', I: '私', hair: 'short', body: 'coat', h: 1.03, host: true,
+    intro: '「藤堂と申します。弁護士をしております。……休暇のつもりが、つい依頼人の顔が浮かんでしまいますね」',
+    hostIntro: s => `「ようこそ、${s}へ。主の藤堂です。弁護士を引退して、ここを買い取りましてね」`,
+    chat: '「こういう場所にいると、法律もずいぶん遠くに感じますね」' },
+  { id: 'kiyo', name: '榊 キヨ', short: 'キヨ', sex: 'f', st: 'old', I: 'あたし', hair: 'bun', body: 'coat', h: .86,
+    intro: '「榊キヨ。占いを少々やっとる。……ふむ、今夜はろくな星回りじゃないねえ」',
+    chat: '「カードに出ておる。今夜、この中のひとりが……いや、やめておこう」' },
+];
+
+// ============================================================
+//  動機
+// ============================================================
+const MOTIVES = {
+  debt: { sum: '借金の取り立てに追いつめられて',
+    hint: x => `「そういえば${x}さん。例のお金の件、期限は来月でしたよね？ ……楽しみにしていますよ」`,
+    react: x => `${x}の顔から、すっと血の気が引いた。`,
+    conf: (I, v) => [`「${v}は、${I}の弱みにつけこんで金を貸した。利子は月ごとにふくれあがって……返しても返しても、終わらなかった」`,
+      `「今夜、部屋に呼ばれて言われたんだ。『払えないなら、家族に払ってもらう』と。……気がついたら、手が動いていた」`] },
+  past: { sum: '七年前のひき逃げの復讐',
+    hint: x => `「${x}さん、どこかでお会いしたことがありませんでしたっけ？ ……そう、七年前の夏。いや、人ちがいかな」`,
+    react: x => `${x}は何も答えず、ただ手もとのグラスを見つめていた。`,
+    conf: (I, v) => [`「七年前の夏。${I}の妹は、夜道で車にはねられて死んだ。犯人は見つからなかった」`,
+      `「……運転していたのは${v}だ。あいつは金で全部もみ消して、のうのうと生きていた。${I}の顔なんて、覚えてもいなかった」`] },
+  steal: { sum: '仕事の手柄を盗まれた恨み',
+    hint: x => `「おかげさまで、例の仕事が評判でしてね。${x}さんにも、ぜひ感想をうかがいたいな」`,
+    react: x => `${x}の口もとが、かすかにこわばった。`,
+    conf: (I, v) => [`「${v}が評判をとったあの仕事。……あれは、もともと${I}のものだった」`,
+      `「何もかも盗まれて、${I}には何も残らなかった。今夜、返してくれと頼んだら、あいつは笑ったんだ」`] },
+  blackmail: { sum: '長年にわたるゆすり',
+    hint: x => `「${x}さん、ご心配なく。あのことは、誰にも話していませんから。……今のところはね」`,
+    react: x => `${x}のフォークが、皿の上でかちりと鳴った。`,
+    conf: (I, v) => [`「何年も、ゆすられ続けてきた。昔のたった一度のあやまちを、${v}はずっと握っていた」`,
+      `「この旅行も、あいつに呼びつけられたんだ。……もう、終わりにしたかった」`] },
+  love: { sum: '裏切られた恋',
+    hint: x => `「来月、結婚するんですよ。……あれ、${x}さんには、まだ言っていませんでしたっけ？」`,
+    react: x => `${x}は笑顔をつくろうとして、うまくいかなかった。`,
+    conf: (I, v) => [`「${v}とは、将来を約束していた。……少なくとも、${I}はそう信じていた」`,
+      `「あいつは、${I}を捨てたことさえ、笑い話にした。今夜も、部屋で笑っていたんだ」`] },
+  inherit: { sum: '家族の墓がある土地を守るため',
+    hint: x => `「${x}さん、例の土地の件、こちらで進めておきましたから。もう口出しは無用ですよ」`,
+    react: x => `テーブルの下で、${x}がこぶしを握りしめるのが見えた。`,
+    conf: (I, v) => [`「あの土地には、${I}の家族の墓がある。${v}はそれを更地にして、売りとばすつもりだった」`,
+      `「何度頼んでも、聞く耳を持たなかった。……ほかに、止める方法がなかったんだ」`] },
+};
+
+// ============================================================
+//  手がかりの種類。毎回このうち2つが「犯人の特徴」になる
+// ============================================================
+const N = c => c.short;
+const DIMS = {
+  left: { tag: '左利き', on: '左利き', off: '右利き', need: '左利きな',
+    clue: (L, sp) => [`${L}の${sp}に、何かが押しこまれていた。引っぱりだしてみると──血のついた${G.weapon}だ！`,
+      '凶器だ。犯人が現場から持ちだして、ここに隠したのだ。',
+      '柄に、血でぬれた手の跡がくっきり残っている。親指の向きからすると……これは、左手で握った跡だ。', '犯人は、左利き。'],
+    note: () => `隠された凶器（${G.weapon}）に、左手で握った血の跡 → 犯人は左利き`,
+    say: () => `現場から持ちさられた${G.weapon}には、左手で握った血の跡が残っていました。犯人は左利きです`,
+    obsOn: n => `${n}は話しながら、左手でカップを口に運んだ。……左利きらしい。`,
+    obsOff: n => `${n}は右手でカップを口に運んでいる。右利きのようだ。` },
+  smoke: { tag: '喫煙', on: '煙草を吸う', off: '煙草は吸わない', need: '煙草を吸う',
+    clue: (L, sp) => [`${L}の${sp}に、吸い殻が1本落ちていた。まだ新しい。`,
+      'つまみあげて、ぞっとした。フィルターに、赤黒い指の跡……血だ。',
+      '犯人は犯行のあと、ここで煙草を吸って気を落ちつけたのだ。犯人は、煙草を吸う人間だ。'],
+    note: () => '血のついた吸い殻 → 犯人は煙草を吸う',
+    say: () => '血のついた指でつまんだ、煙草の吸い殻が見つかりました。犯人は煙草を吸う人間です',
+    obsOn: n => `${n}の服から、かすかに煙草の匂いがする。胸ポケットに、箱がのぞいていた。`,
+    obsOff: n => `${n}からは、煙草の匂いはしない。吸わないのだろう。` },
+  wet: { tag: '濡れ', on: '服や靴が濡れている', off: '服も靴も乾いている', need: '服や靴が濡れていた', excuse: 'wet',
+    clue: L => [`${L}に、${G.set.wet}でぬれた足跡が点々と残っていた。`,
+      'たどってみると、裏口から外へ出て、また戻ってきている。乾き具合からして、犯行のすぐあとだ。',
+      '犯人は一度外へ出て、何かを始末してきたのだ。犯人の服や靴は、まだ濡れているはずだ。'],
+    note: () => `犯行のあと外へ出た、${G.set.wet}でぬれた足跡 → 犯人の服や靴は濡れている`,
+    say: () => `犯行のあと、裏口から外へ出て戻ってきた足跡がありました。犯人の服や靴は、${G.set.wet}で濡れていたはずです`,
+    obsOn: n => `${n}の靴と服のすそが、まだ湿っている。`,
+    obsOff: n => `${n}の靴も服も、乾いている。` },
+  perfume: { tag: '香水', on: '香水の香り', off: '香水の香りはしない', need: '香水をつけている',
+    clue: (L, sp) => [`${L}の${sp}に、丸めたタオルが押しこまれていた。`,
+      '広げると、べっとりと血がついている。犯人が手をぬぐったのだ。',
+      '顔を近づけると……血の匂いにまじって、かすかに甘い香水の香りがした。'],
+    note: () => '血をぬぐったタオルに、甘い香水の香り → 犯人は香水をつけている',
+    say: () => '犯人が血をぬぐったタオルから、香水の香りがしました。犯人は香水をつけています',
+    obsOn: n => `${n}が身をのりだしたとき、ふわりと甘い香りがした。香水をつけているようだ。`,
+    obsOff: n => `${n}からは、香水の匂いはしない。` },
+  cut: { tag: 'けが', on: '手にけが', off: '手にけがはない', need: '手にけがをしている', excuse: 'cut',
+    clue: (L, sp) => [`${L}の${sp}に、ガラスの破片が落ちていた。現場で割れていた花瓶と同じ模様だ。`,
+      `破片のふちに、乾きかけた血がついている。倒れていた${N(G.V)}の血なら、こんな場所まで運ばれるはずがない。`,
+      '犯人は、犯行のときに手を切ったのだ。'],
+    note: () => '現場から運ばれた、血のついた花瓶の破片 → 犯人は手をけがしている',
+    say: () => '現場の花瓶の破片に、犯人自身の血がついていました。犯人は手をけがしています',
+    obsOn: n => `${n}の手の甲に、真新しい絆創膏が貼られている。`,
+    obsOff: n => `${n}の手には、傷ひとつない。` },
+  tall: { tag: '長身', on: '背が高い', off: '背は高くない', need: '背が高い',
+    clue: L => [`${L}の、いちばん高い棚の上に、何かがのっている。背のびして取ってみると──${N(G.V)}の財布だった。`,
+      '現場から消えていたものだ。物盗りのしわざに見せかけようとして、ここに隠したのだろう。',
+      '踏み台はない。あの高さに手が届くのは、かなり背の高い人間だけだ。'],
+    note: () => '高い棚の上に隠された、被害者の財布 → 犯人は背が高い',
+    say: () => `${N(G.V)}さんの財布は、踏み台なしでは届かない高い棚の上に隠されていました。犯人は背の高い人物です`,
+    obsOn: n => `${n}は見あげるほど背が高い。180センチはありそうだ。`,
+    obsOff: n => `${n}の背丈は、それほど高くない。` },
+};
+const ALONE_ACTS = ['本を読んで', '手紙を書いて', 'ベッドで横になって', '荷物を整理して', 'ぼんやり窓の外を眺めて'];
+const PAIR_ACTS = ['トランプをして', 'お酒を飲みながら話しこんで', 'チェスをして'];
+const WINDOW = 'ゆうべの11時から12時';
+const MAX_T = 10, MURDER2_AT = 4;   // 30分で1回。0時から5時まで
+
+// ============================================================
+//  事件をつくる
+//  容疑者5人に「アリバイなし・特徴1・特徴2」を割りふる。
+//  犯人だけが3つともあてはまり、ほかは2つまで。どれか2つの手がかりだけでは絞りきれないようにしてある
+// ============================================================
+let G = null;
+function makeCase(seed) {
+  rnd = seeded(seed);
+  const set = pick(SETTINGS);
+  const host = pick(PEOPLE.filter(p => p.host));
+  const comp = pick(PEOPLE.filter(p => p.comp));
+  const rest = shuffle(PEOPLE.filter(p => p !== host && p !== comp)).slice(0, 4);
+  const cast = shuffle([host, comp, ...rest]).map(p => ({ ...p, isHost: p === host, isComp: p === comp, alive: true, tr: {} }));
+  const H0 = cast.find(c => c.isHost), C0 = cast.find(c => c.isComp);
+  const V = pick(cast.filter(c => !c.isComp));
+  const sus = shuffle(cast.filter(c => c !== V));
+  const dims = shuffle(Object.keys(DIMS));
+  const [d1, d2, d3] = dims;
+  const [X, A, B, Cc, E] = sus;
+  const pats = new Map([[X, [1, 1, 1]], [A, [1, 1, 0]], [B, [1, 0, 1]], [Cc, [0, 1, 1]], [E, pick([[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, 0]])]]);
+  for (const c of cast) {
+    const p = pats.get(c) || [0, rnd() < .4, rnd() < .4];
+    c.alone = !!p[0]; c.tr[d1] = !!p[1]; c.tr[d2] = !!p[2]; c.tr[d3] = rnd() < .45;
+    c.act = pick(ALONE_ACTS);
+    if (dims.slice(0, 3).includes('tall')) c.h = c.tr.tall ? 1.08 : Math.min(c.h, .95);
+  }
+  // アリバイのある人は、ふたりで一緒にいたか、「僕」と一緒にいた
+  const alibi = sus.filter(c => !c.alone);
+  let withMe = null;
+  if (alibi.length === 2) { const a = pick(PAIR_ACTS); alibi[0].partner = alibi[1]; alibi[1].partner = alibi[0]; alibi.forEach(c => c.pact = a); }
+  else { withMe = alibi[0]; withMe.withMe = true; }
+  const motives = shuffle(Object.keys(MOTIVES));
+  const herring = pick([A, B, Cc]);
+  const locs = shuffle(Object.keys(set.locs));
+  const clueAt = { [locs[0]]: d1, [locs[1]]: d2, [locs[2]]: 'memo' };
+  const tm = pick(['11時10分', '11時20分', '11時35分', '11時45分']);
+  return { seed, set, cast, host: H0, comp: C0, V, sus, X, E, V2: E, herring, d1, d2, d3, withMe,
+    motive: motives[0], hMotive: motives[1], weapon: pick(set.weapons), tm, clueAt,
+    v2loc: pick(Object.keys(set.locs)), discoverer: pick(sus), timeVariant: rnd() < .5,
+    t: 0, v2done: false, found: {}, searched: {}, talked: {}, known: {}, flavorPick: {} };
+}
+const locName = k => k === 'room' ? `${N(G.V)}の部屋` : G.set.locs[k];
+const L = () => locName('lounge');
+const hostTitle = () => `${G.set.hostRole(G.host)}の${N(G.host)}`;
+const names = a => a.map(N).join('、');
+const knowAlibi = c => !!(G.known[c.id] && G.known[c.id].alibi);
+const knowTrait = (c, d) => !!(G.known[c.id] && G.known[c.id][d]);
+function learn(c, k) { (G.known[c.id] = G.known[c.id] || {})[k] = true; }
+
+// ============================================================
+//  音（すべてその場で合成。音声ファイルは使わない）
+// ============================================================
+const A = { ctx: null, master: null, on: true, amb: null, bgm: null, ambKind: 'none', ambLevel: 1, bgmKind: 'none', blipAt: 0 };
+try { A.on = localStorage.getItem('kagebo-sound') !== 'off'; } catch (e) {}
+function aInit() {
+  if (A.ctx) { if (A.ctx.state === 'suspended') A.ctx.resume(); return; }
+  try {
+    const C = window.AudioContext || window.webkitAudioContext; A.ctx = new C();
+    A.master = A.ctx.createGain(); A.master.gain.value = A.on ? 1 : 0; A.master.connect(A.ctx.destination);
+    const len = A.ctx.sampleRate * 2, b = A.ctx.createBuffer(1, len, A.ctx.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    A.noise = b;
+  } catch (e) { A.ctx = null; }
+}
+const now = () => A.ctx.currentTime;
+function env(g, t, peak, a, d) { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
+function osc(type, f, t, dur, peak, a, out, f2) {
+  const o = A.ctx.createOscillator(), g = A.ctx.createGain(); o.type = type; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  env(g, t, peak, a, dur); o.connect(g); g.connect(out || A.master); o.start(t); o.stop(t + a + dur + .05); return o;
+}
+function noiseHit(t, dur, peak, type, freq, out) {
+  const s = A.ctx.createBufferSource(); s.buffer = A.noise; const f = A.ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+  const g = A.ctx.createGain(); env(g, t, peak, .01, dur); s.connect(f); f.connect(g); g.connect(out || A.master); s.start(t); s.stop(t + dur + .1);
+}
+function layer() { const g = A.ctx.createGain(); g.gain.value = 0; g.connect(A.master); return { g, srcs: [], timers: [], alive: true }; }
+function stopLayer(l, fade = 1.5) {
+  if (!l) return; l.alive = false; l.timers.forEach(clearTimeout);
+  const t = now(); l.g.gain.cancelScheduledValues(t); l.g.gain.setValueAtTime(l.g.gain.value, t); l.g.gain.linearRampToValueAtTime(0, t + fade);
+  l.srcs.forEach(s => { try { s.stop(t + fade + .1); } catch (e) {} });
+}
+function every(l, fn, min, max) { const go = () => { if (!l.alive) return; fn(); l.timers.push(setTimeout(go, min + Math.random() * (max - min))); }; l.timers.push(setTimeout(go, min * .5)); }
+
+function ambient(kind) {
+  if (kind === A.ambKind) return; A.ambKind = kind;
+  if (!A.ctx) return;
+  stopLayer(A.amb, 2); A.amb = null; if (kind === 'none') return;
+  const l = A.amb = layer(), t = now();
+  const src = A.ctx.createBufferSource(); src.buffer = A.noise; src.loop = true; l.srcs.push(src);
+  const f = A.ctx.createBiquadFilter(), g = A.ctx.createGain();
+  if (kind === 'snow') {        // 吹雪：うなる風
+    f.type = 'bandpass'; f.frequency.value = 480; f.Q.value = .9; g.gain.value = .55;
+    const lfo = A.ctx.createOscillator(), lg = A.ctx.createGain(); lfo.frequency.value = .11; lg.gain.value = 260; lfo.connect(lg); lg.connect(f.frequency); lfo.start(); l.srcs.push(lfo);
+    const lfo2 = A.ctx.createOscillator(), lg2 = A.ctx.createGain(); lfo2.frequency.value = .07; lg2.gain.value = .3; lfo2.connect(lg2); lg2.connect(g.gain); lfo2.start(); l.srcs.push(lfo2);
+  } else if (kind === 'storm') { // 嵐：雨と雷
+    f.type = 'lowpass'; f.frequency.value = 1400; g.gain.value = .45;
+    every(l, () => { flash('white'); noiseHit(now() + .25, 3.2, .9, 'lowpass', 260, l.g); }, 14000, 26000);
+  } else {                       // 大雨
+    f.type = 'highpass'; f.frequency.value = 900; g.gain.value = .32;
+  }
+  src.connect(f); f.connect(g); g.connect(l.g); src.start();
+  l.g.gain.linearRampToValueAtTime(.16 * A.ambLevel, t + 2.5);
+}
+function ambLevel(v) {
+  A.ambLevel = v; if (!A.amb) return; const t = now();
+  A.amb.g.gain.cancelScheduledValues(t); A.amb.g.gain.setValueAtTime(A.amb.g.gain.value, t); A.amb.g.gain.linearRampToValueAtTime(.16 * v, t + 1.2);
+}
+function bgm(kind) {
+  if (kind === A.bgmKind) return; A.bgmKind = kind;
+  if (!A.ctx) return;
+  stopLayer(A.bgm, 2); A.bgm = null; if (kind === 'none') return;
+  const l = A.bgm = layer(), t = now(); l.g.gain.linearRampToValueAtTime(1, t + 2);
+  const lp = A.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1100; lp.connect(l.g);
+  if (kind === 'calm') {         // 静かなパッド（短調）
+    const chords = [[220, 261.6, 329.6], [174.6, 220, 261.6], [146.8, 174.6, 220], [164.8, 207.7, 246.9]]; let i = 0;
+    every(l, () => { const c = chords[i++ % 4], s = now(); c.forEach(f => { osc('triangle', f, s, 6.5, .03, 2.2, lp); osc('sine', f / 2, s, 6.5, .025, 2.2, lp); }); }, 6500, 6500);
+  } else if (kind === 'mystery') { // オルゴールのような音がぽつぽつ
+    const notes = [659.3, 784, 880, 987.8, 1046.5, 1174.7, 1318.5];
+    const dr = A.ctx.createOscillator(), dg = A.ctx.createGain(); dr.frequency.value = 110; dg.gain.value = .025; dr.connect(dg); dg.connect(l.g); dr.start(); l.srcs.push(dr);
+    every(l, () => { const f = notes[Math.floor(Math.random() * notes.length)], s = now(); osc('sine', f, s, 2.4, .045, .01, l.g); osc('sine', f * 2, s, 1.2, .012, .01, l.g); }, 1500, 3200);
+  } else if (kind === 'tense') {   // 低いうなりと心臓の音
+    [55, 55.6, 82.4].forEach(f => { const o = A.ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; const g = A.ctx.createGain(); g.gain.value = .05; o.connect(g); g.connect(lp); o.start(); l.srcs.push(o); });
+    lp.frequency.value = 240;
+    every(l, () => { const s = now(); osc('sine', 62, s, .22, .5, .01, l.g, 40); osc('sine', 58, s + .26, .26, .38, .01, l.g, 38); }, 1150, 1150);
+  }
+}
+function sfx(name) {
+  if (!A.ctx || !A.on) return; const t = now();
+  if (name === 'sting') {       // 「ジャーン」
+    [440, 466.2, 622.3, 659.3, 880, 932.3].forEach(f => osc('sawtooth', f, t, 2.8, .045, .015));
+    noiseHit(t, .5, .25, 'highpass', 2000); osc('sine', 90, t, 1.4, .6, .01, null, 35);
+  } else if (name === 'clue') { osc('sine', 1318.5, t, 1.3, .12, .005); osc('sine', 1975.5, t + .12, 1.5, .1, .005); }
+  else if (name === 'blip') { osc('sine', 1100 + Math.random() * 80, t, .03, .012, .002); }
+  else if (name === 'choice') { osc('triangle', 660, t, .12, .06, .005); }
+  else if (name === 'thud') { noiseHit(t, .5, .5, 'lowpass', 180); osc('sine', 70, t, .45, .5, .005, null, 40); }
+  else if (name === 'blackout') { osc('square', 2200, t, .02, .05, .001); osc('sine', 320, t + .05, 1.4, .25, .01, null, 30); }
+  else if (name === 'knock') { [0, .28].forEach(d => { noiseHit(t + d, .15, .35, 'lowpass', 400); osc('sine', 110, t + d, .15, .3, .003); }); }
+  else if (name === 'true') { [440, 554.4, 659.3, 880, 1108.7].forEach((f, i) => osc('sine', f, t + i * .18, 2.5, .08, .01)); }
+  else if (name === 'bad') { [55, 58.3, 61.7, 110, 116.5].forEach(f => osc('sawtooth', f, t, 4.5, .07, .05)); noiseHit(t, 3, .3, 'lowpass', 300); }
+}
+function setSound(on) {
+  A.on = on; try { localStorage.setItem('kagebo-sound', on ? 'on' : 'off'); } catch (e) {}
+  $('#bSnd').textContent = on ? '🔊' : '🔇';
+  if (A.master) A.master.gain.setTargetAtTime(on ? 1 : 0, now(), .1);
+}
+
+// ============================================================
+//  見た目：背景・天気・影法師
+// ============================================================
+const BG = {
+  title: 'radial-gradient(ellipse at 50% 30%, #1b2a4a 0%, #070a14 70%)',
+  outside: 'linear-gradient(#0a1222, #18233a 55%, #2a3550)',
+  lounge: 'radial-gradient(ellipse at 28% 85%, #6e3b18 0%, #2c170b 42%, #0d0806 100%)',
+  dinner: 'radial-gradient(ellipse at 50% 18%, #7d5628 0%, #2f1c0e 50%, #0e0905 100%)',
+  kitchen: 'linear-gradient(#0f1f1e, #1c2f2c 60%, #0a1211)',
+  store: 'radial-gradient(ellipse at 50% 8%, #3d3022 0%, #120d09 70%)',
+  corridor: 'linear-gradient(90deg, #0a0912, #231b35 50%, #0a0912)',
+  room: 'radial-gradient(ellipse at 50% 62%, #3d0d11 0%, #170507 58%, #050102 100%)',
+  night: 'linear-gradient(#04060c, #0b1020)',
+  black: '#000',
+  dawn: 'linear-gradient(#2b3a5c, #8a7f95 55%, #d9b48f)',
+};
+const FX = { mode: 'none', alpha: 0, target: 0, parts: [] };
+let bgFront = 'A';
+function scene(key, place) {
+  const next = bgFront === 'A' ? 'B' : 'A';
+  const nb = $('#bg' + next), ob = $('#bg' + bgFront);
+  nb.style.background = BG[key] || BG.lounge;
+  nb.style.opacity = 1; ob.style.opacity = 0; bgFront = next;
+  const out = key === 'outside' || key === 'title' || key === 'dawn';
+  $('#deco').style.opacity = out ? 1 : 0;
+  FX.target = key === 'black' || key === 'dawn' ? 0 : out ? 1 : .22;
+  ambLevel(key === 'black' ? .35 : out ? 1 : .5);
+  setPlace(place !== undefined ? place : (G && (G.set.locs[key] || (key === 'room' ? locName('room') : ''))) || '');
+}
+function setPlace(s) { const clk = G && G.investigating ? `<b>${clock()}</b>` : ''; $('#place').innerHTML = esc(s) + clk; }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+function flash(kind) { const f = $('#flash'); f.className = ''; void f.offsetWidth; f.className = kind; }
+function drawDeco(kind) {
+  const hills = kind === 'island'
+    ? '<path d="M0 120 L400 120 L400 160 L0 160Z" fill="#05070d"/><path d="M250 120 L262 70 L270 74 L276 46 L290 52 L300 120Z" fill="#05070d"/><path d="M0 121 L400 121" stroke="#2a3550" stroke-width="1"/>'
+    : kind === 'onsen'
+      ? '<path d="M0 110 Q60 60 120 95 T240 80 T400 100 L400 160 L0 160Z" fill="#070a10"/><path d="M0 130 Q100 100 200 125 T400 120 L400 160 L0 160Z" fill="#03050a"/>'
+      : '<path d="M0 120 L70 50 L120 95 L190 30 L260 100 L320 60 L400 110 L400 160 L0 160Z" fill="#0b1222"/><path d="M0 140 L90 100 L170 135 L260 105 L400 140 L400 160 L0 160Z" fill="#05080f"/>';
+  $('#deco').innerHTML = hills;
+}
+
+// 影法師（SVG）
+function silSVG(c) {
+  const sw = c.sex === 'm' ? 29 : 24, h = c.h || 1;
+  let s = `<ellipse cx="60" cy="62" rx="15.5" ry="19"/><rect x="54" y="76" width="12" height="18" rx="4"/>`;
+  s += `<path d="M${60 - sw},108 Q${60 - sw},90 60,89 Q${60 + sw},90 ${60 + sw},108 L${60 + sw - 4},206 L${60 - sw + 4},206Z"/>`;
+  s += `<rect x="${60 - sw - 8}" y="100" width="11" height="112" rx="5.5" transform="rotate(4 ${60 - sw} 100)"/>`;
+  s += `<rect x="${60 + sw - 3}" y="100" width="11" height="112" rx="5.5" transform="rotate(-4 ${60 + sw} 100)"/>`;
+  if (c.body === 'dress') s += `<path d="M${60 - sw + 3},196 L${60 + sw - 3},196 L${60 + sw + 12},292 L${60 - sw - 12},292Z"/><rect x="47" y="285" width="9" height="52" rx="4"/><rect x="64" y="285" width="9" height="52" rx="4"/>`;
+  else if (c.body === 'coat') s += `<path d="M${60 - sw + 3},196 L${60 + sw - 3},196 L${60 + sw + 3},272 L${60 - sw - 3},272Z"/><rect x="${60 - sw * .62}" y="262" width="${sw * .55}" height="76" rx="5"/><rect x="${60 + sw * .07}" y="262" width="${sw * .55}" height="76" rx="5"/>`;
+  else s += `<rect x="${60 - sw * .72}" y="196" width="${sw * .66}" height="142" rx="6"/><rect x="${60 + sw * .06}" y="196" width="${sw * .66}" height="142" rx="6"/>`;
+  const hair = {
+    short: '<path d="M43 60 Q42 40 60 40 Q79 40 77 60 Q74 49 60 48 Q46 49 43 60Z"/>',
+    messy: '<path d="M42 62 Q38 38 58 38 Q66 32 72 40 Q82 42 78 62 Q74 50 60 49 Q47 50 42 62Z"/>',
+    long: '<path d="M44 60 Q42 39 60 39 Q78 39 76 60 L81 124 Q60 132 39 124Z"/>',
+    bob: '<path d="M42 66 Q40 39 60 39 Q80 39 78 66 L79 84 Q60 90 41 84Z"/>',
+    bun: '<circle cx="60" cy="38" r="10"/><path d="M44 60 Q43 42 60 42 Q77 42 76 60 Q73 50 60 49 Q47 50 44 60Z"/>',
+    cap: '<path d="M43 55 Q43 37 60 37 Q77 37 77 55Z"/><rect x="36" y="51" width="48" height="6" rx="3"/>',
+    spiky: '<path d="M43 58 L42 42 L49 46 L52 34 L58 43 L64 32 L67 43 L75 36 L74 47 L80 46 L77 58 Q72 49 60 48 Q48 49 43 58Z"/>',
+    bald: '',
+  }[c.hair] || '';
+  return `<svg viewBox="0 0 120 340" aria-hidden="true"><g class="b" transform="translate(60 340) scale(${h}) translate(-60 -340)">${hair}${s}</g></svg>`;
+}
+function show(list, talker, opts = {}) {
+  const st = $('#stage'); list = (list || []).filter(Boolean);
+  const w = list.length <= 1 ? 'min(34vw, 150px)' : list.length <= 3 ? 'min(26vw, 128px)' : 'min(18vw, 100px)';
+  st.innerHTML = '';
+  list.forEach(c => {
+    const d = document.createElement('div'); d.className = 'sil'; d.dataset.id = c.id; d.style.width = w; d.innerHTML = silSVG(c);
+    if (opts.red === c) d.classList.add('red');
+    st.appendChild(d);
+    requestAnimationFrame(() => requestAnimationFrame(() => { d.classList.add('on'); if (talker === c) d.classList.add('talk'); }));
+  });
+}
+function talking(c) { document.querySelectorAll('.sil').forEach(d => d.classList.toggle('talk', !!c && d.dataset.id === c.id)); }
+function redden(c) { const d = document.querySelector(`.sil[data-id="${c.id}"]`); if (d) d.classList.add('red'); }
+
+// 雪・雨
+const cv = $('#fx'), cx = cv.getContext('2d');
+function resize() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
+addEventListener('resize', resize); resize();
+function setWeather(mode) {
+  FX.mode = mode; FX.parts = [];
+  const n = mode === 'snow' ? 140 : 160;
+  for (let i = 0; i < n; i++) FX.parts.push({ x: Math.random(), y: Math.random(), z: .3 + Math.random() * .7, p: Math.random() * 6 });
+}
+let lastT = performance.now();
+function frame(t) {
+  const dt = Math.min(.05, (t - lastT) / 1000); lastT = t;
+  FX.alpha += (FX.target - FX.alpha) * Math.min(1, dt * 1.5);
+  const W = cv.width, H = cv.height; cx.clearRect(0, 0, W, H);
+  if (FX.alpha > .01 && FX.mode !== 'none') {
+    const dpr = devicePixelRatio;
+    if (FX.mode === 'snow') {
+      cx.fillStyle = `rgba(235,240,255,${.85 * FX.alpha})`;
+      for (const q of FX.parts) {
+        q.y += dt * .08 * q.z; q.x += dt * (.06 + Math.sin(t / 900 + q.p) * .03) * q.z;
+        if (q.y > 1) { q.y = -.02; q.x = Math.random(); } if (q.x > 1) q.x -= 1;
+        cx.beginPath(); cx.arc(q.x * W, q.y * H, (1 + q.z * 2.2) * dpr, 0, 7); cx.fill();
+      }
+    } else {
+      cx.strokeStyle = `rgba(190,205,235,${.45 * FX.alpha})`; cx.lineWidth = dpr;
+      const sl = FX.mode === 'storm' ? .35 : .12; cx.beginPath();
+      for (const q of FX.parts) {
+        q.y += dt * 1.4 * q.z; q.x += dt * sl * q.z;
+        if (q.y > 1) { q.y = -.05; q.x = Math.random() * 1.2 - .2; }
+        cx.moveTo(q.x * W, q.y * H); cx.lineTo((q.x + .012 * sl / .35) * W, (q.y + .035 * q.z) * H);
+      }
+      cx.stroke();
+    }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ============================================================
+//  文章の表示（タップで読みすすめる）
+// ============================================================
+const box = $('#text');
+let tapRes = null, typing = null, skip = false;
+function waitTap() {
+  return new Promise(r => {
+    const cur = document.createElement('span'); cur.className = 'cur'; cur.textContent = '▼';
+    const last = box.lastElementChild; if (last) last.appendChild(cur);
+    const done = () => { cur.remove(); r(); };
+    tapRes = done;
+    if (skip) setTimeout(() => { if (tapRes === done) { tapRes = null; done(); } }, 110);
+  });
+}
+function addPara(who, s, cls) {
+  const p = document.createElement('p'); if (cls) p.className = cls;
+  if (who) { const n = document.createElement('span'); n.className = 'nm'; n.textContent = who; p.appendChild(n); }
+  const tx = document.createElement('span'); tx.textContent = s; p.appendChild(tx);
+  p.style.visibility = 'hidden'; box.appendChild(p);
+  if (box.scrollHeight > box.clientHeight + 2 && box.children.length > 1) [...box.children].forEach(ch => { if (ch !== p) ch.remove(); });
+  p.style.visibility = ''; tx.textContent = '';
+  return tx;
+}
+function typeInto(node, s) {
+  return new Promise(res => {
+    if (skip) { node.textContent = s; res(); return; }
+    let i = 0;
+    const id = setInterval(() => {
+      i++; node.textContent = s.slice(0, i);
+      if (i % 2 === 0 && A.on) sfx('blip');
+      if (i >= s.length) { clearInterval(id); typing = null; res(); }
+    }, 34);
+    typing = () => { clearInterval(id); node.textContent = s; typing = null; res(); };
+  });
+}
+async function T(s, cls) { const tx = addPara('', s, cls); await typeInto(tx, s); box.scrollTop = box.scrollHeight; await waitTap(); }
+async function S(c, s) { talking(c); const tx = addPara(N(c), s); await typeInto(tx, s); box.scrollTop = box.scrollHeight; await waitTap(); }
+function line(s) { const tx = addPara('', s); tx.textContent = s; }
+function cls() { box.innerHTML = ''; }
+const wait = ms => new Promise(r => setTimeout(r, skip ? Math.min(ms, 120) : ms));
+async function TT(arr) { for (const s of arr) await T(s); }
+
+function onTap(e) {
+  if (e && e.target.closest && e.target.closest('button, .ov')) return;
+  aInit();
+  if (typing) { typing(); return; }
+  if (tapRes) { const r = tapRes; tapRes = null; r(); }
+}
+$('#app').addEventListener('click', onTap);
+addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { e.preventDefault(); onTap(); }
+});
+
+// 選択肢。 items: [{label, v, cls, h(見出し)}]
+function choose(items, two) {
+  skip = false; $('#bSkip').classList.remove('on');
+  return new Promise(res => {
+    const wrap = document.createElement('div'); wrap.className = 'choices' + (two ? ' two' : '');
+    for (const it of items) {
+      if (it.h) { const h = document.createElement('h3'); h.textContent = it.h; wrap.appendChild(h); continue; }
+      const b = document.createElement('button'); b.className = 'ch ' + (it.cls || ''); b.textContent = it.label;
+      b.addEventListener('click', e => { e.stopPropagation(); aInit(); sfx('choice'); wrap.remove(); res(it.v); });
+      wrap.appendChild(b);
+    }
+    box.appendChild(wrap);
+    wrap.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  });
+}
+
+// ============================================================
+//  物語
+// ============================================================
+const clock = () => { const h = Math.floor(G.t / 2), m = G.t % 2 ? '30分' : ''; return `午前${h}時${m}`; };
+const leftTime = () => { const r = MAX_T - G.t, h = Math.floor(r / 2), m = r % 2 ? '30分' : ''; return h ? `${h}時間${m}` : m; };
+
+async function play(seed) {
+  G = makeCase(seed);
+  STATE = 'play';
+  cls(); show([]); drawDeco(G.set.id); setWeather(G.set.amb);
+  $('#bNote').hidden = true;
+  scene('black', `事件ファイル No.${seed}`);
+  ambient(G.set.amb); bgm('none');
+  await wait(600);
+  await T(`事件ファイル No.${seed}`, 'center');
+  await T(G.set.name, 'center');
+  await prologue();
+  await dinner();
+  await night();
+  await investigate();
+}
+
+async function prologue() {
+  const s = G.set, comp = G.comp, host = G.host;
+  cls(); scene('outside', s.short); bgm('calm');
+  await T(s.arrive(N(comp))[0]);
+  show([comp], comp);
+  await S(comp, ST[comp.st].comp);
+  await T(`${N(comp)}とは、${s.rel}だ。`);
+  await T(s.arrive('')[1]);
+  await T(s.arrive('')[2]);
+  cls(); scene('lounge');
+  show([host], host);
+  await T(`扉を開けると、${s.hostRole(host)}が出むかえてくれた。`);
+  await S(host, host.hostIntro(s.short));
+  await T(`${s.short}には、僕たちのほかに、すでに何人かの客が着いていた。`);
+  for (const c of G.cast.filter(c => c !== host && c !== comp)) {
+    show([c], c);
+    await S(c, c.intro);
+  }
+  cls(); show(G.cast);
+  await T('このときの僕は、まだ知らなかった。');
+  sfx('sting');
+  await T('この中のひとりが、今夜、人を殺すことを。');
+}
+
+async function dinner() {
+  const s = G.set, V = G.V, X = G.X, H = G.herring;
+  cls(); scene('dinner', s.dinnerRoom);
+  await T(`夕食は、${s.dinnerRoom}の長いテーブルで、全員そろってとることになった。`);
+  await T(`${s.dish}が並び、グラスにワインがつがれる。`);
+  const talkers = shuffle(G.cast.filter(c => c !== V)).slice(0, 2);
+  for (const c of talkers) { show([c], c); await S(c, c.isHost ? '「おかわりもございますから、どうぞご遠慮なく」' : c.chat); }
+  cls(); show([V], V);
+  await T('にぎやかな食卓のなかで、ひとりだけ、場の空気を冷やす人物がいた。');
+  await T(`${N(V)}だ。`);
+  const pairs = shuffle([[X, G.motive], [H, G.hMotive]]);
+  for (const [c, m] of pairs) {
+    show([V, c], V);
+    await S(V, MOTIVES[m].hint(N(c)));
+    talking(c);
+    await T(MOTIVES[m].react(N(c)));
+  }
+  show([V], V);
+  await T(`${N(V)}は満足げにワインを飲みほすと、ひと足先に部屋へ引きあげていった。`);
+  await T(`${s.dinnerRoom}に、気まずい沈黙が残った。`);
+  cls(); show([G.host]);
+  if (s.amb === 'storm') { flash('white'); }
+  await TT(s.isolate(hostTitle()));
+  show([]);
+}
+
+async function night() {
+  const s = G.set, V = G.V, D = G.discoverer;
+  cls(); scene('lounge');
+  await T('夜もふけて、ひとり、またひとりと部屋へ引きあげていった。');
+  if (G.withMe) {
+    const P = G.withMe;
+    show([P]);
+    await T(`僕はなかなか寝つけず、${L()}で${N(P)}と話しこんでいた。`);
+    await T(`${N(P)}がおやすみを言って立ちあがったのは、日付が変わる少し前のことだ。`);
+  } else {
+    await T(`僕は自分の部屋で、窓をたたく${s.wet}の音を聞きながら、うとうとしていた。`);
+  }
+  cls(); show([]); scene('black', ''); bgm('none');
+  await wait(900);
+  await T('……');
+  sfx('sting'); flash('red');
+  await T(D.sex === 'f' ? '「きゃああああああっ！」' : '「うわああああああっ！」');
+  bgm('tense');
+  await T(`悲鳴だ。${locName('corridor')}のほうから聞こえた。僕は部屋を飛びだした。`);
+  cls(); scene('room'); show([D]);
+  await T(`${N(V)}の部屋のドアが、半びらきになっている。その前で、${N(D)}が床にへたりこんでいた。`);
+  await T('部屋をのぞきこんで、僕は息をのんだ。');
+  await T(`床に、${N(V)}が倒れていた。頭のまわりに、赤黒い染みがゆっくりと広がっている。`);
+  const medic = G.sus.find(c => c.medic);
+  if (medic) { show([medic]); await T(`${medic.medic}の${N(medic)}が駆けよって脈をとり、静かに首を振った。`); }
+  else await T('誰かが脈をとろうとして、すぐに手を引っこめた。もう、冷たくなりはじめている。');
+  cls();
+  const reactors = shuffle(G.sus).slice(0, 2);
+  show(G.sus);
+  for (const c of reactors) await S(c, ST[c.st].react);
+  talking(null);
+  await T(`玄関も窓も、内側から鍵がかかっていた。この${s.wet}のなか、外から誰かが忍びこんだとも思えない。`);
+  sfx('sting');
+  await T('つまり──犯人は、この中にいる。');
+  cls(); show([G.comp], G.comp);
+  await S(G.comp, ST[G.comp.st].fear);
+  talking(null);
+  await T(`夜が明ければ、${s.help}。けれど、それまでに犯人がまた動かないとは限らない。`);
+  await T('僕は、自分の手で犯人を見つけだすことにした。');
+  await T(`夜明けまで、あと5時間。現場や${s.short}のなかを調べ、ひとりずつ話を聞いて、手がかりを集めよう。`);
+  await T('（調べたことは、右上の📓「手帳」でいつでも見直せます）');
+  if (G.withMe) learn(G.withMe, 'alibi');
+}
+
+// ---------- 捜査 ----------
+async function investigate() {
+  G.investigating = true; $('#bNote').hidden = false;
+  while (true) {
+    if (G.t >= MAX_T) { await accuse(true); return; }
+    if (G.t >= MURDER2_AT && !G.v2done) await secondMurder();
+    cls(); scene('corridor', locName('corridor')); show([]); bgm('mystery');
+    line(`時刻は${clock()}。夜明けまで、あと${leftTime()}。`);
+    line(G.t === 0 ? 'どこから調べよう？' : pick(['次は、どうする？', '急がなければ。', '考えろ。犯人は、この中にいる。']));
+    const items = [{ h: '調べる' }, { label: locName('room'), v: ['s', 'room'], cls: G.searched.room ? 'done' : '' }];
+    for (const k of Object.keys(G.set.locs)) items.push({ label: locName(k), v: ['s', k], cls: G.searched[k] ? 'done' : '' });
+    items.push({ h: '話を聞く' });
+    for (const c of G.sus.filter(c => c.alive)) items.push({ label: N(c), v: ['t', c], cls: G.talked[c.id] ? 'done' : '' });
+    items.push({ h: 'そのほか' });
+    items.push({ label: '📓 手帳を見る', v: ['n'] });
+    items.push({ label: '犯人を指名する', v: ['a'], cls: 'danger' });
+    const [kind, arg] = await choose(items, true);
+    if (kind === 's') await search(arg);
+    else if (kind === 't') await talk(arg);
+    else if (kind === 'n') await openNote();
+    else if (kind === 'a') { if (await accuse(false)) return; }
+  }
+}
+
+async function search(k) {
+  const first = !G.searched[k];
+  if (first) { G.searched[k] = true; G.t++; }
+  cls(); scene(k === 'room' ? 'room' : k, locName(k)); show([]); setPlace(locName(k));
+  if (!first) {
+    line(`${locName(k)}は、もう調べた。`);
+    const what = k === 'room' ? 'time' : G.clueAt[k];
+    if (what === 'time') line(`腕時計は${G.tm}で止まっていた。`);
+    else if (what === 'memo') line(`${N(G.herring)}の名前が書かれたメモを見つけた場所だ。`);
+    else if (what) line(DIMS[what].note());
+    else line('めぼしいものは、何もなかった。');
+    await choose([{ label: 'もどる', v: 1 }]);
+    return;
+  }
+  if (k === 'room') {
+    await T(`${N(G.V)}の部屋。遺体には、誰かが毛布をかけていた。`);
+    await T('椅子が倒れ、床には割れた花瓶の破片が散らばっている。争ったあとだ。');
+    if ([G.d1, G.d2].includes('left')) await T('凶器らしいものは見当たらない。犯人が持ちさったのだろうか。');
+    else await T(`ベッドの陰に、血のついた${G.weapon}が転がっていた。これが凶器だろう。`);
+    if ([G.d1, G.d2].includes('tall')) await T(`そういえば、${N(G.V)}が夕食のときに見せびらかしていた革の財布が、どこにもない。`);
+    if (G.timeVariant) {
+      await T(`ふと、${N(G.V)}の腕時計に目がとまった。ガラスが割れ、針が止まっている。`);
+      await T(`指しているのは──${G.tm}。倒れたときに、床に打ちつけたのだ。`);
+    } else {
+      await T('床に、小さな置き時計が落ちていた。もみあったときに、机から落ちたのだろう。電池のふたが外れて、針が止まっている。');
+      await T(`指しているのは──${G.tm}。`);
+    }
+    sfx('clue');
+    await T(`犯行時刻は、${G.tm}ごろ。まちがいない。`);
+    G.found.time = true;
+  } else {
+    const what = G.clueAt[k], name = locName(k), sp = G.set.spots[k];
+    if (G.v2done && k === G.v2loc) await T(`${N(G.V2)}が倒れていた場所だ。床には、まだそのあとが残っている。`);
+    if (what === 'memo') {
+      await T(`${name}の${sp}に、くしゃくしゃに丸めた紙切れが押しこまれていた。`);
+      await T(`広げると、走り書きの文字。「今夜、話がある。部屋に行く ──${N(G.herring)}」`);
+      sfx('clue');
+      await T(`${N(G.herring)}が、${N(G.V)}を訪ねようとしていた……？`);
+      G.found.memo = true;
+    } else if (what) {
+      const ls = DIMS[what].clue(name, sp);
+      for (let i = 0; i < ls.length; i++) { if (i === ls.length - 1) sfx('clue'); await T(ls[i]); }
+      G.found[what] = true;
+    } else {
+      const f = G.set.flavor[k];
+      await T(f[0]); await T(f[1]);
+      await T('ここには、手がかりはなさそうだ。');
+    }
+  }
+}
+
+async function talk(c) {
+  const first = !G.talked[c.id];
+  cls(); scene('lounge', L()); show([c], c);
+  if (!first) {
+    line(`${N(c)}には、もう話を聞いた。`);
+    for (const s of personFacts(c)) line('・' + s);
+    if (c === G.herring && G.found.memo && !G.memoTalked) { await memoTalk(c); return; }
+    await choose([{ label: 'もどる', v: 1 }]);
+    return;
+  }
+  G.talked[c.id] = true; G.t++;
+  await T(pick([`${N(c)}に話を聞くことにした。`, `${N(c)}は${L()}の隅で、じっと何かを考えこんでいた。`, `${N(c)}は落ちつかない様子で、窓の外を見ていた。`]));
+  await T(`${WINDOW}ごろ、どこで何をしていたのか──たずねてみる。`);
+  const st = ST[c.st];
+  if (c.alone) await S(c, st.alone(c.I, '11時から12時', c.act));
+  else if (c.withMe) { await S(c, st.withMe('11時から12時', L())); talking(null); await T(`……そうだった。その時間、僕は${N(c)}とずっと一緒にいた。`); }
+  else await S(c, st.with(c.I, '11時から12時', N(c.partner), L(), c.pact));
+  learn(c, 'alibi'); if (c.partner) learn(c.partner, 'alibi');
+  talking(null);
+  for (const d of shuffle([G.d1, G.d2, G.d3])) {
+    const D = DIMS[d];
+    await T(c.tr[d] ? D.obsOn(N(c)) : D.obsOff(N(c)));
+    learn(c, d);
+    if (c.tr[d] && D.excuse) { await S(c, st[D.excuse]); talking(null); }
+  }
+  if (c === G.herring && G.found.memo) await memoTalk(c);
+}
+async function memoTalk(c) {
+  G.memoTalked = true;
+  await T(`あのメモのことを切りだすと、${N(c)}の顔色が変わった。`);
+  await T(`${N(c)}はしぶしぶ認めた。たしかに、${N(G.V)}と話をつけるつもりでメモを書いた。けれど、部屋の前まで行ってノックしても、返事はなかった──という。`);
+  await T('本当だろうか。');
+}
+function personFacts(c) {
+  const out = [];
+  if (knowAlibi(c)) out.push(c.alone ? 'アリバイ：ひとりで部屋にいた（証人なし）' : c.withMe ? 'アリバイ：僕と一緒にいた' : `アリバイ：${N(c.partner)}と${L()}にいた`);
+  for (const d of [G.d1, G.d2, G.d3]) if (knowTrait(c, d)) out.push(c.tr[d] ? DIMS[d].on : DIMS[d].off);
+  if (c === G.herring && G.memoTalked) out.push('メモを書いたことは認めた。部屋は訪ねたが、返事はなかったという');
+  if (!out.length) out.push('まだ話を聞いていない');
+  return out;
+}
+
+async function secondMurder() {
+  const V2 = G.V2;
+  G.v2done = true; V2.alive = false;
+  cls(); scene('black', ''); show([]); bgm('none'); sfx('blackout');
+  await T(`${clock()}。`);
+  await T('ふいに、すべての明かりが消えた。');
+  await T('停電だ。まっ暗闇のなかで、誰かが短く息をのんだ。');
+  await T('「動かないで！ そのまま、じっとして！」誰かが叫ぶ。');
+  sfx('thud');
+  await T('……そのとき、どこか遠くで、どさりと重いものが倒れる音がした。');
+  await wait(800);
+  await T('数分後、明かりがもどった。');
+  cls(); scene('corridor', ''); show(G.sus.filter(c => c.alive));
+  await T('全員の顔を確かめる。……ひとり、足りない。');
+  cls(); scene(G.v2loc, locName(G.v2loc)); bgm('tense'); show([V2]);
+  sfx('sting'); flash('red');
+  await T(`${N(V2)}が、${locName(G.v2loc)}に倒れていた。`);
+  await T('首に、細いひもで絞められたあとが残っている。もう、息はなかった。');
+  if (V2.isComp) await T(`「${N(V2)}……！」 何度名前を呼んでも、返事はなかった。ここへ誘ってくれたのは、${N(V2)}だったのに。`);
+  show([]);
+  await T('二人目の犠牲者だ。犯人は、まだ止まっていない。');
+  await T('急がなければ。次は──僕かもしれない。');
+}
+
+// ---------- 推理と結末 ----------
+async function accuse(forced) {
+  cls(); scene('lounge', L()); bgm('tense');
+  if (forced) {
+    show([]);
+    await T('窓の外が、白みはじめた。');
+    await T('……夜明けだ。もう、時間がない。警察が来る前に、決着をつけなければ。');
+  } else {
+    line('犯人を指名する。もう、あとには引けない。');
+    const ok = await choose([{ label: '指名する', v: 1, cls: 'danger' }, { label: 'まだ調べる', v: 0 }]);
+    if (!ok) return false;
+  }
+  const alive = G.sus.filter(c => c.alive);
+  cls(); show(alive);
+  await T(`僕は、全員を${L()}に集めた。`);
+  line('犯人は──');
+  const who = await choose(alive.map(c => ({ label: N(c), v: c })), true);
+  G.investigating = false; $('#bNote').hidden = true; setPlace(L());
+  cls(); talking(who);
+  await T(`「${N(G.V)}さんを殺したのは……${N(who)}さん、あなたです」`);
+  const complete = G.found.time && G.found[G.d1] && G.found[G.d2];
+  if (who !== G.X) await badEnd(who);
+  else if (!complete) await normalEnd();
+  else await trueEnd();
+  return true;
+}
+
+async function trueEnd() {
+  const X = G.X, st = ST[X.st], alive = G.sus.filter(c => c.alive);
+  const d1 = DIMS[G.d1], d2 = DIMS[G.d2];
+  await T(`「まず、犯行時刻。${N(G.V)}さんの部屋の時計は、${G.tm}で止まっていました」`);
+  await T(`「その時間、ひとりでいてアリバイがないのは──${names(alive.filter(c => c.alone))}」`);
+  await T(`「次に、${d1.say()}」`);
+  await T(`「${d1.need}のは、${names(alive.filter(c => c.tr[G.d1]))}」`);
+  await T(`「そして、${d2.say()}」`);
+  await T(`「${d2.need}のは、${names(alive.filter(c => c.tr[G.d2]))}」`);
+  await T('「三つの条件すべてにあてはまるのは、ひとりしかいません」');
+  cls(); show([X], X);
+  sfx('sting'); redden(X);
+  await T(`「──${N(X)}さん。あなたです」`);
+  await wait(500);
+  await S(X, st.broken);
+  if (X.isComp) { talking(null); await T(`「どうして……どうして、${N(X)}が」 僕の声は、ふるえていた。`); }
+  for (const s of MOTIVES[G.motive].conf(X.I, N(G.V))) await S(X, s);
+  if (G.v2done) await S(X, `「${N(G.V2)}は……気づきかけていた。だから、口をふさぐしかなかった」`);
+  talking(null);
+  await T(`${N(X)}は、それきり何も言わなかった。`);
+  cls(); show([]); scene('dawn', ''); bgm('calm');
+  await TT(G.set.dawn);
+  await T(`${N(X)}は、静かに連れていかれた。`);
+  if (!X.isComp && G.comp.alive) {
+    cls(); show([G.comp], G.comp);
+    await T(`${G.set.home}のなかで、${N(G.comp)}がぽつりと言った。`);
+    await S(G.comp, ST[G.comp.st].bye);
+  } else {
+    await T(`${G.set.home}のなかで、僕はずっと、窓の外を見ていた。`);
+  }
+  sfx('true');
+  await ending('true', 'TRUE END', '影法師の正体');
+}
+
+async function normalEnd() {
+  const X = G.X;
+  await S(X, ST[X.st].deny);
+  talking(null);
+  await T('僕は、言葉につまった。');
+  await T('まちがっていない。そう確信しているのに──それを証明する手がかりが、足りない。');
+  await T('ほかの客たちも、顔を見あわせるばかりだった。');
+  cls(); show([]); scene('night', ''); bgm('none');
+  await T('結局、全員がそれぞれの部屋に閉じこもり、夜明けを待つことになった。');
+  await wait(600);
+  scene('dawn', ''); bgm('calm');
+  await T(G.set.flee(N(X)));
+  await T('真相は、闇のなかへ消えた。');
+  await ending('normal', 'NORMAL END', '消えた影');
+}
+
+async function badEnd(who) {
+  const X = G.X;
+  await S(who, ST[who.st].protest(who.I));
+  talking(null);
+  await T(`けれど、ほかの客たちの目は、もう${N(who)}を疑いはじめていた。`);
+  await T(`${N(who)}は、夜が明けるまで${locName('store')}に閉じこめられることになった。`);
+  await T('これで、終わった。そう思った。');
+  cls(); show([]); scene('night', ''); bgm('none'); ambLevel(.3);
+  await T('部屋にもどり、ベッドに倒れこむ。');
+  await T('……どれくらい眠っただろう。');
+  sfx('knock');
+  await T('ぎしり、と床がきしむ音で、目がさめた。');
+  await T('暗がりに、誰かが立っている。');
+  show([X], X, { red: X });
+  bgm('tense');
+  await S(X, ST[X.st].kill);
+  talking(null);
+  sfx('sting'); flash('red');
+  await T(`振りおろされる影。それが、僕が見た最後の光景だった。`);
+  bgm('none'); sfx('bad');
+  await ending('bad', 'BAD END', 'まちがえた夜');
+}
+
+// ============================================================
+//  エンディング・記録・手帳
+// ============================================================
+function loadRec() { try { return JSON.parse(localStorage.getItem('kagebo-rec')) || null; } catch (e) { return null; } }
+function rec() { return Object.assign({ played: 0, true: 0, normal: 0, bad: 0, caught: [] }, loadRec() || {}); }
+function saveRec(r) { try { localStorage.setItem('kagebo-rec', JSON.stringify(r)); } catch (e) {} }
+let endWait = null;
+function ending(kind, k, t) {
+  const r = rec(); r.played++; r[kind]++;
+  if (kind === 'true' && !r.caught.includes(G.X.id)) r.caught.push(G.X.id);
+  saveRec(r);
+  STATE = 'end';
+  $('#endK').textContent = k; $('#endK').className = 'k ' + kind; $('#endT').textContent = `── ${t} ──`;
+  $('#ending').hidden = false;
+  return new Promise(res => { endWait = res; });
+}
+function truthHTML() {
+  const X = G.X, wh = d => { const k = Object.keys(G.clueAt).find(k => G.clueAt[k] === d); return locName(k); };
+  const clue = (d, where) => `<li>${G.found[d] ? '✅' : '⬜'} ${esc(DIMS[d].note())}<br><span class="muted">${esc(where)}</span></li>`;
+  return `<h2>事件の真相</h2><div class="muted">事件ファイル No.${G.seed}　${esc(G.set.name)}</div>
+  <h4>犯人</h4><p><b>${esc(X.name)}</b>（${esc(MOTIVES[G.motive].sum)}）</p>
+  <h4>決め手になる3つの手がかり</h4><ul>
+    <li>${G.found.time ? '✅' : '⬜'} 止まった時計 → 犯行時刻は${G.tm}ごろ<br><span class="muted">${esc(locName('room'))}</span></li>
+    ${clue(G.d1, wh(G.d1))}${clue(G.d2, wh(G.d2))}</ul>
+  <p class="muted">3つすべてを見つけてから正しい犯人を指名すると TRUE END になります。</p>
+  <h4>見こみちがいだった人</h4><p>${esc(N(G.herring))}：${esc(N(G.V))}を呼びだすメモを書き、夕食でも「${esc(MOTIVES[G.hMotive].sum)}」をにおわせる言葉をかけられていた。でも、犯人ではなかった。</p>
+  <h4>全員の特徴</h4>${gridHTML(true)}
+  <button class="bigbtn" data-close>とじる</button>`;
+}
+function gridHTML(all) {
+  const cols = [{ k: 'alibi', lab: 'アリバイなし', show: all || G.found.time }, { k: G.d1, lab: DIMS[G.d1].tag, show: all || G.found[G.d1] }, { k: G.d2, lab: DIMS[G.d2].tag, show: all || G.found[G.d2] }].filter(c => c.show);
+  if (!cols.length) return '<p class="muted">決め手になりそうな手がかりは、まだ見つかっていない。</p>';
+  const cell = (c, k) => {
+    const known = all || (k === 'alibi' ? knowAlibi(c) : knowTrait(c, k));
+    if (!known) return '<td class="n">？</td>';
+    const v = k === 'alibi' ? c.alone : c.tr[k];
+    return v ? '<td class="y">●</td>' : '<td class="n">—</td>';
+  };
+  let h = `<table class="grid"><tr><th>人物</th>${cols.map(c => `<th>${c.lab}</th>`).join('')}</tr>`;
+  for (const c of G.sus) h += `<tr><td class="${c.alive ? '' : 'dead'}">${esc(N(c))}${all && c === G.X ? ' 🔪' : ''}</td>${cols.map(k => cell(c, k.k)).join('')}</tr>`;
+  return h + '</table><p class="muted" style="font-size:12px;margin-top:6px">● = 手がかりにあてはまる　？ = まだ話を聞いていない</p>';
+}
+function noteHTML() {
+  const clues = [];
+  if (G.found.time) clues.push(`止まった時計 → 犯行時刻は${G.tm}ごろ`);
+  for (const d of [G.d1, G.d2]) if (G.found[d]) clues.push(DIMS[d].note());
+  if (G.found.memo) clues.push(`「今夜、話がある。部屋に行く ──${N(G.herring)}」と書かれたメモ`);
+  const people = G.sus.map(c => `<li><b class="${c.alive ? '' : 'dead'}">${esc(N(c))}</b>${c.alive ? '' : '（死亡）'}　<span class="muted">${esc(personFacts(c).join(' ／ '))}</span></li>`).join('');
+  return `<h2>📓 手帳</h2><div class="muted">${esc(G.set.name)}　${clock()}　夜明けまであと${leftTime()}</div>
+  <h4>事件</h4><ul><li>${esc(N(G.V))}が自分の部屋で殺された（${esc(WINDOW)}ごろ）</li>${G.v2done ? `<li>停電のあと、${esc(N(G.V2))}が${esc(locName(G.v2loc))}で殺された</li>` : ''}</ul>
+  <h4>手がかり</h4>${clues.length ? '<ul>' + clues.map(s => `<li>${esc(s)}</li>`).join('') + '</ul>' : '<p class="muted">まだ何も見つけていない。</p>'}
+  <h4>推理メモ</h4>${gridHTML(false)}
+  <h4>聞いた話</h4><ul>${people}</ul>
+  <button class="bigbtn" data-close>とじる</button>`;
+}
+function openPanel(html) {
+  $('#pbox').innerHTML = html; $('#panel').hidden = false; $('#pbox').scrollTop = 0;
+  return new Promise(res => { $('#pbox').querySelector('[data-close]').onclick = () => { $('#panel').hidden = true; res(); }; });
+}
+const openNote = () => openPanel(noteHTML());
+function recHTML() {
+  const r = rec();
+  const list = PEOPLE.map(p => r.caught.includes(p.id) ? `<li>${esc(p.name)}</li>` : '<li class="muted">？？？</li>').join('');
+  return `<h2>これまでの記録</h2>
+  <ul><li>遊んだ事件：${r.played}</li><li>TRUE END：${r.true}</li><li>NORMAL END：${r.normal}</li><li>BAD END：${r.bad}</li></ul>
+  <h4>つかまえた犯人（${r.caught.length} / ${PEOPLE.length}）</h4><ul>${list}</ul>
+  <button class="bigbtn" data-close>とじる</button>`;
+}
+
+// ============================================================
+//  タイトルと画面の切りかえ
+// ============================================================
+let STATE = 'title';
+window.canReload = () => STATE === 'title';   // 物語の途中では、更新があっても読みこみ直さない
+function showTitle() {
+  STATE = 'title'; G = null;
+  $('#ending').hidden = true; $('#panel').hidden = true; $('#title').hidden = false; $('#bNote').hidden = true;
+  cls(); show([]); drawDeco('snow'); setWeather('snow'); scene('title', ''); bgm('none'); ambient('none');
+  const r = rec();
+  $('#recLine').textContent = r.played ? `解決した事件 ${r.true} ／ 遊んだ事件 ${r.played}` : '';
+}
+function startGame() {
+  aInit();
+  $('#title').hidden = true; $('#ending').hidden = true; $('#panel').hidden = true;
+  A.ambKind = A.bgmKind = '';   // 音をつくり直す
+  play(10000 + Math.floor(Math.random() * 90000));
+}
+$('#bStart').onclick = startGame;
+$('#bRec').onclick = () => openPanel(recHTML());
+$('#bAgain').onclick = () => { if (endWait) endWait(); startGame(); };
+$('#bToTitle').onclick = () => { if (endWait) endWait(); showTitle(); };
+$('#bTruth').onclick = () => openPanel(truthHTML());
+$('#bNote').onclick = e => { e.stopPropagation(); if (G && G.investigating) openNote(); };
+$('#bSkip').onclick = e => { e.stopPropagation(); skip = !skip; $('#bSkip').classList.toggle('on', skip); if (skip) onTap(); };
+$('#bSnd').onclick = e => { e.stopPropagation(); aInit(); setSound(!A.on); };
+setSound(A.on);
+showTitle();
+</script>
+
+<script>
+if('serviceWorker' in navigator){addEventListener('load',()=>{
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{document.addEventListener('visibilitychange',()=>{if(!document.hidden)r.update().catch(()=>{})})}).catch(()=>{});
+  /* 新しい版に入れかわったら、安全なときに1回だけ読みこみ直す。
+     ゲームの途中などで読みこみ直したくないときは、アプリ側で window.canReload=()=>false を返すようにする */
+  let had=!!navigator.serviceWorker.controller,want=false;const go=()=>{if(want&&(!window.canReload||window.canReload()))location.reload()};
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had){want=true;go()}});setInterval(go,3000)})}
+</script>
+</body>
+</html>
