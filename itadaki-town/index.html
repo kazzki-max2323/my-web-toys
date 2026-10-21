@@ -379,7 +379,7 @@
       <li><b>サイコロ</b>をふって進む。分かれ道では進む方向を選べる（来た道はもどれない）。</li>
       <li><b>空き店</b>に止まったら買える。<b>他人の店</b>に止まったら買い物料をはらう。はらった後、店の価値の<b>5倍</b>で買い取ることもできる（持ち主は3倍を受け取る）。</li>
       <li>同じエリアの店を多く持つほど買い物料が上がる。エリアを独占するとさらに大きく上がる。</li>
-      <li><b>自分の店</b>に止まると、そのエリアの自分の店に<b>増資</b>できる。増資すると店の価値と買い物料が上がり、エリアの株価も上がる。増資の上限はエリアの持ち店数で決まる。</li>
+      <li><b>自分の店</b>に止まると、持っている店ならどこでも<b>増資</b>できる。増資すると店の価値と買い物料が上がり、エリアの株価も上がる。増資の上限はエリアの持ち店数で決まる。</li>
       <li><b>株</b>は銀行か株屋で買える（1回99株まで）。売るのは自分の番の最初ならいつでもOK。10株以上の売買で株価が少し動く。そのエリアで買い物料がはらわれるたびに、株主に<b>配当</b>が入る。</li>
       <li>♠♥♦♣ の4つの<b>スート</b>を集めて銀行を通ると<b>昇進</b>し、給料（基本給＋店の価値の10%）がもらえる。</li>
       <li><b>チャンス</b>マスと<b>スート</b>マスに止まると、8×8のチャンスボードからカードを1枚えらんでめくる（カードは100種類）。めくったカードがたて・よこ・ななめに<b>4枚以上</b>ならぶとボーナス、端から端まで8枚ならぶと<b>1,500G</b>！めくったカードは、めくった人の色になる。</li>
@@ -1082,8 +1082,12 @@ const Sound = (() => {
     { t: 'ピコピコ競売',         g: 'chip',    bpm: 160, key: 57, mode: 'minor',      meter: 4, seed: 52 },
     { t: 'ワープ・ダッシュ',     g: 'chip',    bpm: 170, key: 62, mode: 'minor',      meter: 4, seed: 53 },
     { t: 'レトロタウン',         g: 'chip',    bpm: 140, key: 64, mode: 'major',      meter: 4, seed: 54 },
+    { t: '旅立ちの街道',         g: 'rpg',     bpm: 112, key: 62, mode: 'major',      meter: 4, seed: 61, style: 'march' },
+    { t: '決戦！大富豪',         g: 'rpg',     bpm: 168, key: 57, mode: 'minor',      meter: 4, seed: 62, style: 'battle' },
+    { t: '水晶の祈り',           g: 'rpg',     bpm: 72,  key: 64, mode: 'major',      meter: 4, seed: 63, style: 'harp' },
+    { t: '飛空艇でゆく',         g: 'rpg',     bpm: 150, key: 65, mode: 'major',      meter: 3, seed: 64, style: 'airship' },
   ];
-  const GENRE_NAME = { classic: 'クラシック', chill: 'ゆったり', pop: 'ポップ', jazz: 'ジャズ', bossa: 'ボサノヴァ', chip: 'ピコピコ' };
+  const GENRE_NAME = { classic: 'クラシック', chill: 'ゆったり', pop: 'ポップ', jazz: 'ジャズ', bossa: 'ボサノヴァ', chip: 'ピコピコ', rpg: 'RPG' };
   const MODES = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10], dorian: [0, 2, 3, 5, 7, 9, 10], mixolydian: [0, 2, 4, 5, 7, 9, 10] };
   // chord progressions as scale degrees, one chord per bar, 8 bars per section
   const PROGS = {
@@ -1093,6 +1097,7 @@ const Sound = (() => {
     jazz:    [[1, 4, 0, 0, 1, 4, 0, 5], [1, 4, 0, 5, 1, 4, 0, 0], [2, 5, 1, 4, 0, 5, 1, 4], [0, 5, 1, 4, 2, 5, 1, 4]],
     bossa:   [[0, 0, 1, 4, 0, 0, 1, 4], [1, 4, 0, 5, 1, 4, 0, 0], [3, 3, 2, 5, 1, 4, 0, 0]],
     chip:    [[0, 5, 3, 4, 0, 5, 3, 4], [5, 3, 0, 4, 5, 3, 4, 4], [0, 6, 5, 4, 0, 6, 5, 6], [0, 3, 4, 0, 0, 3, 4, 4]],
+    rpg:     [[0, 5, 6, 0, 0, 5, 6, 4], [0, 3, 6, 2, 5, 1, 4, 4], [5, 6, 0, 0, 5, 6, 4, 4], [0, 4, 5, 2, 3, 0, 1, 4], [3, 4, 2, 5, 1, 4, 0, 0]],
   };
   const GENRE = {
     classic: { rest: 0.08, swing: 0,    wet: 0.4,  span: [-1, 10], level: 1.35 },
@@ -1101,6 +1106,7 @@ const Sound = (() => {
     jazz:    { rest: 0.22, swing: 0.33, wet: 0.22, span: [-2, 10], level: 0.92 },
     bossa:   { rest: 0.2,  swing: 0,    wet: 0.22, span: [-1, 9],  level: 0.85 },
     chip:    { rest: 0.05, swing: 0,    wet: 0.06, span: [0, 12],  level: 0.68 },
+    rpg:     { rest: 0.08, swing: 0,    wet: 0.3,  span: [-1, 11], level: 0.8 },
   };
   const RHY4 = [[4, 4, 4, 4], [2, 2, 4, 4, 4], [6, 2, 4, 4], [4, 2, 2, 8], [3, 3, 2, 4, 4], [8, 4, 4], [2, 2, 2, 2, 4, 4], [4, 4, 8], [2, 4, 2, 4, 4], [6, 2, 8], [4, 2, 2, 4, 4]];
   const RHY3 = [[4, 4, 4], [6, 2, 4], [8, 4], [4, 2, 2, 4], [2, 2, 4, 4], [4, 8], [2, 2, 2, 2, 4]];
@@ -1229,6 +1235,10 @@ const Sound = (() => {
     hat:    (o, t, v, open) => hit(o, t, open ? 0.22 : 0.04, v, 'highpass', 7500),
     ride:   (o, t, v) => hit(o, t, 0.35, v, 'bandpass', 6200, 1.5, true),
     shaker: (o, t, v) => hit(o, t, 0.05, v, 'highpass', 5000),
+    brass:  (o, t, m, d, v) => { voice(o, t, hz(m), d, v, { type: 'sawtooth', a: 0.06, dec: 0.4, sus: 0.8, rel: 0.12, cutoff: 1500, detune: 5, vib: 0.005 });
+      voice(o, t, hz(m) / 2, d, v * 0.35, { type: 'square', a: 0.06, dec: 0.4, sus: 0.7, rel: 0.1, cutoff: 900 }); },
+    harp:   (o, t, m, d, v) => { voice(o, t, hz(m), d, v, { type: 'triangle', a: 0.003, dec: 0.9, sus: 0.02, rel: 0.4 }); voice(o, t, hz(m) * 2, d, v * 0.25, { a: 0.003, dec: 0.4, sus: 0.01 }); },
+    timp:   (o, t, m, v) => { voice(o, t, hz(m), 0.5, v, { a: 0.004, dec: 0.5, sus: 0.02, rel: 0.3 }); hit(o, t, 0.15, v * 0.5, 'lowpass', 300); },
   };
 
   function playBar(song, bar, t, next) {
@@ -1307,6 +1317,42 @@ const Sound = (() => {
         [0, 3, 6, 8, 11, 14].forEach(st => chord(k - 12, 4).slice(1).map(x => x + 12).forEach(x => I.pluck(out, at(st), x, sd * 2, 0.02)));
         melody(I.flute, k + 12, 0.06);
         if (lvl >= 2) melody(I.vibes, k, 0.025);
+        break;
+      }
+      case 'rpg': {
+        const tones = chord(k - 12, 3), up = [...tones, ...tones.map(x => x + 12), tones[0] + 24];
+        if (s.style === 'march') {
+          [0, 8].forEach(st => I.timp(out, at(st), root + 12, 0.16));
+          [4, 12].forEach(st => I.snare(out, at(st), 0.06));
+          if (lvl >= 1) [13, 14, 15].forEach(st => I.snare(out, at(st), 0.025));
+          [[0, root], [4, root + 7], [8, root], [12, root + 7]].forEach(([st, x]) => I.bass(out, at(st), x, sd * 3.5, 0.11));
+          chord(k - 12, 3).forEach(x => I.strings(out, t, x + 12, barDur, 0.014));
+          [2, 6, 10, 14].forEach(st => tones.forEach(x => I.pluck(out, at(st), x + 12, sd * 1.5, 0.014)));
+          melody(I.brass, k + 12, 0.05);
+          if (lvl >= 2) melody(I.flute, k + 24, 0.02);
+        } else if (s.style === 'battle') {
+          for (let st = 0; st < steps; st += 2) I.sbass(out, at(st), root + (st % 4 ? 12 : 0), sd * 1.8, 0.1);
+          for (let st = 0; st < steps; st++) I.stab(out, at(st), up[[0, 2, 1, 2][st % 4] + (st >= 8 ? 1 : 0)] + 12, sd * 0.9, lvl ? 0.013 : 0.009);
+          [0, 8].forEach(st => I.timp(out, at(st), root + 12, 0.18));
+          [0, 6, 8, 11].forEach(st => I.kick(out, at(st), 0.18));
+          [4, 12].forEach(st => I.snare(out, at(st), 0.08));
+          if (lvl >= 1) for (let st = 0; st < steps; st += 2) I.hat(out, at(st), 0.014);
+          melody(I.brass, k + 12, 0.055);
+          if (lvl >= 2) melody(I.strings, k, 0.02);
+        } else if (s.style === 'harp') {
+          const arp = [...up, ...up.slice(1, -1).reverse()];
+          for (let st = 0; st < steps; st++) I.harp(out, at(st), arp[st % arp.length] + 12, sd * 4, 0.05);
+          I.bass(out, at(0), root, barDur, 0.07);
+          if (lvl >= 1) chord(k - 12, 3).forEach(x => I.pad(out, t, x + 12, barDur, 0.011));
+          melody(lvl ? I.strings : I.flute, k + 12, lvl ? 0.04 : 0.05);
+        } else {          // airship: lilting triple time
+          I.bass(out, at(0), root, sd * 4, 0.12);
+          I.timp(out, at(0), root + 12, 0.1);
+          [4, 8].forEach(st => tones.forEach(x => I.strings(out, at(st), x + 12, sd * 3.5, 0.016)));
+          if (lvl >= 1) for (let st = 0; st < steps; st += 2) I.harp(out, at(st), up[(st / 2) % up.length] + 12, sd * 2, 0.016);
+          if (lvl >= 1) I.hat(out, at(0), 0.02, true);
+          melody(lvl >= 2 ? I.brass : I.flute, k + 12, lvl >= 2 ? 0.05 : 0.055);
+        }
         break;
       }
       case 'chip': {
@@ -1684,9 +1730,8 @@ async function landShop(p, c) {
     }
   } else if (c.owner === p.id) {
     log(`${pname(p)}は自分の${c.name}に止まった`);
-    const mine = d.shops.filter(s => cells[s].owner === p.id);
-    if (p.cpu) await cpuInvest(p, mine);
-    else await humanInvest(p, mine, `${d.name}の自分の店に増資できます`);
+    if (p.cpu) await cpuInvest(p, ownedShops(p));
+    else await humanInvest(p, ownedShops(p), '自分の店ならどこでも増資できます');
   } else {
     const o = players[c.owner];
     let f = fee(c.id);
@@ -2173,12 +2218,16 @@ async function humanBuyStock(p, title, mult = 1) {
 async function humanSellStock(p) {
   const held = DISTRICTS.map((d, i) => i).filter(i => p.stocks[i] > 0);
   if (!held.length) return;
+  // in debt, list first the stocks that can clear it on their own
+  if (p.cash < 0) held.sort((a, b) => (p.stocks[b] * price(b) >= -p.cash) - (p.stocks[a] * price(a) >= -p.cash));
   const r = await pickerDialog({
     title: '売る株を選んでね',
     body: `所持金 <b>${fmt(p.cash)}</b>`,
     items: held.map(i => ({ value: i, label: `<span class="tag" style="background:${DISTRICTS[i].color}">${DISTRICTS[i].key}</span>${DISTRICTS[i].name}`, right: `${price(i)}G ・ ${p.stocks[i]}株` })),
     amountMax: d => p.stocks[d],
-    amountLabel: (d, a) => `${a}株 = ${fmt(a * price(d))}`,
+    amountLabel: (d, a) => `${a}株 = ${fmt(a * price(d))}${p.cash < 0 ? ` → 所持金 ${fmt(p.cash + a * price(d))}` : ''}`,
+    // in debt: start at the fewest shares that bring cash back to zero or above
+    amountInit: p.cash < 0 ? d => Math.min(p.stocks[d], Math.ceil(-p.cash / price(d))) : null,
     okLabel: '売る', step: 1,
   });
   if (r) trade(p, r.sel, -r.amt);
