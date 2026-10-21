@@ -200,14 +200,15 @@
   .minimap { width: 180px; height: 180px; flex: none; display: block; }
   .au-top { display: flex; gap: 14px; align-items: center; }
   .tr-top { display: flex; gap: 12px; align-items: center; justify-content: center; margin-bottom: 8px; }
-  .tr-top .minimap { width: 190px; height: 190px; }
+  .tr-top .minimap { width: 240px; height: 240px; }
+  .tpitch { text-align: center; font-weight: 800; color: var(--ink) !important; margin: 4px 0; }
   .maplegend { margin: 0; font-size: 12px; color: var(--ink) !important; line-height: 1.8; }
   .maplegend .mk { display: inline-block; width: 20px; height: 20px; line-height: 16px; text-align: center; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); font-size: 11px; }
-  @media (max-width: 520px) { .minimap { width: 140px; height: 140px; } .au-top { flex-direction: column; } .tr-top .minimap { width: 160px; height: 160px; } .song-list { grid-template-columns: 1fr; } }
+  @media (max-width: 520px) { .minimap { width: 140px; height: 140px; } .au-top { flex-direction: column; } .tr-top { flex-direction: column; } .tr-top .minimap { width: min(78vw, 300px); height: min(78vw, 300px); } .song-list { grid-template-columns: 1fr; } }
   .np button { flex: none; padding: 5px 10px; font-size: 13px; }
   .ocard.chance { max-width: 520px; padding: 18px 18px 14px; }
   .ocard.chance h1 { font-size: 22px; }
-  #chanceMsg { margin: 2px 0 8px; font-weight: 700; color: var(--ink); }
+  #chanceMsg { margin: 2px 0 8px; font-weight: 700; color: var(--ink); min-height: 3.5em; display: flex; align-items: center; justify-content: center; text-wrap: balance; }
   .cgrid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; perspective: 700px; width: min(100%, 56vh); margin-inline: auto; }
   .panel, .panel:hover:not(:disabled), .panel:active:not(:disabled), .panel:disabled {
     position: relative; aspect-ratio: 1; padding: 0; border: none; background: none; box-shadow: none; transform: none; opacity: 1; }
@@ -232,7 +233,9 @@
     -webkit-text-stroke: 1px var(--ink); animation: bump .5s cubic-bezier(.2, 1.6, .4, 1); }
   .ccard { display: flex; gap: 12px; align-items: center; margin-top: 10px; padding: 10px 12px; border: 3px solid var(--ink); border-radius: 16px;
     background: var(--k); box-shadow: 4px 4px 0 var(--ink); animation: popIn .4s cubic-bezier(.2, 1.5, .4, 1); }
-  .ccard[hidden], .bonus[hidden] { display: none; }
+  .invis { visibility: hidden; }
+  .ccard { min-height: 74px; }
+  .bonus { min-height: 30px; }
   .ccard .no { font-family: var(--display); font-size: 24px; min-width: 54px; text-align: center; background: var(--paper);
     border: 2.5px solid var(--ink); border-radius: 10px; padding: 2px 4px; }
   .ccard .tx { font-weight: 800; font-size: 16px; color: var(--ink); line-height: 1.5; }
@@ -440,9 +443,9 @@
     <p class="center" id="chanceMsg"></p>
     <div id="chanceGrid" class="cgrid"></div>
     <div id="chanceLegend" class="clegend"></div>
-    <div id="chanceBonus" class="bonus" hidden></div>
-    <div id="chanceCard" class="ccard" hidden></div>
-    <p class="center"><button id="chanceOk" class="primary" hidden>OK</button></p>
+    <div id="chanceBonus" class="bonus invis">&nbsp;</div>
+    <div id="chanceCard" class="ccard invis"><span class="no">00</span><span class="tx"><small>&nbsp;</small>&nbsp;<br>&nbsp;</span></div>
+    <p class="center"><button id="chanceOk" class="primary invis">OK</button></p>
   </div>
 </div>
 
@@ -461,7 +464,7 @@
   <div class="ocard trade">
     <h1>🤝 交渉</h1>
     <div class="tr-top"><canvas id="trMap" class="minimap" aria-label="交渉しているお店の場所"></canvas>
-      <p class="maplegend"><b class="mk">出</b> あなたが出す店<br><b class="mk">求</b> 相手に求める店<br><small>マップで光っているのが<br>いま話しているお店</small></p></div>
+      <p class="maplegend" id="tradeLegend"></p></div>
     <div id="tradeBody"></div>
   </div>
 </div>
@@ -526,7 +529,7 @@
       <li><b>株</b>は銀行か株屋で買える（1回99株まで）。売るのは自分の番の最初ならいつでもOK。10株以上の売買で株価が少し動く。そのエリアで買い物料がはらわれるたびに、株主に<b>配当</b>が入る。</li>
       <li>♠♥♦♣ の4つの<b>スート</b>を集めて銀行を通ると<b>昇進</b>し、給料（基本給＋店の価値の10%）がもらえる。</li>
       <li><b>チャンス</b>マスと<b>スート</b>マスに止まると、8×8のチャンスボードからカードを1枚えらんでめくる（カードは100種類）。めくったカードがたて・よこ・ななめに<b>4枚以上</b>ならぶとボーナス、端から端まで8枚ならぶと<b>1,500G</b>！めくったカードは、めくった人の色になる。</li>
-      <li><b>休憩所</b>は1回休み。<b>宝くじ</b>はお金がもらえるかも。<b>ワープ</b>は反対の角へ飛ぶ。</li>
+      <li><b>休憩所</b>に止まると、次の自分の番まで自分の店がお休み（買い物料なし）。<b>宝くじ</b>はお金がもらえるかも。<b>ワープ</b>は反対の角へ飛ぶ。</li>
       <li><b>ゲームセンター</b>ではミニゲーム（スロット・ハイ＆ロー）にお金を賭けて遊べる。</li>
       <li><b>空き地</b>は200Gで買って建物を建てられる。<b>関所</b>はライバルが通るたびに通行料が上がり、<b>税務署</b>は止まったライバルから総資産の4%をもらえる。</li>
       <li>自分の番の最初に、ほかのプレイヤーに<b>交渉</b>をもちかけられる。お店を2軒まで出す・求めることができ、お金のやり取りも加えられる。条件を変えると相手の気持ち（😡😒🤔😊😍）がわかる。あと少しのときは上乗せを求めてくる。ひどい条件を出しすぎると相手がすねて、しばらく交渉できない。CPUは自分のエリアの店を高く評価するので、おたがいに得する交換をさがそう。トップの人には少しきびしい。CPUどうしで取引することもある。CPUから交渉が来たときは「はい／絶対しない／いいえ」で答える（絶対しないを選ぶとその人からは来なくなる）。</li>
@@ -583,7 +586,7 @@ const SPECIAL = {
   suit:    { label: 'スート', desc: '通る・止まるとスートがもらえる。4つ集めて銀行へ。ぴったり止まるとチャンスカードもめくれる！' },
   chance:  { label: 'チャンス', desc: '止まるとチャンスカードを1枚引く。' },
   stock:   { label: '株屋', desc: '止まると好きなエリアの株を買える。' },
-  rest:    { label: '休憩所', desc: '止まると次の番は1回休み。' },
+  rest:    { label: '休憩所', desc: '止まると、次の自分の番が来るまで自分の店がぜんぶお休み。そのあいだ誰が止まっても買い物料はもらえない。' },
   lottery: { label: '宝くじ', desc: '止まると0〜400Gのどれかがもらえる。' },
   warp:    { label: 'ワープ', desc: '止まると反対の角のワープマスへ飛ぶ。' },
   arcade:  { label: 'ゲームセンター', desc: '止まるとミニゲーム（スロット・ハイ＆ロー）で遊べる。' },
@@ -843,7 +846,13 @@ const QUADS = [
 const TILE = { bank: '#ffd23f', chance: '#b892ff', stock: '#5fe0b5', rest: '#a9b8ff', lottery: '#ff9f5a', warp: '#4fd3ec',
   arcade: '#ff7ab8', suit: '#ffffff', plot: '#efeae0', shop: '#ffffff' };
 const TILE_LABEL = { stock: '株', rest: '休', lottery: 'くじ', warp: 'ワープ', arcade: 'ゲーム' };
-const OFFS = [[0.22, 0.2], [0.41, 0.2], [0.6, 0.2], [0.79, 0.2]];
+// token spots inside a square, by how many tokens share it
+const SLOTS = { 1: [[0.5, 0.27]], 2: [[0.3, 0.27], [0.7, 0.27]], 3: [[0.28, 0.27], [0.72, 0.27], [0.5, 0.72]], 4: [[0.28, 0.27], [0.72, 0.27], [0.28, 0.73], [0.72, 0.73]] };
+function spotIn(cellId, p) {
+  const occ = players.filter(q => !q.bankrupt && (q.pos === cellId || q === p)).sort((a, b) => a.id - b.id);
+  const sl = SLOTS[Math.min(4, occ.length)][Math.min(3, occ.indexOf(p))];
+  return [(cells[cellId].x + sl[0]) * cs, (cells[cellId].y + sl[1]) * cs, occ.length];
+}
 const cellFx = {};
 const cellPop = id => { cellFx[id] = performance.now(); };
 
@@ -863,8 +872,8 @@ function star(x, y, r, fill) {
 }
 
 function tokenPos(p, i, now) {
-  const spot = id => [(cells[id].x + OFFS[i][0]) * cs, (cells[id].y + OFFS[i][1]) * cs];
-  let [x, y] = spot(p.pos), hop = 0, scale = 1, look = [0, 0], moving = false;
+  const spot = id => spotIn(id, p);
+  let [x, y, crowd] = spot(p.pos), hop = 0, scale = 1, look = [0, 0], moving = false;
   const a = p.anim;
   if (a && now < a.t0 + a.dur) {
     const t = Math.max(0, (now - a.t0) / a.dur);
@@ -879,7 +888,7 @@ function tokenPos(p, i, now) {
       look = [Math.sign(tx - fx), Math.sign(ty - fy)];
     }
   }
-  return { x, y, hop, scale, look, moving };
+  return { x, y, hop, scale, look, moving, crowd };
 }
 
 function drawBlob(x, y, r, color, look = [0, 0], blink = false) {
@@ -1006,7 +1015,7 @@ function drawTile(c, now, pop = true) {
     ctx.fillStyle = '#ff3d63'; rr(-w * 0.52, -cs * 0.12, w * 1.04, cs * 0.24, 6); ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
     ctx.fillStyle = '#fff'; ctx.font = font(400, cs * 0.16, DISPLAY_FONT);
-    ctx.fillText('休業', 0, 1);
+    ctx.fillText('休み', 0, 1);
   }
   ctx.restore();
 }
@@ -1087,15 +1096,15 @@ function drawBoard(now) {
   // direction choice: a bouncing arrow on each square you can move to
   if (pick && pick.from != null) for (const id of pick.opts) {
     const c = cells[id], f = cells[pick.from], ang = Math.atan2(c.y - f.y, c.x - f.x);
-    const bob = REDUCED ? 0 : Math.sin(now / 150) * cs * 0.07, L = cs * 0.34;
+    const bob = REDUCED ? 0 : Math.sin(now / 150) * cs * 0.05, L = cs * 0.2;
     ctx.save();
-    ctx.translate((c.x + 0.5) * cs + Math.cos(ang) * bob, (c.y + 0.5) * cs + Math.sin(ang) * bob);
+    ctx.translate(((c.x + f.x) / 2 + 0.5) * cs + Math.cos(ang) * bob, ((c.y + f.y) / 2 + 0.5) * cs + Math.sin(ang) * bob);
     ctx.rotate(ang);
     ctx.beginPath();
     ctx.moveTo(L, 0); ctx.lineTo(-L * 0.55, -L * 0.8); ctx.lineTo(-L * 0.2, 0); ctx.lineTo(-L * 0.55, L * 0.8); ctx.closePath();
     ctx.lineJoin = 'round';
-    ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.stroke();
-    ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+    ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
     ctx.fillStyle = '#ff5fa2'; ctx.fill();
     ctx.restore();
   }
@@ -1108,13 +1117,31 @@ function drawBoard(now) {
 
   // tokens, back to front
   const toks = players.map((p, i) => ({ p, i, t: tokenPos(p, i, now) })).filter(o => !o.p.bankrupt).sort((a, b) => a.t.y - b.t.y);
-  for (const { p, i, t } of toks) {
+  // the player whose turn it is: square outlined in their colour
+  const curTok = toks.find(o => o.p === current);
+  if (curTok && !curTok.t.moving) {
+    const c = cells[current.pos], w = cs * 0.84 + 8;
+    ctx.lineWidth = 4; ctx.strokeStyle = current.color;
+    rr(c.x * cs + (cs - w) / 2, c.y * cs + (cs - w) / 2, w, w, cs * 0.22); ctx.stroke();
+  }
+  for (const { p, t } of toks) {
     const isCur = p === current;
-    const r = cs * (isCur ? 0.17 : 0.14) * t.scale;
+    const r = cs * (t.crowd >= 3 ? 0.17 : 0.2) * (isCur ? 1.12 : 1) * t.scale;
     if (r <= 0.5) continue;
     ctx.fillStyle = 'rgba(43,35,70,0.28)';
     ctx.beginPath(); ctx.ellipse(t.x, t.y + r * 0.9, r * (0.85 - t.hop / cs * 0.6), r * 0.25, 0, 0, 7); ctx.fill();
+    if (isCur) {     // glowing ring under the current player
+      ctx.beginPath(); ctx.arc(t.x, t.y - t.hop, r + 5, 0, 7);
+      ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.beginPath(); ctx.arc(t.x, t.y - t.hop, r + 5, 0, 7);
+      ctx.lineWidth = 2; ctx.strokeStyle = p.color; ctx.stroke();
+    }
     drawBlob(t.x, t.y - t.hop, r, p.color, t.look);
+    if (isCur) {     // pointer above the current player's head
+      const by = t.y - t.hop - r - cs * 0.12 - (REDUCED ? 0 : Math.abs(Math.sin(now / 220)) * cs * 0.06), aw = cs * 0.13;
+      ctx.beginPath(); ctx.moveTo(t.x, by + aw); ctx.lineTo(t.x - aw, by - aw * 0.4); ctx.lineTo(t.x + aw, by - aw * 0.4); ctx.closePath();
+      ctx.fillStyle = p.color; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+    }
   }
 
   // shops offered in a dialog: soft glow on all, arrow on the chosen one
@@ -1144,7 +1171,8 @@ function drawMiniMap(canvas, marks, now, opts = {}) {
   const w = canvas && canvas.clientWidth;
   if (!w) return;
   const dpr = pixelRatio();
-  if (canvas.width !== Math.round(w * dpr)) { canvas.width = canvas.height = Math.round(w * dpr); }
+  const px = Math.round(w * dpr);
+  if (canvas.width !== px || canvas.height !== px) { canvas.width = canvas.height = px; }
   const g = canvas.getContext('2d'), u = w / N;
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, w, w);
@@ -1180,11 +1208,11 @@ function drawMiniMap(canvas, marks, now, opts = {}) {
     const c = cells[m.id], cx = (c.x + 0.5) * u, cy = (c.y + 0.5) * u;
     g.lineWidth = 3 + 3 * pulse; g.strokeStyle = '#ffd23f';
     g.beginPath(); g.roundRect(c.x * u - 2, c.y * u - 2, u + 4, u + 4, u * 0.3); g.stroke();
-    const r = u * (0.72 + 0.08 * pulse);
+    const r = Math.min(u * 0.72, 15) + 1.5 * pulse;
     g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fillStyle = '#ffffff'; g.fill();
     g.lineWidth = 3; g.strokeStyle = m.color || INK; g.stroke();
     g.lineWidth = 1; g.strokeStyle = INK; g.beginPath(); g.arc(cx, cy, r + 1.5, 0, 7); g.stroke();
-    g.fillStyle = INK; g.font = `400 ${Math.max(10, u * 0.8)}px ${DISPLAY_FONT}`;
+    g.fillStyle = INK; g.font = `400 ${Math.max(10, Math.min(u * 0.8, 16))}px ${DISPLAY_FONT}`;
     g.fillText(m.label, cx, cy + 1);
   }
 }
@@ -1225,9 +1253,11 @@ function floatMoney(p, amount) {
   if (DEMO || over && !players.includes(p)) return;
   const t = tokenPos(p, players.indexOf(p), performance.now());
   const top = Math.max(cv.getBoundingClientRect().top, 0);
-  let [x, y] = boardPoint(t.x, t.y - cs * 0.35), dir = -1;
-  // near the top edge (top row, or board scrolled up) the label would rise out of view, so drop it downward instead
-  if (y - 70 < top + 8) { y = boardPoint(t.x, t.y + cs * 0.35)[1]; dir = 1; }
+  // gains rise, losses sink; start below/above the token when the label would leave the screen
+  const dir = amount > 0 ? -1 : 1;
+  let [x, y] = boardPoint(t.x, t.y + dir * cs * 0.35);
+  if (dir < 0 && y - 60 < top + 8) y = boardPoint(t.x, t.y + cs * 0.35)[1];
+  if (dir > 0 && y + 60 > innerHeight - 8) y = boardPoint(t.x, t.y - cs * 0.35)[1];
   // stack labels that pop at the same time so they don't overlap
   const nowT = performance.now();
   y += dir * 30 * floats.filter(f => nowT - f.t0 < 250 && Math.abs(f.x - x) < 60 && Math.abs(f.y - y) < 60).length;
@@ -1252,7 +1282,7 @@ function drawFx(now) {
   fctx.textAlign = 'center'; fctx.textBaseline = 'middle';
   fctx.font = `400 22px ${DISPLAY_FONT}`;
   for (let i = floats.length - 1; i >= 0; i--) {
-    const f = floats[i], t = (now - f.t0) / 1300;
+    const f = floats[i], t = (now - f.t0) / 1800;
     if (t > 1) { floats.splice(i, 1); continue; }
     const y = f.y + f.dir * 46 * (1 - Math.pow(1 - t, 3)), s = t < 0.15 ? 0.6 + t / 0.15 * 0.4 : 1;
     const w = fctx.measureText(f.text).width + 20, h = 32;
@@ -1889,7 +1919,7 @@ function renderInfo() {
     const owner = c.owner != null ? pname(players[c.owner]) : 'なし（空き店）';
     const own = c.owner != null;
     $('info').innerHTML = `<div class="ti-h"><span class="tag" style="background:${d.color}">${d.key}</span>${c.name}${own ? pname(players[c.owner]) : ''}</div>
-      <div class="ti-sub">${d.name}（${d.shops.length}軒）${own ? '' : ' ・ 空き店'}${c.closedUntil != null ? ' ・ 休業中' : ''}</div>
+      <div class="ti-sub">${d.name}（${d.shops.length}軒）${own ? '' : ' ・ 空き店'}${c.closedUntil != null ? ' ・ お休み中' : ''}</div>
       <dl class="ti-grid">${own ? `<dt>買い物料</dt><dd class="big">${fmt(fee(c.id))}</dd>` : `<dt>値段</dt><dd class="big">${fmt(c.value)}</dd>`}
         ${own ? `<dt>店の価値</dt><dd>${fmt(c.value)}</dd>` : ''}<dt>増資の上限</dt><dd>${fmt(maxValue(c.id))}</dd>
         ${own ? `<dt>買い取り</dt><dd>${fmt(c.value * 5)}</dd>` : ''}<dt>エリア株価</dt><dd>${price(c.d)}G</dd></dl>`;
@@ -2156,10 +2186,11 @@ async function land(p) {
     if (p.cpu) await cpuBuyStock(p, true);
     else await humanBuyStock(p, '株屋：買う株を選んでね（99株まで）');
   } else if (c.type === 'rest') {
-    p.skip = true;
+    ownedShops(p).forEach(s => closeShop(s, p.id));
     Sound.play('rest');
-    log(`${pname(p)}は休憩所でひと休み（次は1回休み）`);
-    await toast(`${pname(p)}は休憩所でひと休み<br>次は1回休み`, 1000);
+    log(`${pname(p)}は休憩所でひと休み。次の番まで${p.name}の店はお休み（買い物料なし）`);
+    renderPanel();
+    await toast(`☕ ${pname(p)}は休憩所でひと休み<br>次の番まで${p.name}の店はお休み<br><small>止まられても買い物料はもらえない</small>`, 1600);
   } else if (c.type === 'warp') {
     const to = WARPS.find(id => id !== c.id);
     log(`${pname(p)}はワープした！`);
@@ -2205,7 +2236,7 @@ async function landShop(p, c) {
   } else {
     const o = players[c.owner];
     let f = fee(c.id);
-    if (c.closedUntil != null) log(`${c.name}は休業中なので買い物料なし！`);
+    if (c.closedUntil != null) { log(`${c.name}はお休み中なので買い物料なし！`); await toast(`☕ ${c.name}はお休み中<br>買い物料なし！`, 1000); }
     if (p.feeTwice && f > 0) { p.feeTwice = false; f *= 2; log(`${pname(p)}は買い物料が2倍…`); }
     if (p.freeFee && f > 0) { p.freeFee = false; f = 0; log(`${pname(p)}は無料券を使った！`); }
     p.cash -= f; o.cash += f;
@@ -2338,6 +2369,7 @@ function humanTrade(p) {
   reroll();
   return new Promise(resolve => {
     const ov = $('tradeOv');
+    $('tradeLegend').innerHTML = '<b class="mk">出</b> あなたが出す店　<b class="mk">求</b> 相手に求める店<br><small>マップで光っているのが、いま話しているお店</small>';
     const finish = () => { ov.classList.add('hidden'); resolve(st.done); };
     const hint = (s, mine) => {
       const c = cells[s], q = st.partner;
@@ -2489,14 +2521,15 @@ async function cpuPropose(p) {
   }
   if (money > 0 && p.cash - money < 300) return;
   Sound.play('turn');
-  focusShops([...give, want], want);
   const pitch = { bold: 'いい話があるんだ！', steady: 'お互いに得な話だと思うが、どうだろう？', shy: 'あの…よかったら、交換しませんか…？' }[p.style] || 'この条件で交換しない？';
-  const ans = await ask({
-    title: `🤝 ${p.name}から交渉`,
-    body: `「${pitch}」${tradeSheet(p, give, Math.max(0, money), h, [want], Math.max(0, -money))}`,
-    buttons: [{ label: 'はい', value: 'yes' }, { label: '絶対しない', value: 'never' }, { label: 'いいえ', value: 'no', primary: true }],
-  });
-  clearFocus();
+  // show the offer on the trade screen so both shops light up on the map
+  miniMarks.tr = [{ id: want, label: '出', color: h.color }, ...give.map(id => ({ id, label: '受', color: p.color }))];
+  $('tradeLegend').innerHTML = '<b class="mk">出</b> あなたがわたす店　<b class="mk">受</b> もらえる店';
+  $('tradeBody').innerHTML = `<p class="tpitch">🤝 ${chipOf(p)}から交渉「${pitch}」</p>${tradeSheet(p, give, Math.max(0, money), h, [want], Math.max(0, -money))}
+    <div class="btns center-row"><button data-a="yes">はい</button><button data-a="never">絶対しない</button><button data-a="no" class="primary">いいえ</button></div>`;
+  $('tradeOv').classList.remove('hidden');
+  const ans = await new Promise(res => $('tradeBody').querySelectorAll('[data-a]').forEach(b => b.onclick = () => { Sound.play('click'); res(b.dataset.a); }));
+  $('tradeOv').classList.add('hidden');
   if (ans === 'yes') executeTrade(p, give, Math.max(0, money), h, [want], Math.max(0, -money));
   else {
     if (ans === 'never') (h.blockTrades = h.blockTrades || []).push(p.id);
@@ -3282,7 +3315,7 @@ function renderChanceGrid(clickable, aim = -1) {
 
 async function openChance(p) {
   const ov = $('chanceOv');
-  $('chanceCard').hidden = true; $('chanceBonus').hidden = true; $('chanceOk').hidden = true;
+  ['chanceCard', 'chanceBonus', 'chanceOk'].forEach(id => $(id).classList.add('invis'));
   $('chanceMsg').innerHTML = p.cpu ? `${pname(p)}がカードをえらんでいます…` : 'めくるカードをえらんでね！ たて・よこ・ななめに4枚以上ならぶとボーナス！';
   renderChanceGrid(!p.cpu);
   ov.classList.remove('hidden');
@@ -3307,7 +3340,7 @@ async function openChance(p) {
   const cid = chance.cards[i], card = CARDS[cid];
   $('chanceCard').innerHTML = `<span class="no">${cid + 1}</span><span class="tx"><small>${CARD_ICON[card.k]} ${CARD_KIND[card.k]}</small>${card.t}</span>`;
   $('chanceCard').style.setProperty('--k', p.color);
-  $('chanceCard').hidden = false;
+  $('chanceCard').classList.remove('invis');
   $('chanceMsg').innerHTML = `${pname(p)}のチャンスカード`;
   log(`🎴 ${pname(p)}のチャンスカード No.${cid + 1}「${card.t}」`);
 
@@ -3317,7 +3350,7 @@ async function openChance(p) {
     lines.flat().forEach(j => $('chanceGrid').children[j].classList.add('line'));
     const longest = Math.max(...lines.map(l => l.length));
     $('chanceBonus').innerHTML = `${longest === CN ? '🎆 ラインコンプリート！' : `✨ ${longest}枚ならんだ！`} ボーナス +${fmt(bonus)}`;
-    $('chanceBonus').hidden = false;
+    $('chanceBonus').classList.remove('invis');
     p.cash += bonus;
     Sound.play(longest === CN ? 'win' : 'fanfare');
     const r = $('chanceGrid').getBoundingClientRect();
@@ -3327,7 +3360,7 @@ async function openChance(p) {
   }
   if (p.cpu) await sleep(1800);
   else {
-    $('chanceOk').hidden = false;
+    $('chanceOk').classList.remove('invis');
     $('chanceOk').textContent = 'OK';
     await new Promise(res => $('chanceOk').onclick = () => { Sound.play('click'); res(); });
   }
@@ -3343,10 +3376,10 @@ async function openChance(p) {
 
 function viewChance() {
   if (!chance) return;
-  $('chanceCard').hidden = true; $('chanceBonus').hidden = true;
+  ['chanceCard', 'chanceBonus'].forEach(id => $(id).classList.add('invis'));
   $('chanceMsg').innerHTML = 'これまでにめくられたカード（数字はカード番号）';
   renderChanceGrid(false);
-  $('chanceOk').hidden = false;
+  $('chanceOk').classList.remove('invis');
   $('chanceOk').textContent = 'とじる';
   $('chanceOk').onclick = () => $('chanceOv').classList.add('hidden');
   $('chanceOv').classList.remove('hidden');
