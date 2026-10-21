@@ -298,7 +298,7 @@
     border: 2.5px solid var(--ink); border-radius: 12px; padding: 6px; animation: popIn .35s; }
   .treply.ok { background: color-mix(in srgb, var(--mint) 40%, var(--paper)); }
   @media (max-width: 520px) { .tcols { grid-template-columns: 1fr; } .au-bidders { gap: 6px; } .au-b { font-size: 11px; padding: 6px; } }
-  .overlay.stock-ov { align-items: stretch; justify-content: stretch; padding: 0; background-color: var(--sky);
+  .overlay.map-ov { align-items: stretch; justify-content: stretch; padding: 0; background-color: var(--sky);
     background-image: radial-gradient(var(--sky-dot) 17%, transparent 18%), radial-gradient(var(--sky-dot) 17%, transparent 18%);
     background-size: 38px 38px; background-position: 0 0, 19px 19px; }
   .sk { display: flex; flex-direction: column; gap: 8px; width: 100%; height: 100%;
@@ -324,6 +324,18 @@
   .sk-shops .nm { font-weight: 800; }
   .sk-shops .chip { font-size: 10px; padding: 0 5px; }
   .sk-shops .vac { color: var(--muted); font-size: 10px; }
+  .sk-shops tr.hl td { background: color-mix(in srgb, var(--yellow) 45%, var(--paper)); }
+  .sk-shops tr.hl td:first-child { box-shadow: inset 4px 0 0 var(--pink); padding-left: 6px; }
+  .sk-panel .au-price { margin: 2px 0; }
+  .sk-panel .au-price b { font-size: 28px; }
+  .sk-panel .au-bidders { margin-top: 14px; }
+  .sk-panel #auMsg { margin: 4px 0 0; }
+  .sk-panel #auBtns:not(:empty) { position: sticky; bottom: -10px; margin: 0 -12px -10px; padding: 8px 12px 10px; background: var(--paper); }
+  .sk-panel .tcol .opts { max-height: none; }
+  .tline { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; color: var(--ink); }
+  .tline .r { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #tradeBody .btns { position: sticky; bottom: -10px; margin: 8px -12px -10px; padding: 8px 12px 10px; background: var(--paper); }
+  .maplegend { text-align: center; }
   .sk-qty { display: flex; align-items: center; gap: 8px; }
   .sk-qty input { flex: 1; accent-color: var(--pink); }
   .sk-qty button { width: 34px; height: 34px; padding: 0; font-size: 18px; }
@@ -455,23 +467,24 @@
   </div>
 </div>
 
-<div class="overlay hidden" id="auctionOv">
-  <div class="ocard auction">
-    <h1>🔨 競売</h1>
-    <div class="au-top"><canvas id="auMap" class="minimap" aria-label="競売にかけられたお店の場所"></canvas><div id="auShop" class="au-shop"></div></div>
-    <div class="au-price"><small>いまの価格</small><b id="auPrice"></b><span id="auHolder"></span></div>
-    <div id="auBidders" class="au-bidders"></div>
-    <p class="center" id="auMsg"></p>
-    <div id="auBtns" class="btns center-row"></div>
+<div class="overlay hidden map-ov" id="auctionOv">
+  <div class="sk">
+    <div class="sk-map"><canvas id="auMap" class="skmap" aria-label="競売にかけられたお店の場所"></canvas></div>
+    <div class="sk-panel">
+      <div class="sk-head"><b id="auTitle">🔨 競売</b><span id="auSeller"></span></div>
+      <div id="auShop"></div>
+      <div class="au-price"><small>いまの価格</small><b id="auPrice"></b><span id="auHolder"></span></div>
+      <div id="auBidders" class="au-bidders"></div>
+      <p class="center" id="auMsg"></p>
+      <div id="auBtns" class="btns center-row"></div>
+    </div>
   </div>
 </div>
 
-<div class="overlay hidden" id="tradeOv">
-  <div class="ocard trade">
-    <h1>🤝 交渉</h1>
-    <div class="tr-top"><canvas id="trMap" class="minimap" aria-label="交渉しているお店の場所"></canvas>
-      <p class="maplegend" id="tradeLegend"></p></div>
-    <div id="tradeBody"></div>
+<div class="overlay hidden map-ov" id="tradeOv">
+  <div class="sk">
+    <div class="sk-map"><canvas id="trMap" class="skmap" aria-label="交渉しているお店の場所。タップでお店をえらべます"></canvas><p class="maplegend" id="tradeLegend"></p></div>
+    <div class="sk-panel"><div id="tradeBody"></div></div>
   </div>
 </div>
 
@@ -502,7 +515,7 @@
   </div>
 </div>
 
-<div class="overlay hidden stock-ov" id="stockOv">
+<div class="overlay hidden map-ov" id="stockOv">
   <div class="sk">
     <div class="sk-map"><canvas id="skMap" class="skmap" aria-label="お店の持ち主マップ。タップでエリアを選べます"></canvas></div>
     <div class="sk-panel">
@@ -1184,7 +1197,7 @@ function drawMiniMap(canvas, marks, now, opts = {}) {
   g.clearRect(0, 0, w, w);
   g.fillStyle = '#8fe0a8'; g.beginPath(); g.roundRect(1, 1, w - 2, w - 2, u * 0.5); g.fill();
   g.lineWidth = 2; g.strokeStyle = INK; g.stroke();
-  const big = u >= 22, spot = opts.district;
+  const big = u >= 22, spot = opts.district, keep = opts.keep && opts.keep.length ? opts.keep : null;
   g.textAlign = 'center'; g.textBaseline = 'middle';
   for (const c of cells) {
     const x = c.x * u + u * 0.08, y = c.y * u + u * 0.08, sz = u * 0.84;
@@ -1199,6 +1212,11 @@ function drawMiniMap(canvas, marks, now, opts = {}) {
     g.lineWidth = 1; g.strokeStyle = INK; g.beginPath(); g.roundRect(x, y, sz, sz, u * 0.15); g.stroke();
   }
   const pulse = REDUCED ? 1 : 0.5 + 0.5 * Math.sin(now / 140);
+  if (keep) {
+    // fade everything except the shops being discussed
+    g.fillStyle = `rgba(43,35,70,${opts.dim || 0.45})`;
+    for (const c of cells) if (!keep.includes(c.id)) { g.beginPath(); g.roundRect(c.x * u + u * 0.08, c.y * u + u * 0.08, u * 0.84, u * 0.84, u * 0.15); g.fill(); }
+  }
   if (spot != null) {
     // dim everything except the chosen district, then outline its shops
     g.fillStyle = 'rgba(43,35,70,0.45)';
@@ -1957,8 +1975,8 @@ function frame(now) {
   if (now - lastDraw < (ECO ? 32 : 15)) return;
   lastDraw = now; wasBusy = busy;
   drawBoard(now);
-  if (shown('auctionOv')) drawMiniMap($('auMap'), miniMarks.au, now);
-  if (shown('tradeOv')) drawMiniMap($('trMap'), miniMarks.tr, now);
+  if (shown('auctionOv')) drawMiniMap($('auMap'), miniMarks.au, now, miniMarks.auD != null ? { district: miniMarks.auD } : { keep: miniMarks.au.map(m => m.id) });
+  if (shown('tradeOv')) drawMiniMap($('trMap'), miniMarks.tr, now, { keep: miniMarks.tr.map(m => m.id), dim: 0.3 });
   if (shown('stockOv')) drawMiniMap($('skMap'), [], now, { district: stockView && stockView.d });
   drawFx(now);
 }
@@ -2375,7 +2393,7 @@ function humanTrade(p) {
   reroll();
   return new Promise(resolve => {
     const ov = $('tradeOv');
-    $('tradeLegend').innerHTML = '<b class="mk">出</b> あなたが出す店　<b class="mk">求</b> 相手に求める店<br><small>マップで光っているのが、いま話しているお店</small>';
+    $('tradeLegend').innerHTML = '<b class="mk">出</b> 出す店　<b class="mk">求</b> 求める店　<small>（マップをタップでもえらべる）</small>';
     const finish = () => { ov.classList.add('hidden'); resolve(st.done); };
     const hint = (s, mine) => {
       const c = cells[s], q = st.partner;
@@ -2389,7 +2407,8 @@ function humanTrade(p) {
     const list = (owner, chosen, key) => {
       const props = ownedProps(owner);
       return props.length ? props.map(s => `<label class="opt"><input type="checkbox" data-k="${key}" value="${s}" ${chosen.includes(s) ? 'checked' : ''}
-        ${!chosen.includes(s) && chosen.length >= 2 ? 'disabled' : ''}><span class="nm">${propLabel(s)}${hint(s, key === 'give')}</span><span class="r">${fmt(cells[s].value)}</span></label>`).join('')
+        ${!chosen.includes(s) && chosen.length >= 2 ? 'disabled' : ''}><span class="nm">${propLabel(s)}${hint(s, key === 'give')}</span>
+        <span class="r">${cells[s].type === 'shop' ? `料${fmt(fee(s))}<br>` : ''}${fmt(cells[s].value)}</span></label>`).join('')
         : '<div class="tnone">お店なし</div>';
     };
     const money = (key, val, max) => `<div class="tmoney"><span>おかね <b>${fmt(val)}</b></span>
@@ -2413,6 +2432,7 @@ function humanTrade(p) {
           <div class="tcol"><h3>あなたが出す（2軒まで）</h3><div class="opts">${list(p, st.give, 'give')}</div>${money('mGive', st.mGive, p.cash)}</div>
           <div class="tcol"><h3>${q.name}に求める（2軒まで）</h3><div class="opts">${list(q, st.get, 'get')}</div>${money('mGet', st.mGet, q.cash)}</div>
         </div>
+        ${st.give.length + st.get.length ? shopTable([...st.give, ...st.get], '話しているお店', [...st.give, ...st.get]) : ''}
         ${tradeSheet(p, st.give, st.mGive, q, st.get, st.mGet)}
         ${meter()}
         ${st.reply}
@@ -2480,8 +2500,20 @@ function humanTrade(p) {
       reroll();
       render();
     };
+    // tap a shop on the map to add or remove it from the deal
+    $('trMap').onclick = e => {
+      const r = $('trMap').getBoundingClientRect(), u = r.width / N;
+      const id = at[Math.floor((e.clientX - r.left) / u) + ',' + Math.floor((e.clientY - r.top) / u)];
+      if (id == null || cells[id].owner == null) return;
+      const key = cells[id].owner === p.id ? 'give' : cells[id].owner === st.partner.id ? 'get' : null;
+      if (!key) return;
+      const arr = st[key];
+      if (arr.includes(id)) arr.splice(arr.indexOf(id), 1); else if (arr.length < 2) arr.push(id); else return;
+      Sound.play('click'); st.reply = ''; render();
+    };
     render();
     ov.classList.remove('hidden');
+    fitMap('tradeOv');
   });
 }
 
@@ -2531,9 +2563,12 @@ async function cpuPropose(p) {
   // show the offer on the trade screen so both shops light up on the map
   miniMarks.tr = [{ id: want, label: '出', color: h.color }, ...give.map(id => ({ id, label: '受', color: p.color }))];
   $('tradeLegend').innerHTML = '<b class="mk">出</b> あなたがわたす店　<b class="mk">受</b> もらえる店';
-  $('tradeBody').innerHTML = `<p class="tpitch">🤝 ${chipOf(p)}から交渉「${pitch}」</p>${tradeSheet(p, give, Math.max(0, money), h, [want], Math.max(0, -money))}
+  $('trMap').onclick = null;
+  $('tradeBody').innerHTML = `<p class="tpitch">🤝 ${chipOf(p)}から交渉「${pitch}」</p>${shopTable([want, ...give], '交換するお店', [want, ...give])}
+    ${tradeSheet(p, give, Math.max(0, money), h, [want], Math.max(0, -money))}
     <div class="btns center-row"><button data-a="yes">はい</button><button data-a="never">絶対しない</button><button data-a="no" class="primary">いいえ</button></div>`;
   $('tradeOv').classList.remove('hidden');
+  fitMap('tradeOv');
   const ans = await new Promise(res => $('tradeBody').querySelectorAll('[data-a]').forEach(b => b.onclick = () => { Sound.play('click'); res(b.dataset.a); }));
   $('tradeOv').classList.add('hidden');
   if (ans === 'yes') executeTrade(p, give, Math.max(0, money), h, [want], Math.max(0, -money));
@@ -2726,6 +2761,16 @@ function priceAfter(d, qty) {
   const k = Math.abs(qty), mod = DISTRICTS[d].mod * (k >= 10 ? 1 + Math.sign(qty) * 0.015 * Math.floor(k / 10) : 1);
   return Math.max(1, Math.round(districtValue(d) * mod / 50));
 }
+// table of shops: owner, fee, value and how far it can be invested; hl rows are highlighted
+function shopTable(ids, head, hl = []) {
+  return `<table class="sk-shops"><tr><th>${head}</th><th>買い物料</th><th>店の値段</th><th>増資上限</th></tr>${ids.map(s => {
+    const c = cells[s], shop = c.type === 'shop';
+    const feeTxt = c.owner == null ? '—' : shop ? fmt(fee(s)) : c.building === 'cp' ? fmt(c.cpFee) : '資産4%';
+    const owner = c.owner != null ? `<span class="chip" style="--pc:${players[c.owner].color}">${players[c.owner].name}</span>` : '<span class="vac">空き店</span>';
+    const tag = shop ? `<span class="tag" style="background:${DISTRICTS[c.d].color}">${DISTRICTS[c.d].key}</span>` : '<span class="tag" style="background:#efeae0">地</span>';
+    return `<tr class="${hl.includes(s) ? 'hl' : ''}"><td>${tag}<span class="nm">${c.name}</span>${owner}</td><td>${feeTxt}</td><td>${fmt(c.value)}</td><td>${shop ? fmt(maxValue(s)) : '—'}</td></tr>`;
+  }).join('')}</table>`;
+}
 let stockView = null;
 // full-screen stock trading: big mini map on top, district picker and projection below
 function stockScreen(p, mode, title, mult = 1) {
@@ -2761,10 +2806,7 @@ function stockScreen(p, mode, title, mult = 1) {
     };
     const renderArea = () => {
       const D = DISTRICTS[st.d];
-      $('skArea').innerHTML = `<table class="sk-shops"><tr><th><span class="tag" style="background:${D.color}">${D.key}</span>${D.name}</th><th>買い物料</th><th>店の値段</th><th>増資上限</th></tr>${
-        D.shops.map(s => { const c = cells[s];
-          return `<tr><td><span class="nm">${c.name}</span>${c.owner != null ? `<span class="chip" style="--pc:${players[c.owner].color}">${players[c.owner].name}</span>` : '<span class="vac">空き店</span>'}</td>
-            <td>${c.owner != null ? fmt(fee(s)) : '—'}</td><td>${fmt(c.value)}</td><td>${fmt(maxValue(s))}</td></tr>`; }).join('')}</table>`;
+      $('skArea').innerHTML = shopTable(D.shops, `${D.name}のお店`);
     };
     const select = d => {
       st.d = d; stockView = { d };
@@ -2791,13 +2833,14 @@ function stockScreen(p, mode, title, mult = 1) {
     select(st.d);
   });
 }
-function fitStockMap() {
-  const box = $('stockOv').querySelector('.sk-map');
-  const land = matchMedia('(orientation: landscape)').matches;
-  const s = Math.floor(land ? Math.min(box.clientWidth, box.clientHeight) : Math.min(box.clientWidth, innerHeight * (innerHeight < 720 ? 0.34 : 0.4)));
-  $('skMap').style.width = $('skMap').style.height = Math.max(120, s) + 'px';
+function fitMap(ovId) {
+  const box = $(ovId).querySelector('.sk-map'), canvas = box.querySelector('canvas'), extra = box.querySelector('.maplegend');
+  const land = matchMedia('(orientation: landscape)').matches, ex = extra ? extra.offsetHeight + 6 : 0;
+  const s = Math.floor(land ? Math.min(box.clientWidth, box.clientHeight - ex) : Math.min(box.clientWidth, innerHeight * (innerHeight < 720 ? 0.34 : 0.4) - ex));
+  canvas.style.width = canvas.style.height = Math.max(120, s) + 'px';
 }
-window.addEventListener('resize', () => { if (shown('stockOv')) fitStockMap(); });
+const fitStockMap = () => fitMap('stockOv');
+window.addEventListener('resize', () => ['stockOv', 'auctionOv', 'tradeOv'].forEach(id => { if (shown(id)) fitMap(id); }));
 
 async function humanSellStock(p) {
   if (!p.stocks.some(n => n > 0)) return;
@@ -2844,11 +2887,12 @@ async function auction(s, seller, forced = false) {
   log(`🔨 ${pname(seller)}が${c.name}を${forced ? '強制' : ''}競売に出した（売り出し ${fmt(start)}）`);
 
   miniMarks.au = [{ id: s, label: '競', color: seller.color }];
+  miniMarks.auD = c.type === 'shop' ? c.d : null;
   if (watching) focusShops([s], s);
   const render = (active = null) => {
-    $('auShop').innerHTML = `<div class="au-tile" style="--k:${c.type === 'shop' ? DISTRICTS[c.d].color : '#efeae0'}">${c.type === 'shop' ? DISTRICTS[c.d].key : '地'}</div>
-      <div><b>${propLabel(s)}</b><br><small>${areaName(c)} ・ 売り主 ${chipOf(seller)}${forced ? ' ・ 強制競売' : ''}</small><br>
-      <small>売り出し価格 ${fmt(start)}${c.type === 'shop' ? ` ・ いまの買い物料 ${fmt(fee(s))}` : ''}</small></div>`;
+    $('auTitle').textContent = `🔨 ${forced ? '強制' : ''}競売：${c.name}`;
+    $('auSeller').innerHTML = `売り主 ${chipOf(seller)}`;
+    $('auShop').innerHTML = shopTable(c.type === 'shop' ? DISTRICTS[c.d].shops : [s], c.type === 'shop' ? `${DISTRICTS[c.d].name}のお店` : '空き地', [s]);
     $('auPrice').textContent = fmt(price);
     $('auHolder').innerHTML = holder ? `${chipOf(holder.q)} が最高額` : 'まだ入札なし';
     $('auBidders').innerHTML = bidders.map(b => `<div class="au-b ${b.out ? 'out' : ''} ${b === active ? 'now' : ''} ${b === holder ? 'top' : ''}" style="--pc:${b.q.color}">
@@ -2857,7 +2901,7 @@ async function auction(s, seller, forced = false) {
       <div class="au-row"><span>おかね</span>${fmt(b.q.cash)}</div><div class="au-row"><span>株</span>${fmt(stockWorth(b.q))}</div>
       <div class="au-row sum"><span>上限</span>${fmt(bidLimit(b.q))}</div>${b.out ? '<span class="x">×</span>' : ''}</div>`).join('');
   };
-  if (watching) { $('auBtns').innerHTML = ''; $('auMsg').textContent = ''; render(); $('auctionOv').classList.remove('hidden'); await sleep(700); }
+  if (watching) { $('auBtns').innerHTML = ''; $('auMsg').textContent = ''; render(); $('auctionOv').classList.remove('hidden'); fitMap('auctionOv'); await sleep(700); }
 
   for (let i = 0; ; i++) {
     if (!bidders.some(b => !b.out && b !== holder)) break;
