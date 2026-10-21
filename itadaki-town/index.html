@@ -288,6 +288,7 @@
     #status { display: none; }
     #action { position: static; }
   }
+  .eco .pc.now, .eco .au-b.now, .eco .panel.aim .f, .eco .panel.line .b { animation: none; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
@@ -314,7 +315,8 @@
       <button id="bgmBtn">🎵 BGM ON</button>
       <button id="speedBtn">CPU速度: ふつう</button>
       <button id="rulesBtn">ルール</button>
-      <button id="chanceBtn" class="wide">🎴 チャンスボードを見る</button>
+      <button id="chanceBtn">🎴 チャンスボード</button>
+      <button id="ecoBtn">⚡ 省エネ ON</button>
       <div class="np wide box"><button id="npTitle" class="nptitle" title="タップして曲をえらぶ">🎵 BGMはゲーム開始で流れます</button><button id="npNext" disabled>⏭ 次の曲</button></div>
     </div>
   </aside>
@@ -430,6 +432,12 @@
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEMO = params.has('demo'); // all players are CPU, very fast (for testing)
+// power saving: lower frame rate and resolution, fewer particles, lighter music; on by default on phones
+let ECO = (() => {
+  try { const v = localStorage.getItem('itadaki-town-eco'); if (v != null) return v === '1'; } catch {}
+  return matchMedia('(pointer: coarse)').matches;
+})();
+const pixelRatio = () => Math.min(window.devicePixelRatio || 1, ECO ? 1.5 : 2);
 
 // ---------- board data ----------
 const N = 9;
@@ -592,7 +600,7 @@ function showDialog({ title, body = '', buttons = [], mount }, onPick) {
   card.classList.add('pop');
   $('dialog').classList.remove('hidden');
 }
-const closeDialog = () => $('dialog').classList.add('hidden');
+const closeDialog = () => { $('dialog').classList.add('hidden'); markDirty(); };
 const ask = o => new Promise(res => showDialog(o, v => { closeDialog(); res(v); }));
 
 // radio list + amount slider. returns { sel, amt } via mutable object
@@ -602,7 +610,7 @@ function focusShops(cands, sel) {
   if (sel != null) { selected = sel; renderInfo(); }
   if (cands.length && window.innerWidth <= 860) cv.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
-const clearFocus = v => { focus = { cands: [], sel: null }; return v; };
+const clearFocus = v => { focus = { cands: [], sel: null }; markDirty(); return v; };
 
 function pickerDialog({ title, body = '', items, amountMax, amountLabel, okLabel, step = 10, amountInit, cellItems = false }) {
   const st = { sel: items[0].value, amt: 0 };
@@ -633,7 +641,12 @@ function pickerDialog({ title, body = '', items, amountMax, amountLabel, okLabel
 }
 
 // ---------- rendering ----------
-const cv = $('board'), ctx = cv.getContext('2d');
+const cv = $('board'), mainCtx = cv.getContext('2d');
+let ctx = mainCtx;
+// everything that only changes with game state is drawn once into this layer
+const layer = document.createElement('canvas'), layerCtx = layer.getContext('2d');
+let boardDirty = true;
+const markDirty = () => { boardDirty = true; };
 let size = 400, cs = 400 / N;
 function resize() {
   const wrap = $('boardWrap');
@@ -644,10 +657,12 @@ function resize() {
   const wide = window.innerWidth >= 1180, pl = $('players');
   if (wide && pl.parentElement !== $('left')) $('left').prepend(pl);
   if (!wide && pl.parentElement !== $('side')) $('action').after(pl);
-  const dpr = window.devicePixelRatio || 1;
-  cv.width = size * dpr; cv.height = size * dpr;
+  const dpr = pixelRatio();
+  cv.width = layer.width = size * dpr; cv.height = layer.height = size * dpr;
   cv.style.width = size + 'px'; cv.style.height = size + 'px';
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  layerCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  markDirty();
   resizeFx();
 }
 window.addEventListener('resize', resize);
@@ -771,10 +786,10 @@ function drawSkyline(x0, y0, w) {
   }
 }
 
-function drawTile(c, now) {
+function drawTile(c, now, pop = true) {
   const w = cs * 0.84, r = cs * 0.16, h = w / 2;
   let s = 1;
-  if (cellFx[c.id]) {
+  if (pop && cellFx[c.id]) {
     const t = now - cellFx[c.id];
     if (t < 700 && !REDUCED) s = 1 + 0.28 * Math.exp(-t / 160) * Math.cos(t / 35);
     else delete cellFx[c.id];
@@ -840,7 +855,8 @@ function drawTile(c, now) {
   ctx.restore();
 }
 
-function drawBoard(now) {
+function drawStatic() {
+  ctx = layerCtx;
   ctx.clearRect(0, 0, size, size);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
@@ -871,12 +887,7 @@ function drawBoard(now) {
     ctx.stroke();
   }
 
-  // block contents: dice / goal / skyline / whose turn
-  drawDice(2.5 * cs, 2.35 * cs, now);
-  if (dice && dice.left != null && !dice.rolling) {
-    ctx.font = font(800, cs * 0.22); ctx.fillStyle = INK;
-    ctx.fillText(dice.left ? `のこり ${dice.left}マス` : 'とうちゃく！', 2.5 * cs, 3.4 * cs);
-  }
+  // block contents that only change with game state
   ctx.font = font(800, cs * 0.24); ctx.fillStyle = INK;
   ctx.fillText('目標', 6.5 * cs, 1.75 * cs);
   ctx.font = font(400, cs * 0.44, DISPLAY_FONT);
@@ -887,15 +898,29 @@ function drawBoard(now) {
   ctx.font = font(400, cs * 0.26, DISPLAY_FONT);
   outlined('いただきタウン', 2.5 * cs, 5.62 * cs, '#ffd23f', INK, 3);
   if (current) {
-    const bob = REDUCED ? 0 : Math.abs(Math.sin(now / 260)) * cs * 0.12;
     ctx.fillStyle = 'rgba(43,35,70,0.2)';
     ctx.beginPath(); ctx.ellipse(6.5 * cs, 6.75 * cs, cs * 0.45, cs * 0.1, 0, 0, 7); ctx.fill();
-    drawBlob(6.5 * cs, 6.2 * cs - bob, cs * 0.5, current.color, [0, 0], (now / 1000) % 3.2 < 0.12);
+    drawBlob(6.5 * cs, 6.2 * cs, cs * 0.5, current.color);
     ctx.font = font(800, cs * 0.26); ctx.fillStyle = INK;
     ctx.fillText(`${current.name}の番`, 6.5 * cs, 7.15 * cs);
   }
+  for (const c of cells) drawTile(c, 0, false);
+  ctx = mainCtx;
+  boardDirty = false;
+}
 
-  for (const c of cells) drawTile(c, now);
+// per frame: copy the static layer, then draw what moves
+function drawBoard(now) {
+  if (boardDirty) drawStatic();
+  ctx.clearRect(0, 0, size, size);
+  ctx.drawImage(layer, 0, 0, size, size);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const id of Object.keys(cellFx)) drawTile(cells[id], now);
+  drawDice(2.5 * cs, 2.35 * cs, now);
+  if (dice && dice.left != null && !dice.rolling) {
+    ctx.font = font(800, cs * 0.22); ctx.fillStyle = INK;
+    ctx.fillText(dice.left ? `のこり ${dice.left}マス` : 'とうちゃく！', 2.5 * cs, 3.4 * cs);
+  }
 
   for (const id of highlight) {
     const c = cells[id], w = cs * 0.84 + 6, pulse = REDUCED ? 0.6 : 0.5 + 0.5 * Math.sin(now / 130);
@@ -916,10 +941,9 @@ function drawBoard(now) {
     const isCur = p === current;
     const r = cs * (isCur ? 0.17 : 0.14) * t.scale;
     if (r <= 0.5) continue;
-    const idle = isCur && !t.moving && !REDUCED ? Math.abs(Math.sin(now / 240)) * cs * 0.06 : 0;
     ctx.fillStyle = 'rgba(43,35,70,0.28)';
     ctx.beginPath(); ctx.ellipse(t.x, t.y + r * 0.9, r * (0.85 - t.hop / cs * 0.6), r * 0.25, 0, 0, 7); ctx.fill();
-    drawBlob(t.x, t.y - t.hop - idle, r, p.color, t.look, (now / 1000 + i * 0.7) % 3.4 < 0.12);
+    drawBlob(t.x, t.y - t.hop, r, p.color, t.look);
   }
 
   // shops offered in a dialog: soft glow on all, arrow on the chosen one
@@ -948,7 +972,7 @@ const miniMarks = { au: [], tr: [] };
 function drawMiniMap(canvas, marks, now) {
   const w = canvas && canvas.clientWidth;
   if (!w) return;
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = pixelRatio();
   if (canvas.width !== Math.round(w * dpr)) { canvas.width = canvas.height = Math.round(w * dpr); }
   const g = canvas.getContext('2d'), u = w / N;
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -983,7 +1007,7 @@ const fx = $('fx'), fctx = fx.getContext('2d');
 const confetti = [], floats = [];
 const CONFETTI_COLORS = ['#ff5fa2', '#ffd23f', '#5fe0b5', '#4fd3ec', '#b892ff', '#ff9f5a'];
 function resizeFx() {
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = pixelRatio();
   fx.width = innerWidth * dpr; fx.height = innerHeight * dpr;
   fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
@@ -993,6 +1017,7 @@ function boardPoint(bx, by) {
 }
 function burst(x, y, n, power = 1) {
   if (REDUCED || DEMO) return;
+  if (ECO) n = Math.ceil(n * 0.35);
   for (let i = 0; i < n; i++) confetti.push({
     x, y, vx: (Math.random() - 0.5) * 380 * power, vy: -(160 + Math.random() * 320) * power, g: 700,
     rot: Math.random() * 6, vr: (Math.random() - 0.5) * 14, color: CONFETTI_COLORS[rand(CONFETTI_COLORS.length)],
@@ -1002,6 +1027,7 @@ function burst(x, y, n, power = 1) {
 const burstCell = (id, n, power) => burst(...boardPoint((cells[id].x + 0.5) * cs, (cells[id].y + 0.5) * cs), n, power);
 function rain(n) {
   if (REDUCED || DEMO) return;
+  if (ECO) n = Math.ceil(n * 0.35);
   for (let i = 0; i < n; i++) confetti.push({
     x: Math.random() * innerWidth, y: -20 - Math.random() * innerHeight * 0.6, vx: (Math.random() - 0.5) * 60, vy: 80 + Math.random() * 120, g: 30,
     rot: Math.random() * 6, vr: (Math.random() - 0.5) * 8, color: CONFETTI_COLORS[rand(CONFETTI_COLORS.length)],
@@ -1020,11 +1046,14 @@ function floatMoney(p, amount) {
   y += dir * 30 * floats.filter(f => nowT - f.t0 < 250 && Math.abs(f.x - x) < 60 && Math.abs(f.y - y) < 60).length;
   floats.push({ x, y, dir, text: (amount > 0 ? '+' : '−') + fmt(Math.abs(amount)), color: p.color, loss: amount < 0, t0: nowT });
 }
-let lastFx = 0;
+let lastFx = 0, fxDrawn = false;
+const fxActive = () => confetti.length > 0 || floats.length > 0 || fxDrawn;
 function drawFx(now) {
   const dt = Math.min(0.05, (now - (lastFx || now)) / 1000);
   lastFx = now;
+  if (!fxActive()) return;
   fctx.clearRect(0, 0, innerWidth, innerHeight);
+  fxDrawn = confetti.length > 0 || floats.length > 0;
   for (let i = confetti.length - 1; i >= 0; i--) {
     const c = confetti[i];
     c.vy += c.g * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.rot += c.vr * dt; c.life -= dt;
@@ -1230,6 +1259,11 @@ const Sound = (() => {
 
   let reverb = null, song = null, bag = [];
   const genreOut = (gen) => {
+    if (ECO) {
+      const dry = ac.createGain();
+      dry.gain.value = 0.75 * gen.level; dry.connect(bgmBus);
+      return { dry, wet: null };
+    }
     if (!reverb) {
       reverb = ac.createConvolver();
       const len = ac.sampleRate * 2.4, buf = ac.createBuffer(2, len, ac.sampleRate);
@@ -1244,7 +1278,9 @@ const Sound = (() => {
 
   // one synth voice: oscillator(s) -> envelope -> optional lowpass -> song output (+ reverb send)
   function voice(out, t, f, dur, vol, o = {}) {
-    const { type = 'sine', a = 0.01, dec = 0.3, sus = 1, rel = 0.15, cutoff = 0, detune = 0, vib = 0 } = o;
+    if (ECO && vol < 0.012) return;
+    const { type = 'sine', a = 0.01, dec = 0.3, sus = 1, rel = 0.15, cutoff = 0 } = o;
+    const detune = ECO ? 0 : o.detune || 0, vib = ECO ? 0 : o.vib || 0;
     const g = ac.createGain(), end = t + Math.max(dur, a + 0.02);
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(vol, t + a);
@@ -1264,13 +1300,14 @@ const Sound = (() => {
     }
     let node = g;
     if (cutoff) { const flt = ac.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = cutoff; g.connect(flt); node = flt; }
-    node.connect(out.dry); node.connect(out.wet);
+    node.connect(out.dry); if (out.wet) node.connect(out.wet);
   }
   function hit(out, t, dur, vol, type, freq, q = 1, wet = false) {
+    if (ECO && vol < 0.012) return;
     const src = ac.createBufferSource(), flt = ac.createBiquadFilter(), g = ac.createGain();
     src.buffer = noiseBuf; flt.type = type; flt.frequency.value = freq; flt.Q.value = q;
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(flt); flt.connect(g); g.connect(out.dry); if (wet) g.connect(out.wet);
+    src.connect(flt); flt.connect(g); g.connect(out.dry); if (wet && out.wet) g.connect(out.wet);
     src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.02);
   }
   const INST = {
@@ -1559,8 +1596,8 @@ const Sound = (() => {
   }
   function fadeOut(sg, when = ac.currentTime) {
     if (!sg) return;
-    [sg.out.dry, sg.out.wet].forEach(g => { g.gain.cancelScheduledValues(when); g.gain.setValueAtTime(g.gain.value, when); g.gain.linearRampToValueAtTime(0, when + 0.6); });
-    setTimeout(() => { sg.out.dry.disconnect(); sg.out.wet.disconnect(); }, (when - ac.currentTime + 4) * 1000);
+    [sg.out.dry, sg.out.wet].filter(Boolean).forEach(g => { g.gain.cancelScheduledValues(when); g.gain.setValueAtTime(g.gain.value, when); g.gain.linearRampToValueAtTime(0, when + 0.6); });
+    setTimeout(() => { sg.out.dry.disconnect(); if (sg.out.wet) sg.out.wet.disconnect(); }, (when - ac.currentTime + 4) * 1000);
   }
   function startSong(i, when) {
     const built = buildSong(SONGS[i]);
@@ -1623,6 +1660,7 @@ const Sound = (() => {
 })();
 
 function renderPanel() {
+  markDirty();
   const changed = {};
   for (const p of players) {
     if (p._last != null && p.cash !== p._last) {
@@ -1670,13 +1708,27 @@ function renderInfo() {
   }
 }
 
-function frame(now) {
-  drawBoard(now);
-  if (!$('auctionOv').classList.contains('hidden')) drawMiniMap($('auMap'), miniMarks.au, now);
-  if (!$('tradeOv').classList.contains('hidden')) drawMiniMap($('trMap'), miniMarks.tr, now);
-  drawFx(now);
-  requestAnimationFrame(frame);
+const shown = id => !$(id).classList.contains('hidden');
+function isBusy(now) {
+  return players.some(p => p.anim && now < p.anim.t0 + p.anim.dur + 80)
+    || (dice && (dice.rolling || (dice.t0 && now - dice.t0 < 900)))
+    || highlight.length > 0 || focus.cands.length > 0 || focus.sel != null
+    || Object.keys(cellFx).length > 0 || shown('auctionOv') || shown('tradeOv');
 }
+let lastDraw = 0, wasBusy = true;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const busy = isBusy(now), fxOn = fxActive();
+  // nothing moving and nothing changed: skip the frame entirely
+  if (!busy && !wasBusy && !boardDirty && !fxOn) return;
+  if (now - lastDraw < (ECO ? 32 : 15)) return;
+  lastDraw = now; wasBusy = busy;
+  drawBoard(now);
+  if (shown('auctionOv')) drawMiniMap($('auMap'), miniMarks.au, now);
+  if (shown('tradeOv')) drawMiniMap($('trMap'), miniMarks.tr, now);
+  drawFx(now);
+}
+document.fonts && document.fonts.ready.then(markDirty);
 
 cv.addEventListener('click', e => {
   const r = cv.getBoundingClientRect();
@@ -1684,6 +1736,7 @@ cv.addEventListener('click', e => {
   if (id === undefined) return;
   if (pick && pick.opts.includes(id)) { pick.done(id); return; }
   selected = id;
+  markDirty();
   renderInfo();
 });
 
@@ -3088,6 +3141,16 @@ $('again').onclick = () => { $('end').classList.add('hidden'); refreshResume(); 
 $('resume').onclick = resumeGame;
 $('rulesBtn').onclick = $('titleRules').onclick = () => $('rules').classList.remove('hidden');
 $('chanceBtn').onclick = viewChance;
+const syncEco = () => {
+  $('ecoBtn').textContent = ECO ? '⚡ 省エネ ON' : '⚡ 省エネ OFF';
+  document.body.classList.toggle('eco', ECO);
+};
+$('ecoBtn').onclick = () => {
+  ECO = !ECO;
+  try { localStorage.setItem('itadaki-town-eco', ECO ? '1' : '0'); } catch {}
+  syncEco(); resize(); Sound.play('click');
+};
+syncEco();
 $('closeRules').onclick = () => $('rules').classList.add('hidden');
 function syncSoundButtons() {
   $('seBtn').textContent = Sound.prefs.se ? '🔊 効果音 ON' : '🔇 効果音 OFF';
