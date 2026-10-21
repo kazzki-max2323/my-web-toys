@@ -137,8 +137,19 @@
     border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); font-family: var(--display); font-size: 26px; text-align: center; animation: flip .45s ease-out; }
   .tools .wide { grid-column: 1 / -1; }
   .np { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; }
-  .np span { flex: 1; min-width: 0; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .np span small { color: var(--muted); font-weight: 700; margin-left: 4px; }
+  .np .nptitle { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: none; border-width: 2px; padding: 5px 10px; font-size: 13px; }
+  .np .nptitle small { color: var(--muted); font-weight: 700; margin-left: 4px; }
+  .song-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+  .song-list button { text-align: left; padding: 8px 10px; font-size: 13px; line-height: 1.3; }
+  .song-list button small { display: block; color: var(--muted); font-size: 11px; }
+  .song-list button.now { background: var(--yellow); }
+  .minimap { width: 180px; height: 180px; flex: none; display: block; }
+  .au-top { display: flex; gap: 14px; align-items: center; }
+  .tr-top { display: flex; gap: 12px; align-items: center; justify-content: center; margin-bottom: 8px; }
+  .tr-top .minimap { width: 190px; height: 190px; }
+  .maplegend { margin: 0; font-size: 12px; color: var(--ink) !important; line-height: 1.8; }
+  .maplegend .mk { display: inline-block; width: 20px; height: 20px; line-height: 16px; text-align: center; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); font-size: 11px; }
+  @media (max-width: 520px) { .minimap { width: 140px; height: 140px; } .au-top { flex-direction: column; } .tr-top .minimap { width: 160px; height: 160px; } .song-list { grid-template-columns: 1fr; } }
   .np button { flex: none; padding: 5px 10px; font-size: 13px; }
   .ocard.chance { max-width: 520px; padding: 18px 18px 14px; }
   .ocard.chance h1 { font-size: 22px; }
@@ -304,7 +315,7 @@
       <button id="speedBtn">CPU速度: ふつう</button>
       <button id="rulesBtn">ルール</button>
       <button id="chanceBtn" class="wide">🎴 チャンスボードを見る</button>
-      <div class="np wide box"><span id="npTitle">🎵 BGMはゲーム開始で流れます</span><button id="npNext" disabled>⏭ 次の曲</button></div>
+      <div class="np wide box"><button id="npTitle" class="nptitle" title="タップして曲をえらぶ">🎵 BGMはゲーム開始で流れます</button><button id="npNext" disabled>⏭ 次の曲</button></div>
     </div>
   </aside>
 </div>
@@ -357,7 +368,7 @@
 <div class="overlay hidden" id="auctionOv">
   <div class="ocard auction">
     <h1>🔨 競売</h1>
-    <div id="auShop" class="au-shop"></div>
+    <div class="au-top"><canvas id="auMap" class="minimap" aria-label="競売にかけられたお店の場所"></canvas><div id="auShop" class="au-shop"></div></div>
     <div class="au-price"><small>いまの価格</small><b id="auPrice"></b><span id="auHolder"></span></div>
     <div id="auBidders" class="au-bidders"></div>
     <p class="center" id="auMsg"></p>
@@ -368,7 +379,17 @@
 <div class="overlay hidden" id="tradeOv">
   <div class="ocard trade">
     <h1>🤝 交渉</h1>
+    <div class="tr-top"><canvas id="trMap" class="minimap" aria-label="交渉しているお店の場所"></canvas>
+      <p class="maplegend"><b class="mk">出</b> あなたが出す店<br><b class="mk">求</b> 相手に求める店<br><small>マップで光っているのが<br>いま話しているお店</small></p></div>
     <div id="tradeBody"></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="songOv">
+  <div class="ocard songs">
+    <h1>🎵 曲をえらぶ</h1>
+    <div id="songList" class="song-list"></div>
+    <p class="center"><button id="songClose" class="primary">とじる</button></p>
   </div>
 </div>
 
@@ -922,6 +943,41 @@ function drawBoard(now) {
   }
 }
 
+// ---------- mini map inside the auction / trade screens ----------
+const miniMarks = { au: [], tr: [] };
+function drawMiniMap(canvas, marks, now) {
+  const w = canvas && canvas.clientWidth;
+  if (!w) return;
+  const dpr = window.devicePixelRatio || 1;
+  if (canvas.width !== Math.round(w * dpr)) { canvas.width = canvas.height = Math.round(w * dpr); }
+  const g = canvas.getContext('2d'), u = w / N;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, w);
+  g.fillStyle = '#8fe0a8'; g.beginPath(); g.roundRect(1, 1, w - 2, w - 2, u * 0.5); g.fill();
+  g.lineWidth = 2; g.strokeStyle = INK; g.stroke();
+  for (const c of cells) {
+    const x = c.x * u + u * 0.08, y = c.y * u + u * 0.08, sz = u * 0.84;
+    const owned = (c.type === 'shop' || c.type === 'plot') && c.owner != null;
+    g.fillStyle = owned ? players[c.owner].color : TILE[c.type] || '#ffffff';
+    g.beginPath(); g.roundRect(x, y, sz, sz, u * 0.15); g.fill();
+    if (c.type === 'shop' && !owned) { g.fillStyle = DISTRICTS[c.d].color; g.fillRect(x + 1, y + 1, sz - 2, sz * 0.3); }
+    g.lineWidth = 1; g.strokeStyle = INK; g.stroke();
+  }
+  const pulse = REDUCED ? 1 : 0.5 + 0.5 * Math.sin(now / 140);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const m of marks) {
+    const c = cells[m.id], cx = (c.x + 0.5) * u, cy = (c.y + 0.5) * u;
+    g.lineWidth = 3 + 3 * pulse; g.strokeStyle = '#ffd23f';
+    g.beginPath(); g.roundRect(c.x * u - 2, c.y * u - 2, u + 4, u + 4, u * 0.3); g.stroke();
+    const r = u * (0.72 + 0.08 * pulse);
+    g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fillStyle = '#ffffff'; g.fill();
+    g.lineWidth = 3; g.strokeStyle = m.color || INK; g.stroke();
+    g.lineWidth = 1; g.strokeStyle = INK; g.beginPath(); g.arc(cx, cy, r + 1.5, 0, 7); g.stroke();
+    g.fillStyle = INK; g.font = `400 ${Math.max(10, u * 0.8)}px ${DISPLAY_FONT}`;
+    g.fillText(m.label, cx, cy + 1);
+  }
+}
+
 // ---------- particles on a full-screen layer ----------
 const fx = $('fx'), fctx = fx.getContext('2d');
 const confetti = [], floats = [];
@@ -1086,6 +1142,7 @@ const Sound = (() => {
     { t: '決戦！大富豪',         g: 'rpg',     bpm: 168, key: 57, mode: 'minor',      meter: 4, seed: 62, style: 'battle' },
     { t: '水晶の祈り',           g: 'rpg',     bpm: 72,  key: 64, mode: 'major',      meter: 4, seed: 63, style: 'harp' },
     { t: '飛空艇でゆく',         g: 'rpg',     bpm: 150, key: 65, mode: 'major',      meter: 3, seed: 64, style: 'airship' },
+    { t: '決戦のテーマ',         g: 'rpg',     bpm: 172, key: 57, mode: 'minor',      meter: 4, seed: 70, score: 'battle' },
   ];
   const GENRE_NAME = { classic: 'クラシック', chill: 'ゆったり', pop: 'ポップ', jazz: 'ジャズ', bossa: 'ボサノヴァ', chip: 'ピコピコ', rpg: 'RPG' };
   const MODES = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10], dorian: [0, 2, 3, 5, 7, 9, 10], mixolydian: [0, 2, 4, 5, 7, 9, 10] };
@@ -1145,6 +1202,7 @@ const Sound = (() => {
   }
 
   function buildSong(s) {
+    if (s.score === 'battle') return buildBattle(s);
     const rng = mulberry32(s.seed), gen = GENRE[s.g];
     const steps = s.meter * 4, barDur = s.meter * 60 / s.bpm;
     const progs = [...PROGS[s.g]].sort(() => rng() - 0.5);
@@ -1238,8 +1296,133 @@ const Sound = (() => {
     brass:  (o, t, m, d, v) => { voice(o, t, hz(m), d, v, { type: 'sawtooth', a: 0.06, dec: 0.4, sus: 0.8, rel: 0.12, cutoff: 1500, detune: 5, vib: 0.005 });
       voice(o, t, hz(m) / 2, d, v * 0.35, { type: 'square', a: 0.06, dec: 0.4, sus: 0.7, rel: 0.1, cutoff: 900 }); },
     harp:   (o, t, m, d, v) => { voice(o, t, hz(m), d, v, { type: 'triangle', a: 0.003, dec: 0.9, sus: 0.02, rel: 0.4 }); voice(o, t, hz(m) * 2, d, v * 0.25, { a: 0.003, dec: 0.4, sus: 0.01 }); },
+    dbass:  (o, t, m, d, v) => { voice(o, t, hz(m), d, v, { type: 'sawtooth', a: 0.004, dec: 0.18, sus: 0.55, rel: 0.05, cutoff: 820 }); voice(o, t, hz(m), d, v * 0.5, { a: 0.004, dec: 0.3, sus: 0.7, rel: 0.05 }); },
     timp:   (o, t, m, v) => { voice(o, t, hz(m), 0.5, v, { a: 0.004, dec: 0.5, sus: 0.02, rel: 0.3 }); hit(o, t, 0.15, v * 0.5, 'lowpass', 300); },
   };
+
+  // ---------- hand-written battle theme (original composition, SNES-RPG style) ----------
+  // chords per bar; melody as "Note+octave:16ths" tokens ("r" = rest)
+  const BATTLE = {
+    chords: {
+      A: 'Am Am F G Am Am Dm E Am Am F G F G E E',
+      B: 'F G Em Am Dm G C E',
+      C: 'Am E/G# Am/G D/F# F Dm/F E E',
+      D: 'C G Am F C G F E',
+    },
+    mel: {
+      A: ['E5:4 A5:2 B5:2 C6:4 B5:2 A5:2', 'B5:3 A5:3 E5:2 r:4 E5:2 G5:2', 'A5:4 F5:2 G5:2 A5:4 C6:4', 'B5:6 A5:2 G5:4 D5:4',
+          'E5:4 A5:2 B5:2 C6:4 D6:2 E6:2', 'E6:6 D6:2 C6:4 B5:4', 'A5:4 F5:2 A5:2 D6:4 C6:2 A5:2', 'B5:8 G#5:4 E5:4',
+          'C6:4 B5:2 A5:2 E6:4 C6:4', 'A5:3 B5:3 C6:2 B5:4 A5:4', 'F5:4 A5:2 C6:2 F6:4 E6:2 C6:2', 'D6:6 B5:2 G5:4 B5:4',
+          'C6:4 A5:4 F5:4 A5:4', 'B5:4 G5:4 D6:4 B5:4', 'G#5:4 B5:4 E6:4 D6:2 B5:2', 'E6:12 r:4'],
+      B: ['A5:8 C6:4 F6:4', 'D6:8 B5:4 G5:4', 'E5:6 G5:2 B5:4 E6:4', 'C6:12 B5:2 A5:2',
+          'F5:8 A5:4 D6:4', 'B5:8 D6:4 G6:4', 'E6:6 D6:2 C6:4 G5:4', 'G#5:8 B5:4 E6:4'],
+      C: ['A5:16', 'B5:16', 'C6:16', 'D6:8 C6:4 D6:4', 'C6:16', 'A5:8 D6:8', 'B5:8 G#5:8', 'E6:4 D6:4 C6:4 B5:4'],
+      D: ['E5:4 G5:4 C6:6 B5:2', 'D6:8 B5:4 G5:4', 'C6:4 E6:4 A6:6 G6:2', 'F6:8 E6:4 C6:4',
+          'E6:4 D6:2 C6:2 G5:8', 'D6:4 C6:2 B5:2 D6:8', 'C6:4 A5:4 F6:4 E6:2 D6:2', 'E6:4 B5:4 G#5:4 E5:4'],
+    },
+  };
+  const PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const noteMidi = n => { const m = n.match(/^([A-G])([#b]?)(-?\d)$/); return 12 * (+m[3] + 1) + PC[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0); };
+  const parseMel = str => { let pos = 0; return str.split(' ').map(tok => { const [n, l] = tok.split(':'); const ev = { pos, len: +l, midi: n === 'r' ? null : noteMidi(n) }; pos += +l; return ev; }).filter(e => e.midi != null); };
+  const parseChord = name => {
+    const [main, slash] = name.split('/'), m = main.match(/^([A-G][#b]?)(m?)$/);
+    const root = noteMidi(m[1] + '3') - 12, tri = m[2] ? [0, 3, 7] : [0, 4, 7];
+    return { root, tones: tri.map(x => root + x), bass: slash ? noteMidi(slash + '2') : root };
+  };
+
+  function buildBattle(s) {
+    const barDur = 4 * 60 / s.bpm;
+    const bars = [];
+    for (let i = 0; i < 4; i++) bars.push({ sec: 'I', b: i, lvl: 0 });
+    const add = (sec, lvl) => BATTLE.mel[sec].forEach((m, b) => bars.push({ sec, b, lvl, n: BATTLE.mel[sec].length,
+      chord: parseChord(BATTLE.chords[sec].split(' ')[b]), mel: parseMel(m) }));
+    const form = [['A', 0], ['A', 1], ['B', 0], ['C', 0], ['A', 2], ['D', 1], ['B', 1], ['C', 1]];
+    const target = Math.ceil(300 / barDur) - 2;
+    for (let pass = 0; bars.length < target; pass++)
+      for (const [sec, lvl] of form) { if (bars.length >= target) break; add(sec, Math.min(2, lvl + pass)); }
+    bars.push({ sec: 'END', b: 0, lvl: 2, chord: parseChord('Am') }, { sec: 'END', b: 1, lvl: 2, chord: parseChord('Am'), final: true });
+    return { s, gen: { ...GENRE.rpg, level: 0.5 }, steps: 16, barDur, bars, scored: true };
+  }
+
+  function playBattleBar(song, bar, t) {
+    const { barDur, out } = song, sd = barDur / 16, I = INST, at = st => t + st * sd;
+    const lvl = bar.lvl, ch = bar.chord;
+    const drums = (half = false) => {
+      (half ? [0, 10] : [0, 6, 8, 11]).forEach(st => I.kick(out, at(st), 0.2));
+      (half ? [8] : [4, 12]).forEach(st => I.snare(out, at(st), 0.08));
+      for (let st = 0; st < 16; st += 2) I.hat(out, at(st), st % 4 ? 0.01 : 0.017);
+    };
+    const fill = () => [12, 13, 14, 15].forEach((st, i) => I.snare(out, at(st), 0.04 + i * 0.012));
+    const ostinato = () => {      // driving eighth-note bass with octave leaps
+      [0, 12, 0, 12, 7, 12, 0, 10].forEach((x, i) => I.dbass(out, at(i * 2), ch.bass + x, sd * 1.7, 0.11));
+    };
+    const strings16 = (vol) => {
+      const up = [ch.tones[0] + 24, ch.tones[2] + 24, ch.tones[1] + 24, ch.tones[2] + 24];
+      for (let st = 0; st < 16; st++) I.stab(out, at(st), up[st % 4], sd * 0.9, vol);
+    };
+    const lead = (inst, vol, oct = 0) => bar.mel.forEach(n => inst(out, at(n.pos), n.midi + oct, n.len * sd * 0.95, vol));
+    const last = bar.b === bar.n - 1;
+
+    switch (bar.sec) {
+      case 'I': {
+        if (bar.b === 0) {          // rising run over a low pedal
+          const run = ['A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G#4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G#5', 'A5', 'B5'].map(noteMidi);
+          run.forEach((m, st) => I.strings(out, at(st), m, sd * 1.2, 0.03 + st * 0.0015));
+          I.timp(out, at(0), 45, 0.2); I.dbass(out, at(0), 33, barDur, 0.1);
+        } else if (bar.b === 1) {   // tremolo and timpani roll
+          for (let st = 0; st < 16; st++) { I.stab(out, at(st), noteMidi(st % 2 ? 'E5' : 'A5'), sd, 0.02); I.timp(out, at(st), 45, 0.05 + st * 0.008); }
+          [0, 8].forEach(st => I.dbass(out, at(st), 33, sd * 6, 0.12));
+        } else {                     // syncopated brass hits
+          const cs = bar.b === 2 ? [parseChord('Am'), parseChord('F')] : [parseChord('G'), parseChord('E')];
+          [[0, 0], [3, 0], [6, 0], [8, 1], [11, 1], [14, 1]].forEach(([st, c]) => {
+            cs[c].tones.forEach(x => I.brass(out, at(st), x + 24, sd * 2, 0.03));
+            I.dbass(out, at(st), cs[c].root + 12, sd * 2, 0.12);
+          });
+          I.timp(out, at(0), cs[0].root + 12, 0.2);
+          if (bar.b === 3) fill();
+        }
+        break;
+      }
+      case 'A': case 'D': {
+        ostinato();
+        drums();
+        if (last) fill();
+        if (bar.b % 8 === 0) I.timp(out, at(0), ch.root + 12, 0.18);
+        lead(I.brass, 0.055);
+        if (lvl >= 1) { strings16(0.011); lead(I.strings, 0.016, -12); }
+        if (lvl >= 2 || bar.sec === 'D') [0, 6].forEach(st => ch.tones.forEach(x => I.brass(out, at(st), x + 12, sd * 2, 0.014)));
+        break;
+      }
+      case 'B': {
+        [[0, 0, 4], [4, 0, 2], [6, 7, 2], [8, 12, 4], [12, 7, 4]].forEach(([st, x, len]) => I.dbass(out, at(st), ch.bass + x, sd * len * 0.9, 0.11));
+        drums(true);
+        ch.tones.forEach(x => I.brass(out, t, x + 12, barDur, 0.011));
+        lead(I.strings, 0.045);
+        if (lvl >= 1) { const up = [...ch.tones, ...ch.tones.map(x => x + 12)].map(x => x + 24); for (let st = 0; st < 16; st++) I.harp(out, at(st), up[st % 6], sd * 3, 0.018); }
+        if (last) fill();
+        break;
+      }
+      case 'C': {
+        for (let st = 0; st < 16; st += 2) I.dbass(out, at(st), ch.bass, sd * 1.8, 0.1 + bar.b * 0.004);
+        for (let st = 0; st < 16; st++) I.stab(out, at(st), ch.tones[st % 3] + 24, sd * 0.9, 0.009 + bar.b * 0.0012);
+        I.timp(out, at(0), ch.root + 12, 0.16);
+        lead(I.brass, 0.05);
+        if (lvl >= 1) lead(I.strings, 0.018, 12);
+        if (bar.b >= 6) for (let st = bar.b === 7 ? 0 : 8; st < 16; st++) I.snare(out, at(st), 0.02 + st * 0.003 + (bar.b - 6) * 0.02);
+        else drums(true);
+        break;
+      }
+      case 'END': {
+        if (bar.b === 0) {
+          [0, 3, 6].forEach(st => { ch.tones.forEach(x => I.brass(out, at(st), x + 24, sd * 2, 0.03)); I.dbass(out, at(st), 45, sd * 2, 0.12); });
+          ch.tones.forEach(x => { I.brass(out, at(8), x + 24, sd * 8, 0.035); I.strings(out, at(8), x + 12, sd * 8, 0.02); });
+          I.timp(out, at(8), 45, 0.25); I.dbass(out, at(8), 33, sd * 8, 0.12);
+          for (let st = 0; st < 8; st++) I.snare(out, at(st), 0.03 + st * 0.008);
+        }
+        break;
+      }
+    }
+  }
 
   function playBar(song, bar, t, next) {
     const { s, gen, steps, barDur, out } = song, sd = barDur / steps, I = INST;
@@ -1393,7 +1576,7 @@ const Sound = (() => {
         startSong(nextIndex(), end + 1.5);
         continue;
       }
-      playBar(song, song.bars[song.i], song.t, song.bars[song.i + 1]);
+      (song.scored ? playBattleBar : playBar)(song, song.bars[song.i], song.t, song.bars[song.i + 1]);
       song.t += song.barDur; song.i++;
     }
   }
@@ -1409,6 +1592,13 @@ const Sound = (() => {
     song = null;
     if (onSong) onSong(null);
   }
+  function playSong(i) {
+    if (!prefs.bgm || !ensure()) return;
+    if (song) fadeOut(song);
+    bag = bag.filter(x => x !== i);
+    startSong(i, ac.currentTime + 0.5);
+    if (!bgmTimer) bgmTimer = setInterval(schedule, 150);
+  }
   function nextSong() {
     if (!bgmTimer || !song) return;
     fadeOut(song);
@@ -1419,7 +1609,8 @@ const Sound = (() => {
     if (document.hidden) ac.suspend().catch(() => {}); else ac.resume().catch(() => {});
   });
   return {
-    play, startBgm, stopBgm, nextSong, prefs,
+    play, startBgm, stopBgm, nextSong, playSong, prefs,
+    songs: () => SONGS.map(x => ({ title: x.t, genre: GENRE_NAME[x.g] })),
     setOnSong(fn) { onSong = fn; },
     songList: () => SONGS.map(x => { const b = buildSong(x); return { title: x.t, genre: GENRE_NAME[x.g], seconds: Math.round(b.bars.length * b.barDur) }; }),
     unlock: ensure,
@@ -1481,6 +1672,8 @@ function renderInfo() {
 
 function frame(now) {
   drawBoard(now);
+  if (!$('auctionOv').classList.contains('hidden')) drawMiniMap($('auMap'), miniMarks.au, now);
+  if (!$('tradeOv').classList.contains('hidden')) drawMiniMap($('trMap'), miniMarks.tr, now);
   drawFx(now);
   requestAnimationFrame(frame);
 }
@@ -1896,6 +2089,7 @@ function humanTrade(p) {
     };
     const render = () => {
       const q = st.partner, sulk = sulking(q);
+      miniMarks.tr = [...st.give.map(id => ({ id, label: '出', color: p.color })), ...st.get.map(id => ({ id, label: '求', color: q.color }))];
       $('tradeBody').innerHTML = `
         <div class="tpartners">${rivals.map(r => `<button data-p="${r.id}" class="${r === q ? 'primary' : ''}">${r.name}
           <small>${sulking(r) ? '😤' : '♥'.repeat(Math.max(0, patienceOf(r))) + '♡'.repeat(3 - Math.max(0, patienceOf(r)))}</small></button>`).join('')}</div>
@@ -2017,12 +2211,14 @@ async function cpuPropose(p) {
   }
   if (money > 0 && p.cash - money < 300) return;
   Sound.play('turn');
+  focusShops([...give, want], want);
   const pitch = { bold: 'いい話があるんだ！', steady: 'お互いに得な話だと思うが、どうだろう？', shy: 'あの…よかったら、交換しませんか…？' }[p.style] || 'この条件で交換しない？';
   const ans = await ask({
     title: `🤝 ${p.name}から交渉`,
     body: `「${pitch}」${tradeSheet(p, give, Math.max(0, money), h, [want], Math.max(0, -money))}`,
     buttons: [{ label: 'はい', value: 'yes' }, { label: '絶対しない', value: 'never' }, { label: 'いいえ', value: 'no', primary: true }],
   });
+  clearFocus();
   if (ans === 'yes') executeTrade(p, give, Math.max(0, money), h, [want], Math.max(0, -money));
   else {
     if (ans === 'never') (h.blockTrades = h.blockTrades || []).push(p.id);
@@ -2270,6 +2466,8 @@ async function auction(s, seller, forced = false) {
   let price = start, holder = null;
   log(`🔨 ${pname(seller)}が${c.name}を${forced ? '強制' : ''}競売に出した（売り出し ${fmt(start)}）`);
 
+  miniMarks.au = [{ id: s, label: '競', color: seller.color }];
+  if (watching) focusShops([s], s);
   const render = (active = null) => {
     $('auShop').innerHTML = `<div class="au-tile" style="--k:${c.type === 'shop' ? DISTRICTS[c.d].color : '#efeae0'}">${c.type === 'shop' ? DISTRICTS[c.d].key : '地'}</div>
       <div><b>${propLabel(s)}</b><br><small>${areaName(c)} ・ 売り主 ${chipOf(seller)}${forced ? ' ・ 強制競売' : ''}</small><br>
@@ -2319,6 +2517,7 @@ async function auction(s, seller, forced = false) {
     else await new Promise(res => { $('auBtns').innerHTML = '<button class="primary">OK</button>'; $('auBtns').firstChild.onclick = () => { Sound.play('click'); res(); }; });
     $('auctionOv').classList.add('hidden');
   }
+  clearFocus();
 }
 
 function humanAuctionBid(q, price, held) {
@@ -2898,10 +3097,22 @@ function syncSoundButtons() {
 $('seBtn').onclick = () => { Sound.toggle('se'); Sound.play('click'); syncSoundButtons(); };
 $('bgmBtn').onclick = () => { Sound.toggle('bgm', !over); syncSoundButtons(); };
 $('npNext').onclick = () => Sound.nextSong();
+let nowTitle = null;
 Sound.setOnSong(info => {
-  $('npTitle').innerHTML = info ? `🎵 ${info.title}<small>${info.genre}</small>` : (Sound.prefs.bgm ? '🎵 BGMはゲーム開始で流れます' : '🎵 BGM OFF');
+  nowTitle = info && info.title;
+  $('npTitle').innerHTML = info ? `🎵 ${info.title}<small>${info.genre}</small>` : (Sound.prefs.bgm ? '🎵 タップで曲をえらべます' : '🎵 BGM OFF');
   $('npNext').disabled = !info;
 });
+$('npTitle').onclick = () => {
+  $('songList').innerHTML = Sound.songs().map((x, i) => `<button data-i="${i}" class="${x.title === nowTitle ? 'now' : ''}">${x.title}<small>${x.genre}</small></button>`).join('');
+  $('songList').querySelectorAll('button').forEach(b => b.onclick = () => {
+    if (!Sound.prefs.bgm) { Sound.toggle('bgm', false); syncSoundButtons(); }
+    Sound.playSong(+b.dataset.i);
+    $('songOv').classList.add('hidden');
+  });
+  $('songOv').classList.remove('hidden');
+};
+$('songClose').onclick = () => $('songOv').classList.add('hidden');
 $('titleSound').onclick = () => {
   const on = !(Sound.prefs.se || Sound.prefs.bgm);
   if (Sound.prefs.se !== on) Sound.toggle('se');
