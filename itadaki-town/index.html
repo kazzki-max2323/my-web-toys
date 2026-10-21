@@ -957,7 +957,7 @@ function floatMoney(p, amount) {
   // stack labels that pop at the same time so they don't overlap
   const nowT = performance.now();
   y += dir * 30 * floats.filter(f => nowT - f.t0 < 250 && Math.abs(f.x - x) < 60 && Math.abs(f.y - y) < 60).length;
-  floats.push({ x, y, dir, text: (amount > 0 ? '+' : '−') + fmt(Math.abs(amount)), color: amount > 0 ? '#12a85f' : '#ff3d63', t0: nowT });
+  floats.push({ x, y, dir, text: (amount > 0 ? '+' : '−') + fmt(Math.abs(amount)), color: p.color, loss: amount < 0, t0: nowT });
 }
 let lastFx = 0;
 function drawFx(now) {
@@ -982,9 +982,10 @@ function drawFx(now) {
     const x = Math.min(Math.max(f.x, w / 2 + 6), innerWidth - w / 2 - 6);
     fctx.save(); fctx.globalAlpha = 1 - t * t * t; fctx.translate(x, y); fctx.scale(s, s);
     fctx.fillStyle = '#2b2346'; fctx.beginPath(); fctx.roundRect(-w / 2 + 2, -h / 2 + 3, w, h, h / 2); fctx.fill();
-    fctx.fillStyle = '#fff'; fctx.beginPath(); fctx.roundRect(-w / 2, -h / 2, w, h, h / 2); fctx.fill();
-    fctx.lineWidth = 2.5; fctx.strokeStyle = '#2b2346'; fctx.stroke();
-    fctx.fillStyle = f.color; fctx.fillText(f.text, 0, 1);
+    // pill in the player's colour; a loss gets a heavier outline
+    fctx.fillStyle = f.color; fctx.beginPath(); fctx.roundRect(-w / 2, -h / 2, w, h, h / 2); fctx.fill();
+    fctx.lineWidth = f.loss ? 4 : 2.5; fctx.strokeStyle = '#2b2346'; fctx.stroke();
+    fctx.fillStyle = '#2b2346'; fctx.fillText(f.text, 0, 1);
     fctx.restore();
   }
 }
