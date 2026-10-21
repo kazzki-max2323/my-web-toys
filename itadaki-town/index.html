@@ -31,9 +31,22 @@
     background-image: radial-gradient(var(--sky-dot) 17%, transparent 18%), radial-gradient(var(--sky-dot) 17%, transparent 18%);
     background-size: 38px 38px; background-position: 0 0, 19px 19px;
   }
-  #app { display: flex; gap: 18px; height: 100%; padding-block: 16px;
-    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-  #boardWrap { flex: 1; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center; }
+  /* Layout: one screen, no page scroll. Portrait: players / board / actions+toolbar. Landscape: players | board | actions */
+  #app { position: fixed; inset: 0; display: grid; gap: 10px;
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "left" "board" "side";
+    padding: max(10px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+  #left { grid-area: left; min-width: 0; }
+  #boardWrap { grid-area: board; min-width: 0; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; }
+  #side { grid-area: side; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+  #action { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 6px 6px 2px; }
+  #toolbar { flex: none; display: flex; gap: 6px; }
+  #toolbar button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 5px 2px; font-size: 18px; line-height: 1.1; }
+  #toolbar span { font-size: 10px; }
+  @media (orientation: landscape) and (min-width: 820px) {
+    #app { gap: 16px; grid-template-columns: 230px minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1fr); grid-template-areas: "left board side"; }
+    #left { overflow-y: auto; padding: 2px 6px 6px 2px; }
+    #toolbar span { font-size: 11px; }
+  }
   #board { display: block; touch-action: manipulation; }
   #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
   #toast {
@@ -43,28 +56,38 @@
   }
   #toast.show { animation: toastIn .45s cubic-bezier(.2, 1.6, .4, 1); }
   #toast.hidden { opacity: 0; }
-  #side { width: 340px; flex: none; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 2px 6px 8px 2px; }
-  #side > * { flex: none; }
   .box { background: var(--paper); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 4px 4px 0 var(--ink); padding: 10px 12px; font-size: 13px; }
   .box summary { cursor: pointer; font-weight: 800; }
-  #players { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .pc { background: var(--paper); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 4px 4px 0 var(--ink);
-    padding: 8px 10px; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 1.5; position: relative; }
+  #players { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .pc { background: var(--paper); border: 2.5px solid var(--ink); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); cursor: pointer;
+    padding: 5px 6px; font-size: 10.5px; font-variant-numeric: tabular-nums; line-height: 1.4; position: relative; min-width: 0; }
+  .pc .row { display: flex; justify-content: space-between; gap: 4px; white-space: nowrap; }
+  .pc .row span { color: var(--muted); font-weight: 700; }
+  @media (orientation: landscape) and (min-width: 820px) {
+    #players { grid-template-columns: 1fr; gap: 12px; }
+    .pc { font-size: 14px; padding: 10px 14px; border-width: 3px; border-radius: 18px; box-shadow: 4px 4px 0 var(--ink); }
+  }
   .pc.now { background: color-mix(in srgb, var(--pc) 24%, var(--paper)); animation: bob 1.4s ease-in-out infinite; }
   .pc.out { opacity: .45; filter: grayscale(1); }
   .pc.up { animation: bump .5s cubic-bezier(.2, 1.6, .4, 1); }
   .pc.down { animation: shake .4s; }
   .pc.up .cash { color: var(--good); }
   .pc.down .cash { color: var(--danger); }
-  .pc .pn { font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 6px; }
-  .pc .pn small { color: var(--muted); font-weight: 800; margin-left: auto; font-size: 11px; background: var(--paper);
-    border: 2px solid var(--ink); border-radius: 999px; padding: 0 7px; }
+  .pc .pn { font-weight: 800; font-size: 12px; display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .pc .pn b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pc .pn small.lv { display: none; }
+  @media (orientation: landscape) and (min-width: 820px) { .pc .pn small.lv { display: inline; } }
+  .pc .pn small { color: var(--muted); font-weight: 800; margin-left: auto; font-size: 9px; background: var(--paper);
+    border: 1.5px solid var(--ink); border-radius: 999px; padding: 0 4px; flex: none; }
+  @media (orientation: landscape) and (min-width: 820px) { .pc .pn { font-size: 16px; gap: 6px; } .pc .pn small { font-size: 11px; padding: 0 7px; } }
   .av { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink); flex: none;
     background: radial-gradient(circle at 34% 45%, var(--ink) 11%, #fff 12% 22%, transparent 23%),
                 radial-gradient(circle at 66% 45%, var(--ink) 11%, #fff 12% 22%, transparent 23%), var(--pc); }
-  .pc .cash { font-family: var(--display); font-size: 18px; transition: color .3s; }
+  .pc .cash { font-family: var(--display); font-size: 14px; transition: color .3s; white-space: nowrap; }
+  @media (orientation: landscape) and (min-width: 820px) { .pc .cash { font-size: 26px; } .suits span { font-size: 18px; } }
   .pc .sub b { font-weight: 800; }
-  .suits span { opacity: .2; margin-right: 2px; font-size: 15px; }
+  .suits { white-space: nowrap; }
+  .suits span { opacity: .2; margin-right: 1px; font-size: 13px; }
   .suits span.on { opacity: 1; }
   .suits span.red.on { color: var(--danger); }
   .suits .w { color: var(--ink); background: var(--yellow); border-radius: 6px; padding: 0 4px; opacity: 1; font-size: 11px; font-weight: 800; }
@@ -77,12 +100,41 @@
   #stocks tr + tr td { border-top: 1px dashed color-mix(in srgb, var(--ink) 18%, transparent); }
   .tag { display: inline-block; min-width: 18px; text-align: center; border-radius: 6px; border: 2px solid var(--ink); color: var(--ink);
     font-weight: 800; font-size: 11px; margin-right: 4px; line-height: 1.3; }
-  #info { line-height: 1.7; min-height: 60px; }
+  #info { line-height: 1.6; }
+  .tile-info { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); width: min(94%, 340px); z-index: 4;
+    background: var(--paper); border: 3px solid var(--ink); border-radius: 16px; box-shadow: 4px 4px 0 var(--ink);
+    padding: 8px 34px 8px 12px; font-size: 12.5px; animation: popIn .3s cubic-bezier(.2, 1.5, .4, 1); }
+  .tile-info[hidden] { display: none; }
+  .tile-info #tileClose { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; padding: 0; border-radius: 50%; font-size: 14px; box-shadow: none; border-width: 2px; }
+  .status { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 8px; min-height: 48px; }
+  .scroll { max-height: 58vh; overflow-y: auto; }
+  .srow { display: flex; align-items: center; gap: 10px; margin: 12px 0; color: var(--ink); font-weight: 800; }
+  .srow > span { width: 86px; flex: none; }
+  .srow input[type=range] { flex: 1; accent-color: var(--pink); }
+  .srow output { width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button { padding: 5px 10px; font-size: 13px; }
+  .seg button.on { background: var(--yellow); }
+  #playerBody h1 { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  #playerBody h1 .av { width: 28px; height: 28px; }
+  #playerBody h3 { margin: 12px 0 4px; font-size: 14px; color: var(--ink); }
+  .plist div { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed color-mix(in srgb, var(--ink) 18%, transparent); color: var(--ink); font-size: 13px; }
+  .plist div span { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .pstats { text-align: center; color: var(--ink); font-size: 13px; line-height: 1.8; }
+  .dice3d { position: absolute; left: 50%; top: 50%; width: var(--ds, 90px); height: var(--ds, 90px);
+    margin: calc(var(--ds, 90px) / -2) 0 0 calc(var(--ds, 90px) / -2); perspective: 700px; pointer-events: none; z-index: 6; }
+  .dice3d[hidden] { display: none; }
+  .dice3d .shadow { position: absolute; left: 12%; right: 12%; bottom: -16%; height: 14%; border-radius: 50%; background: rgba(43, 35, 70, 0.3); }
+  .cube { position: absolute; inset: 0; transform-style: preserve-3d; }
+  .cube .face { position: absolute; inset: 0; background: #fff; border: 3px solid var(--ink); border-radius: 18%; padding: 13%;
+    display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    box-shadow: inset 0 -5px 0 rgba(43, 35, 70, 0.12); }
+  .cube .face i { width: 72%; height: 72%; margin: auto; border-radius: 50%; background: var(--ink); }
+  .cube .face.f1 i { width: 100%; height: 100%; background: #ff3d63; }
   #info h3 { margin: 0 0 2px; font-size: 16px; font-family: var(--display); font-weight: 400; }
   #log { max-height: 220px; overflow-y: auto; line-height: 1.75; }
   #log div { border-bottom: 1px dashed color-mix(in srgb, var(--ink) 18%, transparent); padding: 2px 0; }
   #log div:first-child { animation: slideIn .35s ease-out; }
-  .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   button {
     padding: 9px 14px; border-radius: 14px; border: 3px solid var(--ink); background: var(--paper); color: var(--ink);
     font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 var(--ink);
@@ -93,27 +145,9 @@
   button.primary { background: var(--yellow); }
   button.primary:hover:not(:disabled) { background: #ffdf6b; }
   button:disabled { opacity: .35; cursor: default; }
-  /* desktop: the action slot sits at the top of the right column and never covers anything */
-  #action { position: sticky; top: 0; z-index: 5; }
-  #status { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px; min-height: 58px; }
   #dialog:not(.hidden) + #status { display: none; }
   .dialog.hidden { display: none; }
-  #left { display: none; width: 260px; flex: none; flex-direction: column; gap: 12px; overflow-y: auto; padding: 2px 6px 8px 2px; }
-  @media (min-width: 1180px) {
-    #left { display: flex; }
-    #left #players { grid-template-columns: 1fr; gap: 12px; }
-    #left .pc { font-size: 14px; padding: 12px 14px; }
-    #left .pc .pn { font-size: 17px; }
-    #left .pc .cash { font-size: 28px; }
-    #left .suits span { font-size: 18px; }
-    #side { width: 380px; }
-    #side .box { font-size: 14px; }
-    .dialog h2 { font-size: 20px; }
-    .dbody { font-size: 14px; }
-    button { font-size: 15px; }
-  }
-  .dialog .card { background: var(--paper); border: 3px solid var(--ink); border-radius: 22px; padding: 14px 16px;
-    max-height: 62vh; overflow-y: auto; box-shadow: 6px 6px 0 var(--ink); }
+  .dialog .card { background: var(--paper); border: 3px solid var(--ink); border-radius: 20px; padding: 12px 14px; box-shadow: 4px 4px 0 var(--ink); }
   .dialog .card.pop { animation: popIn .4s cubic-bezier(.2, 1.5, .4, 1); }
   .dialog h2 { font-family: var(--display); font-weight: 400; font-size: 18px; margin: 0 0 6px; }
   .dbody { color: var(--muted); font-size: 13px; line-height: 1.75; }
@@ -135,7 +169,6 @@
   .slotmsg { text-align: center; color: var(--ink); font-weight: 800; }
   .bigcard { display: inline-block; min-width: 46px; padding: 4px 8px; margin: 4px; border-radius: 10px; background: var(--paper); color: var(--ink);
     border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); font-family: var(--display); font-size: 26px; text-align: center; animation: flip .45s ease-out; }
-  .tools .wide { grid-column: 1 / -1; }
   .np { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; }
   .np .nptitle { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: none; border-width: 2px; padding: 5px 10px; font-size: 13px; }
   .np .nptitle small { color: var(--muted); font-weight: 700; margin-left: 4px; }
@@ -279,14 +312,12 @@
   @keyframes hopChar { 0%, 60%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-10px) rotate(-4deg); } }
   @keyframes drift { to { transform: translate(18px, -26px) rotate(40deg); } }
   @keyframes flip { from { transform: rotateY(90deg); } }
-  @media (max-width: 860px) {
-    html, body { overflow: auto; height: auto; }
-    #app { flex-direction: column; height: auto; padding-block: 12px 230px; }
-    #boardWrap { flex: none; }
-    #side { width: auto; overflow: visible; padding: 0; }
-    .dialog { position: fixed; z-index: 10; left: 50%; right: auto; top: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(480px, calc(100% - 32px)); }
-    #status { display: none; }
-    #action { position: static; }
+  @media (max-height: 720px) and (orientation: portrait) {
+    .dialog .card { padding: 9px 11px; }
+    .dialog h2 { font-size: 16px; margin-bottom: 2px; }
+    .dbody { font-size: 12px; line-height: 1.6; }
+    .btns { gap: 6px; margin-top: 8px; }
+    .btns button { padding: 6px 11px; font-size: 13px; }
   }
   .eco .pc.now, .eco .au-b.now, .eco .panel.aim .f, .eco .panel.line .b { animation: none; }
   @media (prefers-reduced-motion: reduce) {
@@ -296,29 +327,25 @@
 </head>
 <body>
 <div id="app">
-  <aside id="left"></aside>
+  <aside id="left"><div id="players"></div></aside>
   <div id="boardWrap">
     <canvas id="board"></canvas>
     <div id="toast" class="hidden"></div>
+    <div id="dice3d" class="dice3d" hidden><span class="shadow"></span><div class="cube"></div></div>
+    <div id="tileInfo" class="tile-info" hidden><div id="info"></div><button id="tileClose" aria-label="とじる">×</button></div>
   </div>
   <aside id="side">
     <div id="action">
       <div id="dialog" class="dialog hidden"><div class="card" id="dlgCard"></div></div>
-      <div id="status" class="box">タイトル画面で目標金額をえらんでね</div>
+      <div id="status" class="box status">タイトル画面で目標金額をえらんでね</div>
     </div>
-    <div id="players"></div>
-    <div class="box" id="info">マスをタップすると詳しい情報が見られます。</div>
-    <details class="box" open><summary>株価と持ち株</summary><table id="stocks"></table></details>
-    <div class="box" id="log"></div>
-    <div class="tools">
-      <button id="seBtn">🔊 効果音 ON</button>
-      <button id="bgmBtn">🎵 BGM ON</button>
-      <button id="speedBtn">テンポ: ふつう</button>
-      <button id="rulesBtn">ルール</button>
-      <button id="chanceBtn">🎴 チャンスボード</button>
-      <button id="ecoBtn">⚡ 省エネ ON</button>
-      <div class="np wide box"><button id="npTitle" class="nptitle" title="タップして曲をえらぶ">🎵 BGMはゲーム開始で流れます</button><button id="npNext" disabled>⏭ 次の曲</button></div>
-    </div>
+    <nav id="toolbar">
+      <button id="stocksBtn">📈<span>株価</span></button>
+      <button id="logBtn">📜<span>ログ</span></button>
+      <button id="chanceBtn">🎴<span>チャンス</span></button>
+      <button id="rulesBtn">📖<span>ルール</span></button>
+      <button id="settingsBtn">⚙️<span>設定</span></button>
+    </nav>
   </aside>
 </div>
 <canvas id="fx"></canvas>
@@ -350,7 +377,7 @@
     </div>
     <div class="btns center-row">
       <button id="titleRules">ルールを読む</button>
-      <button id="titleSound">🔊 音あり</button>
+      <button id="titleSettings">⚙️ 設定</button>
     </div>
   </div>
 </div>
@@ -384,6 +411,33 @@
     <div class="tr-top"><canvas id="trMap" class="minimap" aria-label="交渉しているお店の場所"></canvas>
       <p class="maplegend"><b class="mk">出</b> あなたが出す店<br><b class="mk">求</b> 相手に求める店<br><small>マップで光っているのが<br>いま話しているお店</small></p></div>
     <div id="tradeBody"></div>
+  </div>
+</div>
+
+<div class="overlay sheet hidden" id="stocksOv">
+  <div class="ocard"><h1>📈 株価と持ち株</h1><div class="scroll"><table id="stocks"></table></div>
+    <p class="center"><button class="primary" data-close="stocksOv">とじる</button></p></div>
+</div>
+
+<div class="overlay sheet hidden" id="logOv">
+  <div class="ocard"><h1>📜 ログ</h1><div id="log" class="scroll"></div>
+    <p class="center"><button class="primary" data-close="logOv">とじる</button></p></div>
+</div>
+
+<div class="overlay sheet hidden" id="playerOv">
+  <div class="ocard"><div id="playerBody"></div>
+    <p class="center"><button class="primary" data-close="playerOv">とじる</button></p></div>
+</div>
+
+<div class="overlay sheet hidden" id="settingsOv">
+  <div class="ocard settings">
+    <h1>⚙️ 設定</h1>
+    <div class="srow"><span>🎵 BGM</span><input type="range" id="bgmVol" min="0" max="100" step="5"><output id="bgmVolOut"></output></div>
+    <div class="srow"><span>🔊 効果音</span><input type="range" id="seVol" min="0" max="100" step="5"><output id="seVolOut"></output></div>
+    <div class="srow"><span>⏱ テンポ</span><div class="seg" id="tempoSeg"></div></div>
+    <div class="srow"><span>⚡ 省エネ</span><button id="ecoBtn"></button></div>
+    <div class="np box"><button id="npTitle" class="nptitle" title="タップして曲をえらぶ">🎵 BGMはゲーム開始で流れます</button><button id="npNext" disabled>⏭ 次の曲</button></div>
+    <p class="center"><button class="primary" data-close="settingsOv">とじる</button></p>
   </div>
 </div>
 
@@ -607,12 +661,17 @@ const ask = o => new Promise(res => showDialog(o, v => { closeDialog(); res(v); 
 
 // radio list + amount slider. returns { sel, amt } via mutable object
 // point at shops on the board while the player chooses one in a dialog
-function focusShops(cands, sel, scroll = true) {
-  focus = { cands, sel };
-  if (sel != null) { selected = sel; renderInfo(); }
-  if (scroll && cands.length && window.innerWidth <= 860) cv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+let tileTimer;
+function showTileInfo(autoHide) {
+  $('tileInfo').hidden = false;
+  clearTimeout(tileTimer);
+  if (autoHide) tileTimer = setTimeout(() => { $('tileInfo').hidden = true; }, 6000);
 }
-const clearFocus = v => { focus = { cands: [], sel: null }; markDirty(); return v; };
+function focusShops(cands, sel) {
+  focus = { cands, sel };
+  if (sel != null) { selected = sel; renderInfo(); showTileInfo(false); }
+}
+const clearFocus = v => { focus = { cands: [], sel: null }; $('tileInfo').hidden = true; markDirty(); return v; };
 
 function pickerDialog({ title, body = '', items, amountMax, amountLabel, okLabel, step = 10, amountInit, cellItems = false }) {
   const st = { sel: items[0].value, amt: 0 };
@@ -650,15 +709,22 @@ const layer = document.createElement('canvas'), layerCtx = layer.getContext('2d'
 let boardDirty = true;
 const markDirty = () => { boardDirty = true; };
 let size = 400, cs = 400 / N;
+const isLandscape = () => matchMedia('(orientation: landscape) and (min-width: 820px)').matches;
 function resize() {
   const wrap = $('boardWrap');
-  const mobile = window.innerWidth <= 860;
-  size = mobile ? Math.min(window.innerWidth - 32, 620) : Math.min(wrap.clientWidth, wrap.clientHeight);
-  if (mobile) wrap.style.height = size + 'px'; else wrap.style.height = '';
+  if (isLandscape()) {
+    wrap.style.height = '';
+    size = Math.floor(Math.min(wrap.clientWidth, wrap.clientHeight));
+  } else {
+    // portrait: the board gets what is left after the player bar and a fixed action area
+    const app = $('app'), st = getComputedStyle(app);
+    const w = app.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight);
+    const h = app.clientHeight - parseFloat(st.paddingTop) - parseFloat(st.paddingBottom);
+    const actionMin = Math.max(210, h * 0.3);
+    size = Math.floor(Math.max(220, Math.min(w, h - $('left').offsetHeight - actionMin - 20)));
+    wrap.style.height = size + 'px';
+  }
   cs = size / N;
-  const wide = window.innerWidth >= 1180, pl = $('players');
-  if (wide && pl.parentElement !== $('left')) $('left').prepend(pl);
-  if (!wide && pl.parentElement !== $('side')) $('action').after(pl);
   const dpr = pixelRatio();
   cv.width = layer.width = size * dpr; cv.height = layer.height = size * dpr;
   cv.style.width = size + 'px'; cv.style.height = size + 'px';
@@ -668,6 +734,12 @@ function resize() {
   resizeFx();
 }
 window.addEventListener('resize', resize);
+let fitQueued = false;
+new ResizeObserver(() => {
+  if (fitQueued) return;
+  fitQueued = true;
+  requestAnimationFrame(() => { fitQueued = false; resize(); });
+}).observe($('left'));
 
 function rr(x, y, w, h, r) {
   ctx.beginPath();
@@ -1084,9 +1156,12 @@ function drawFx(now) {
 
 // ---------- sound: tiny synth, no audio files ----------
 const Sound = (() => {
-  let ac = null, master, bgmBus, noiseBuf, bgmTimer = null;
-  const prefs = { se: true, bgm: true };
-  try { Object.assign(prefs, JSON.parse(localStorage.getItem('itadaki-town-sound')) || {}); } catch {}
+  let ac = null, master, bgmBus, sfxBus, noiseBuf, bgmTimer = null;
+  const prefs = { se: 0.8, bgm: 0.8 };
+  try {
+    const sv = JSON.parse(localStorage.getItem('itadaki-town-sound')) || {};
+    for (const k of ['se', 'bgm']) prefs[k] = typeof sv[k] === 'number' ? sv[k] : sv[k] === false ? 0 : prefs[k];
+  } catch {}
   const savePrefs = () => { try { localStorage.setItem('itadaki-town-sound', JSON.stringify(prefs)); } catch {} };
   const hz = m => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -1096,7 +1171,8 @@ const Sound = (() => {
       try {
         ac = new (window.AudioContext || window.webkitAudioContext)();
         master = ac.createGain(); master.gain.value = 0.55; master.connect(ac.destination);
-        bgmBus = ac.createGain(); bgmBus.gain.value = 1; bgmBus.connect(master);
+        bgmBus = ac.createGain(); bgmBus.gain.value = prefs.bgm; bgmBus.connect(master);
+        sfxBus = ac.createGain(); sfxBus.gain.value = prefs.se * 1.25; sfxBus.connect(master);
         noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
         const d = noiseBuf.getChannelData(0);
         for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -1105,7 +1181,7 @@ const Sound = (() => {
     if (ac.state === 'suspended') ac.resume().catch(() => {});
     return ac;
   }
-  function tone(f, t, dur, type = 'square', vol = 0.1, slide = 1, dest = master) {
+  function tone(f, t, dur, type = 'square', vol = 0.1, slide = 1, dest = sfxBus) {
     const o = ac.createOscillator(), g = ac.createGain();
     o.type = type; o.frequency.setValueAtTime(f, t);
     if (slide !== 1) o.frequency.exponentialRampToValueAtTime(f * slide, t + dur);
@@ -1114,7 +1190,7 @@ const Sound = (() => {
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(g); g.connect(dest); o.start(t); o.stop(t + dur + 0.05);
   }
-  function noise(t, dur, vol, freq, dest = master) {
+  function noise(t, dur, vol, freq, dest = sfxBus) {
     const src = ac.createBufferSource(), flt = ac.createBiquadFilter(), g = ac.createGain();
     src.buffer = noiseBuf; flt.type = 'bandpass'; flt.frequency.value = freq; flt.Q.value = 1.2;
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -1143,7 +1219,7 @@ const Sound = (() => {
     lose: t => { seq(t, [67, 66, 65], 0.28, 'triangle', 0.13, 0.3); tone(hz(64), t + 0.84, 0.9, 'triangle', 0.13, 0.7); },
   };
   function play(name) {
-    if (!prefs.se || !ensure()) return;
+    if (prefs.se <= 0 || !ensure()) return;
     SFX[name](ac.currentTime + 0.01);
   }
 
@@ -1620,7 +1696,7 @@ const Sound = (() => {
     }
   }
   function startBgm() {
-    if (!prefs.bgm || bgmTimer || !ensure()) return;
+    if (prefs.bgm <= 0 || bgmTimer || !ensure()) return;
     startSong(nextIndex(), ac.currentTime + 0.2);
     schedule();
     bgmTimer = setInterval(schedule, 150);
@@ -1632,11 +1708,18 @@ const Sound = (() => {
     if (onSong) onSong(null);
   }
   function playSong(i) {
-    if (!prefs.bgm || !ensure()) return;
+    if (!ensure()) return;
+    if (prefs.bgm <= 0) setVolume('bgm', 0.6);
     if (song) fadeOut(song);
     bag = bag.filter(x => x !== i);
     startSong(i, ac.currentTime + 0.5);
     if (!bgmTimer) bgmTimer = setInterval(schedule, 150);
+  }
+  function setVolume(kind, v, wantBgm = false) {
+    prefs[kind] = v;
+    savePrefs();
+    if (ac) (kind === 'se' ? sfxBus : bgmBus).gain.value = kind === 'se' ? v * 1.25 : v;
+    if (kind === 'bgm') { if (v <= 0) stopBgm(); else if (wantBgm && !bgmTimer) startBgm(); }
   }
   function nextSong() {
     if (!bgmTimer || !song) return;
@@ -1653,11 +1736,7 @@ const Sound = (() => {
     setOnSong(fn) { onSong = fn; },
     songList: () => SONGS.map(x => { const b = buildSong(x); return { title: x.t, genre: GENRE_NAME[x.g], seconds: Math.round(b.bars.length * b.barDur) }; }),
     unlock: ensure,
-    toggle(kind, playing) {
-      prefs[kind] = !prefs[kind];
-      savePrefs();
-      if (kind === 'bgm') { if (prefs.bgm && playing) startBgm(); else stopBgm(); }
-    },
+    setVolume,
   };
 })();
 
@@ -1673,13 +1752,13 @@ function renderPanel() {
   }
   $('players').innerHTML = players.map(p => {
     const suits = Object.entries(SUITS).map(([k, s]) => `<span class="${p.suits[k] ? 'on' : ''} ${k === 'h' || k === 'd' ? 'red' : ''}">${s}</span>`).join('') +
-      (p.wild ? `<span class="w">ワイルド×${p.wild}</span>` : '');
-    const status = p.bankrupt ? '破産' : p.skip ? '休み' : `Lv${p.level}`;
-    return `<div class="pc ${p === current ? 'now' : ''} ${p.bankrupt ? 'out' : ''} ${changed[p.id] || ''}" style="--pc:${p.color}">
-      <div class="pn"><span class="av"></span>${p.name}<small>${status}</small></div>
+      (p.wild ? `<span class="w">W×${p.wild}</span>` : '');
+    const status = p.bankrupt ? '破産' : p.skip ? '休み' : `Lv${p.level}`, plain = !p.bankrupt && !p.skip;
+    return `<div class="pc ${p === current ? 'now' : ''} ${p.bankrupt ? 'out' : ''} ${changed[p.id] || ''}" style="--pc:${p.color}" data-id="${p.id}">
+      <div class="pn"><span class="av"></span><b>${p.name}</b><small class="${plain ? 'lv' : ''}">${status}</small></div>
       <div class="cash">${fmt(p.cash)}</div>
-      <div class="sub">総資産 <b>${fmt(worth(p))}</b></div>
-      <div class="sub">店${ownedProps(p).length} ・ 株${fmt(stockWorth(p))}</div>
+      <div class="row"><span>株</span>${fmt(stockWorth(p))}</div>
+      <div class="row"><span>資産</span><b>${fmt(worth(p))}</b></div>
       <div class="suits">${suits}</div></div>`;
   }).join('');
 
@@ -1740,6 +1819,7 @@ cv.addEventListener('click', e => {
   selected = id;
   markDirty();
   renderInfo();
+  showTileInfo(true);
 });
 
 // ---------- game flow ----------
@@ -1826,15 +1906,47 @@ async function takeTurn(p) {
   await rollAndMove(p);
 }
 
-async function rollAndMove(p) {
-  dice = { n: 1, rolling: true };
+// a cube that tumbles across the board and settles on n
+const FACE_ROT = { 1: [0, 0], 2: [90, 0], 3: [0, -90], 4: [0, 90], 5: [-90, 0], 6: [0, 180] };
+const FACE_POS = { 1: 'rotateY(0deg)', 6: 'rotateY(180deg)', 3: 'rotateY(90deg)', 4: 'rotateY(-90deg)', 5: 'rotateX(90deg)', 2: 'rotateX(-90deg)' };
+const PIPS = { 1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] };
+document.querySelector('#dice3d .cube').innerHTML = [1, 2, 3, 4, 5, 6].map(n => `<div class="face f${n}" style="transform:${FACE_POS[n]} translateZ(calc(var(--ds) / 2))">${
+  PIPS[n].map(p => `<i style="grid-area:${Math.ceil(p / 3)} / ${(p - 1) % 3 + 1}"></i>`).join('')}</div>`).join('');
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function roll3d(n) {
+  if (DEMO || REDUCED) { Sound.play('land'); return; }
+  const box = $('dice3d'), cube = box.querySelector('.cube');
+  box.style.setProperty('--ds', Math.round(cs * 1.5) + 'px');
+  box.hidden = false;
+  const D = Math.round(1100 * Math.min(speed, 1.6)), [rx, ry] = FACE_ROT[n];
+  const sx = 360 * (2 + rand(2)) * (Math.random() < 0.5 ? 1 : -1), sy = 360 * (2 + rand(2)), sz = rand(360);
+  const spin = cube.animate([
+    { transform: `rotateX(${rx + sx}deg) rotateY(${ry + sy}deg) rotateZ(${sz}deg)` },
+    { transform: `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(0deg)` }], { duration: D, easing: 'cubic-bezier(.15,.65,.25,1)', fill: 'forwards' });
+  const path = box.animate([
+    { transform: `translate(${-size * 0.4}px, ${-size * 0.34}px) scale(.5)`, opacity: 0 },
+    { transform: `translate(${-size * 0.1}px, ${size * 0.06}px) scale(1.05)`, opacity: 1, offset: 0.4 },
+    { transform: `translate(${size * 0.07}px, ${-size * 0.07}px) scale(1)`, offset: 0.62 },
+    { transform: `translate(${size * 0.01}px, ${size * 0.02}px) scale(1)`, offset: 0.8 },
+    { transform: 'translate(0, 0) scale(1)' }], { duration: D, easing: 'ease-out', fill: 'forwards' });
   Sound.play('dice');
-  await sleep(650);
+  await wait(D * 0.4); Sound.play('step');
+  await wait(D * 0.22); Sound.play('step');
+  await wait(D * 0.38); Sound.play('land');
+  await wait(Math.round(500 * speed));
+  const out = box.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.6)' }], { duration: 220, fill: 'forwards' });
+  await wait(220);
+  box.hidden = true;
+  [spin, path, out].forEach(a => a.cancel());
+}
+
+async function rollAndMove(p) {
   const n = 1 + rand(6);
+  dice = null;
+  await roll3d(n);
   dice = { n, left: n, t0: performance.now() };
-  Sound.play('land');
   log(`${pname(p)}はサイコロで <b>${n}</b> を出した`);
-  await sleep(450);
+  await sleep(250);
   await move(p, n);
   if (over) return;
   await land(p);
@@ -2632,14 +2744,11 @@ const shopLabel = s => {
 };
 
 async function rollDie() {
-  dice = { n: 1, rolling: true };
-  Sound.play('dice');
-  await sleep(650);
   const n = 1 + rand(6);
+  await roll3d(n);
   dice = { n, t0: performance.now() };
-  Sound.play('land');
   log(`サイコロの目は <b>${n}</b>`);
-  await sleep(450);
+  await sleep(250);
   return n;
 }
 
@@ -2682,7 +2791,6 @@ function pickCell(p, cand, title, cpuPick) {
   if (!cand.length) return Promise.resolve(null);
   if (p.cpu) return Promise.resolve(cpuPick ? cpuPick(cand, p) : cand[rand(cand.length)]);
   highlight = cand;
-  if (window.innerWidth <= 860) cv.scrollIntoView({ block: 'start', behavior: 'smooth' });
   return new Promise(res => {
     const done = v => { pick = null; highlight = []; closeDialog(); res(v); };
     pick = { opts: cand, done };
@@ -3107,7 +3215,7 @@ async function cpuInvest(p, shopIds) {
   const amt = Math.floor(Math.min(room(s), budget * 0.7) / 10) * 10;
   if (amt < 30) return;
   invest(p, s, amt);
-  focusShops([s], s, false);
+  focusShops([s], s);
   await toast(`💰 ${pname(p)}が<br><b>${cells[s].name}</b>に ${fmt(amt)} 増資！`, 1200);
   clearFocus();
 }
@@ -3147,9 +3255,31 @@ document.querySelectorAll('[data-target]').forEach(b => b.onclick = () => newGam
 $('again').onclick = () => { $('end').classList.add('hidden'); refreshResume(); $('title').classList.remove('hidden'); };
 $('resume').onclick = resumeGame;
 $('rulesBtn').onclick = $('titleRules').onclick = () => $('rules').classList.remove('hidden');
+$('closeRules').onclick = () => $('rules').classList.add('hidden');
 $('chanceBtn').onclick = viewChance;
+const openSheet = id => $(id).classList.remove('hidden');
+$('stocksBtn').onclick = () => openSheet('stocksOv');
+$('logBtn').onclick = () => openSheet('logOv');
+$('settingsBtn').onclick = $('titleSettings').onclick = () => openSheet('settingsOv');
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => $(b.dataset.close).classList.add('hidden'));
+document.querySelectorAll('.overlay.sheet').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.add('hidden'); }));
+$('tileClose').onclick = () => { $('tileInfo').hidden = true; };
+$('players').addEventListener('click', e => { const c = e.target.closest('.pc'); if (c) showPlayer(+c.dataset.id); });
+function showPlayer(id) {
+  const q = players[id];
+  if (!q || q.stocks == null) return;
+  const props = ownedProps(q);
+  const suits = Object.entries(SUITS).map(([k, sy]) => q.suits[k] ? sy : '・').join(' ');
+  $('playerBody').innerHTML = `<h1><span class="av" style="--pc:${q.color}"></span>${q.name}</h1>
+    <div class="pstats">所持金 <b>${fmt(q.cash)}</b> ・ 株 <b>${fmt(stockWorth(q))}</b> ・ 総資産 <b>${fmt(worth(q))}</b><br>
+    レベル ${q.level} ・ スート ${suits}${q.wild ? ` ・ ワイルド×${q.wild}` : ''}</div>
+    <h3>お店（${props.length}軒）</h3><div class="plist scroll">${props.map(s => `<div><span class="nm">${propLabel(s)}</span><span>価値 ${fmt(cells[s].value)}${cells[s].type === 'shop' ? ` ・ 料 ${fmt(fee(s))}` : ''}</span></div>`).join('') || '<div>なし</div>'}</div>
+    <h3>株</h3><div class="plist">${q.stocks.map((n, i) => n ? `<div><span class="nm"><span class="tag" style="background:${DISTRICTS[i].color}">${DISTRICTS[i].key}</span>${DISTRICTS[i].name}</span><span>${n}株 = ${fmt(n * price(i))}</span></div>` : '').join('') || '<div>なし</div>'}</div>`;
+  openSheet('playerOv');
+}
 const syncEco = () => {
-  $('ecoBtn').textContent = ECO ? '⚡ 省エネ ON' : '⚡ 省エネ OFF';
+  $('ecoBtn').textContent = ECO ? 'ON' : 'OFF';
+  $('ecoBtn').classList.toggle('primary', ECO);
   document.body.classList.toggle('eco', ECO);
 };
 $('ecoBtn').onclick = () => {
@@ -3158,47 +3288,42 @@ $('ecoBtn').onclick = () => {
   syncEco(); resize(); Sound.play('click');
 };
 syncEco();
-$('closeRules').onclick = () => $('rules').classList.add('hidden');
-function syncSoundButtons() {
-  $('seBtn').textContent = Sound.prefs.se ? '🔊 効果音 ON' : '🔇 効果音 OFF';
-  $('bgmBtn').textContent = Sound.prefs.bgm ? '🎵 BGM ON' : '🎵 BGM OFF';
-  $('titleSound').textContent = Sound.prefs.se || Sound.prefs.bgm ? '🔊 音あり' : '🔇 音なし';
-}
-$('seBtn').onclick = () => { Sound.toggle('se'); Sound.play('click'); syncSoundButtons(); };
-$('bgmBtn').onclick = () => { Sound.toggle('bgm', !over); syncSoundButtons(); };
+const syncVolumes = () => {
+  for (const k of ['bgm', 'se']) {
+    const v = Math.round(Sound.prefs[k] * 100);
+    $(k + 'Vol').value = v; $(k + 'VolOut').textContent = v + '%';
+  }
+};
+$('bgmVol').oninput = e => { Sound.setVolume('bgm', +e.target.value / 100, !over); syncVolumes(); };
+$('seVol').oninput = e => { Sound.setVolume('se', +e.target.value / 100); syncVolumes(); };
+$('seVol').onchange = () => Sound.play('coin');
+syncVolumes();
 $('npNext').onclick = () => Sound.nextSong();
 let nowTitle = null;
 Sound.setOnSong(info => {
   nowTitle = info && info.title;
-  $('npTitle').innerHTML = info ? `🎵 ${info.title}<small>${info.genre}</small>` : (Sound.prefs.bgm ? '🎵 タップで曲をえらべます' : '🎵 BGM OFF');
+  $('npTitle').innerHTML = info ? `🎵 ${info.title}<small>${info.genre}</small>` : '🎵 タップで曲をえらべます';
   $('npNext').disabled = !info;
 });
 $('npTitle').onclick = () => {
   $('songList').innerHTML = Sound.songs().map((x, i) => `<button data-i="${i}" class="${x.title === nowTitle ? 'now' : ''}">${x.title}<small>${x.genre}</small></button>`).join('');
   $('songList').querySelectorAll('button').forEach(b => b.onclick = () => {
-    if (!Sound.prefs.bgm) { Sound.toggle('bgm', false); syncSoundButtons(); }
     Sound.playSong(+b.dataset.i);
+    syncVolumes();
     $('songOv').classList.add('hidden');
   });
   $('songOv').classList.remove('hidden');
 };
 $('songClose').onclick = () => $('songOv').classList.add('hidden');
-$('titleSound').onclick = () => {
-  const on = !(Sound.prefs.se || Sound.prefs.bgm);
-  if (Sound.prefs.se !== on) Sound.toggle('se');
-  if (Sound.prefs.bgm !== on) Sound.toggle('bgm', false);
-  Sound.play('click');
-  syncSoundButtons();
-};
 document.addEventListener('pointerdown', () => Sound.unlock());
-syncSoundButtons();
-const syncTempo = () => { $('speedBtn').textContent = 'テンポ: ' + TEMPOS[tempo].label; };
-$('speedBtn').onclick = () => {
-  if (DEMO) return;
-  tempo = (tempo + 1) % TEMPOS.length;
-  speed = TEMPOS[tempo].v;
-  try { localStorage.setItem('itadaki-town-tempo', tempo); } catch {}
-  syncTempo(); Sound.play('click');
+const syncTempo = () => {
+  $('tempoSeg').innerHTML = TEMPOS.map((t, i) => `<button data-t="${i}" class="${i === tempo ? 'on' : ''}">${t.label}</button>`).join('');
+  $('tempoSeg').querySelectorAll('button').forEach(b => b.onclick = () => {
+    if (DEMO) return;
+    tempo = +b.dataset.t; speed = TEMPOS[tempo].v;
+    try { localStorage.setItem('itadaki-town-tempo', tempo); } catch {}
+    syncTempo(); Sound.play('click');
+  });
 };
 syncTempo();
 
