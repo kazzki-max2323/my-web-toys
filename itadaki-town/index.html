@@ -305,19 +305,25 @@
     padding: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
   .sk-map { flex: 0 0 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
   .skmap { display: block; cursor: pointer; }
-  .sk-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; font-size: 11px; }
-  .sk-panel { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: var(--paper);
+  .sk-panel { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; background: var(--paper);
     border: 3px solid var(--ink); border-radius: 18px; box-shadow: 4px 4px 0 var(--ink); padding: 10px 12px; color: var(--ink); }
   .sk-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; }
   .sk-head b { font-family: var(--display); font-weight: 400; }
   .sk-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
   .sk-list button { display: flex; flex-direction: column; align-items: center; padding: 3px 2px; font-size: 11px; line-height: 1.2;
     border-width: 2px; box-shadow: 0 2px 0 var(--ink); background: color-mix(in srgb, var(--k) 30%, var(--paper)); }
-  .sk-list button b { font-family: var(--display); font-weight: 400; font-size: 15px; }
+  .sk-list button b { font-family: var(--display); font-weight: 400; font-size: 14px; }
+  .sk-list button span { white-space: nowrap; }
   .sk-list button small { color: var(--muted); font-size: 10px; }
   .sk-list button.on { background: var(--k); box-shadow: 0 0 0 3px var(--yellow), 0 2px 0 var(--ink); }
-  .sk-area { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12.5px; }
-  .sk-area .own { flex-basis: 100%; color: var(--muted); }
+  .sk-shops { width: 100%; border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .sk-shops th { color: var(--muted); font-weight: 800; text-align: right; padding: 0 0 2px 6px; white-space: nowrap; }
+  .sk-shops th:first-child { text-align: left; color: var(--ink); padding-left: 0; }
+  .sk-shops td { text-align: right; padding: 2px 0 2px 6px; border-top: 1px dashed color-mix(in srgb, var(--ink) 18%, transparent); white-space: nowrap; }
+  .sk-shops td:first-child { text-align: left; padding-left: 0; display: flex; align-items: center; gap: 4px; }
+  .sk-shops .nm { font-weight: 800; }
+  .sk-shops .chip { font-size: 10px; padding: 0 5px; }
+  .sk-shops .vac { color: var(--muted); font-size: 10px; }
   .sk-qty { display: flex; align-items: center; gap: 8px; }
   .sk-qty input { flex: 1; accent-color: var(--pink); }
   .sk-qty button { width: 34px; height: 34px; padding: 0; font-size: 18px; }
@@ -498,7 +504,7 @@
 
 <div class="overlay hidden stock-ov" id="stockOv">
   <div class="sk">
-    <div class="sk-map"><canvas id="skMap" class="skmap" aria-label="お店の持ち主マップ。タップでエリアを選べます"></canvas><div id="skLegend" class="sk-legend"></div></div>
+    <div class="sk-map"><canvas id="skMap" class="skmap" aria-label="お店の持ち主マップ。タップでエリアを選べます"></canvas></div>
     <div class="sk-panel">
       <div class="sk-head"><b id="skTitle"></b><span id="skCash"></span></div>
       <div id="skList" class="sk-list"></div>
@@ -2754,10 +2760,11 @@ function stockScreen(p, mode, title, mult = 1) {
       }
     };
     const renderArea = () => {
-      const D = DISTRICTS[st.d], owners = {};
-      D.shops.forEach(s => { const o = cells[s].owner; owners[o == null ? 'v' : o] = (owners[o == null ? 'v' : o] || 0) + 1; });
-      $('skArea').innerHTML = `<span class="tag" style="background:${D.color}">${D.key}</span><b>${D.name}</b><span>株価 ${price(st.d)}G ・ 持ち株 ${p.stocks[st.d]}株</span>
-        <span class="own">${Object.entries(owners).map(([o, n]) => o === 'v' ? `空き店${n}` : `${pname(players[+o])}${n}軒`).join(' ')}</span>`;
+      const D = DISTRICTS[st.d];
+      $('skArea').innerHTML = `<table class="sk-shops"><tr><th><span class="tag" style="background:${D.color}">${D.key}</span>${D.name}</th><th>買い物料</th><th>店の値段</th><th>増資上限</th></tr>${
+        D.shops.map(s => { const c = cells[s];
+          return `<tr><td><span class="nm">${c.name}</span>${c.owner != null ? `<span class="chip" style="--pc:${players[c.owner].color}">${players[c.owner].name}</span>` : '<span class="vac">空き店</span>'}</td>
+            <td>${c.owner != null ? fmt(fee(s)) : '—'}</td><td>${fmt(c.value)}</td><td>${fmt(maxValue(s))}</td></tr>`; }).join('')}</table>`;
     };
     const select = d => {
       st.d = d; stockView = { d };
@@ -2767,7 +2774,7 @@ function stockScreen(p, mode, title, mult = 1) {
     };
     $('skTitle').textContent = title;
     $('skCash').innerHTML = `所持金 <b>${fmt(p.cash)}</b>`;
-    $('skList').innerHTML = ids.map(i => `<button data-d="${i}" style="--k:${DISTRICTS[i].color}"><b>${DISTRICTS[i].key}</b>${unit(i)}G<small>${p.stocks[i]}株</small></button>`).join('');
+    $('skList').innerHTML = ids.map(i => `<button data-d="${i}" style="--k:${DISTRICTS[i].color}"><span><b>${DISTRICTS[i].key}</b> ${unit(i)}G</span><small>${p.stocks[i]}株</small></button>`).join('');
     $('skList').querySelectorAll('button').forEach(b => b.onclick = () => { Sound.play('click'); select(+b.dataset.d); });
     range.oninput = () => { st.qty = +range.value; renderProj(); };
     $('skMinus').onclick = () => { range.value = Math.max(0, st.qty - 1); range.oninput(); };
@@ -2779,17 +2786,15 @@ function stockScreen(p, mode, title, mult = 1) {
       const id = at[Math.floor((e.clientX - r.left) / u) + ',' + Math.floor((e.clientY - r.top) / u)];
       if (id != null && cells[id].type === 'shop' && ids.includes(cells[id].d)) { Sound.play('click'); select(cells[id].d); }
     };
-    $('skLegend').innerHTML = players.map(q => `<span class="chip" style="--pc:${q.color}">${q.name[0]} ${q.name}</span>`).join('') + '<span class="chip" style="--pc:#fff">空き店</span>';
     $('stockOv').classList.remove('hidden');
     fitStockMap();
     select(st.d);
   });
 }
 function fitStockMap() {
-  const box = $('stockOv').querySelector('.sk-map'), legend = $('skLegend');
+  const box = $('stockOv').querySelector('.sk-map');
   const land = matchMedia('(orientation: landscape)').matches;
-  const s = Math.floor(land ? Math.min(box.clientWidth, box.clientHeight - legend.offsetHeight - 6)
-    : Math.min(box.clientWidth, innerHeight * 0.42 - legend.offsetHeight));
+  const s = Math.floor(land ? Math.min(box.clientWidth, box.clientHeight) : Math.min(box.clientWidth, innerHeight * (innerHeight < 720 ? 0.34 : 0.4)));
   $('skMap').style.width = $('skMap').style.height = Math.max(120, s) + 'px';
 }
 window.addEventListener('resize', () => { if (shown('stockOv')) fitStockMap(); });
