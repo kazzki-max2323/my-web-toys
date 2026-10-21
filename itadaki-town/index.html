@@ -295,6 +295,37 @@
     border: 2.5px solid var(--ink); border-radius: 12px; padding: 6px; animation: popIn .35s; }
   .treply.ok { background: color-mix(in srgb, var(--mint) 40%, var(--paper)); }
   @media (max-width: 520px) { .tcols { grid-template-columns: 1fr; } .au-bidders { gap: 6px; } .au-b { font-size: 11px; padding: 6px; } }
+  .overlay.stock-ov { align-items: stretch; justify-content: stretch; padding: 0; background-color: var(--sky);
+    background-image: radial-gradient(var(--sky-dot) 17%, transparent 18%), radial-gradient(var(--sky-dot) 17%, transparent 18%);
+    background-size: 38px 38px; background-position: 0 0, 19px 19px; }
+  .sk { display: flex; flex-direction: column; gap: 8px; width: 100%; height: 100%;
+    padding: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+  .sk-map { flex: 0 0 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+  .skmap { display: block; cursor: pointer; }
+  .sk-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; font-size: 11px; }
+  .sk-panel { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: var(--paper);
+    border: 3px solid var(--ink); border-radius: 18px; box-shadow: 4px 4px 0 var(--ink); padding: 10px 12px; color: var(--ink); }
+  .sk-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; }
+  .sk-head b { font-family: var(--display); font-weight: 400; }
+  .sk-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+  .sk-list button { display: flex; flex-direction: column; align-items: center; padding: 3px 2px; font-size: 11px; line-height: 1.2;
+    border-width: 2px; box-shadow: 0 2px 0 var(--ink); background: color-mix(in srgb, var(--k) 30%, var(--paper)); }
+  .sk-list button b { font-family: var(--display); font-weight: 400; font-size: 15px; }
+  .sk-list button small { color: var(--muted); font-size: 10px; }
+  .sk-list button.on { background: var(--k); box-shadow: 0 0 0 3px var(--yellow), 0 2px 0 var(--ink); }
+  .sk-area { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12.5px; }
+  .sk-area .own { flex-basis: 100%; color: var(--muted); }
+  .sk-qty { display: flex; align-items: center; gap: 8px; }
+  .sk-qty input { flex: 1; accent-color: var(--pink); }
+  .sk-qty button { width: 34px; height: 34px; padding: 0; font-size: 18px; }
+  .sk-qty output { min-width: 48px; text-align: right; font-family: var(--display); font-size: 16px; }
+  .sk-proj { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 3px 10px; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .sk-panel .btns { position: sticky; bottom: -10px; margin: 0 -12px -10px; padding: 8px 12px 10px; background: var(--paper); border-top: 1.5px dashed color-mix(in srgb, var(--ink) 20%, transparent); }
+  .sk-proj span { color: var(--muted); font-weight: 700; }
+  .sk-proj b { text-align: right; }
+  .sk-proj .gain, .sk-proj em.gain { color: var(--good); font-style: normal; }
+  .sk-proj .loss, .sk-proj em.loss { color: var(--danger); font-style: normal; }
+  @media (orientation: landscape) { .sk { flex-direction: row; } .sk-map { flex: 0 0 52%; } .sk-proj { grid-template-columns: auto 1fr; } }
   @keyframes glow { to { box-shadow: 0 0 0 4px var(--yellow), 0 0 18px var(--yellow); } }
   .overlay { position: fixed; inset: 0; display: flex; align-items: safe center; justify-content: center; z-index: 20; overflow-y: auto;
     background: color-mix(in srgb, var(--ink) 45%, transparent);
@@ -459,6 +490,20 @@
     <div class="srow"><span>⚡ 省エネ</span><button id="ecoBtn"></button></div>
     <div class="np box"><button id="npTitle" class="nptitle" title="タップして曲をえらぶ">🎵 BGMはゲーム開始で流れます</button><button id="npNext" disabled>⏭ 次の曲</button></div>
     <p class="center"><button class="primary" data-close="settingsOv">とじる</button></p>
+  </div>
+</div>
+
+<div class="overlay hidden stock-ov" id="stockOv">
+  <div class="sk">
+    <div class="sk-map"><canvas id="skMap" class="skmap" aria-label="お店の持ち主マップ。タップでエリアを選べます"></canvas><div id="skLegend" class="sk-legend"></div></div>
+    <div class="sk-panel">
+      <div class="sk-head"><b id="skTitle"></b><span id="skCash"></span></div>
+      <div id="skList" class="sk-list"></div>
+      <div id="skArea" class="sk-area"></div>
+      <div class="sk-qty"><button id="skMinus" aria-label="1株へらす">−</button><input type="range" id="skRange" min="0" step="1" aria-label="株数"><button id="skPlus" aria-label="1株ふやす">＋</button><output id="skQty"></output></div>
+      <div id="skProj" class="sk-proj"></div>
+      <div class="btns center-row"><button id="skOk" class="primary"></button><button id="skCancel">やめる</button></div>
+    </div>
   </div>
 </div>
 
@@ -1039,6 +1084,21 @@ function drawBoard(now) {
     rr(c.x * cs + (cs - w) / 2, c.y * cs + (cs - w) / 2, w, w, cs * 0.2); ctx.fill();
     ctx.lineWidth = 4; ctx.strokeStyle = '#ff5fa2'; ctx.stroke();
   }
+  // direction choice: a bouncing arrow on each square you can move to
+  if (pick && pick.from != null) for (const id of pick.opts) {
+    const c = cells[id], f = cells[pick.from], ang = Math.atan2(c.y - f.y, c.x - f.x);
+    const bob = REDUCED ? 0 : Math.sin(now / 150) * cs * 0.07, L = cs * 0.34;
+    ctx.save();
+    ctx.translate((c.x + 0.5) * cs + Math.cos(ang) * bob, (c.y + 0.5) * cs + Math.sin(ang) * bob);
+    ctx.rotate(ang);
+    ctx.beginPath();
+    ctx.moveTo(L, 0); ctx.lineTo(-L * 0.55, -L * 0.8); ctx.lineTo(-L * 0.2, 0); ctx.lineTo(-L * 0.55, L * 0.8); ctx.closePath();
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.stroke();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+    ctx.fillStyle = '#ff5fa2'; ctx.fill();
+    ctx.restore();
+  }
   if (selected != null) {
     const c = cells[selected], w = cs * 0.84 + 4;
     ctx.setLineDash([5, 4]); ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
@@ -1080,7 +1140,7 @@ function drawBoard(now) {
 
 // ---------- mini map inside the auction / trade screens ----------
 const miniMarks = { au: [], tr: [] };
-function drawMiniMap(canvas, marks, now) {
+function drawMiniMap(canvas, marks, now, opts = {}) {
   const w = canvas && canvas.clientWidth;
   if (!w) return;
   const dpr = pixelRatio();
@@ -1090,15 +1150,31 @@ function drawMiniMap(canvas, marks, now) {
   g.clearRect(0, 0, w, w);
   g.fillStyle = '#8fe0a8'; g.beginPath(); g.roundRect(1, 1, w - 2, w - 2, u * 0.5); g.fill();
   g.lineWidth = 2; g.strokeStyle = INK; g.stroke();
+  const big = u >= 22, spot = opts.district;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
   for (const c of cells) {
     const x = c.x * u + u * 0.08, y = c.y * u + u * 0.08, sz = u * 0.84;
     const owned = (c.type === 'shop' || c.type === 'plot') && c.owner != null;
     g.fillStyle = owned ? players[c.owner].color : TILE[c.type] || '#ffffff';
     g.beginPath(); g.roundRect(x, y, sz, sz, u * 0.15); g.fill();
-    if (c.type === 'shop' && !owned) { g.fillStyle = DISTRICTS[c.d].color; g.fillRect(x + 1, y + 1, sz - 2, sz * 0.3); }
-    g.lineWidth = 1; g.strokeStyle = INK; g.stroke();
+    if (c.type === 'shop') {
+      g.fillStyle = DISTRICTS[c.d].color; g.fillRect(x + 1, y + 1, sz - 2, sz * 0.3);
+      if (big) { g.fillStyle = INK; g.font = `800 ${u * 0.22}px ${BODY_FONT}`; g.fillText(DISTRICTS[c.d].key, x + sz / 2, y + sz * 0.16); }
+      if (big && owned) { g.fillStyle = INK; g.font = `400 ${u * 0.36}px ${DISPLAY_FONT}`; g.fillText(players[c.owner].name[0], x + sz / 2, y + sz * 0.64); }
+    }
+    g.lineWidth = 1; g.strokeStyle = INK; g.beginPath(); g.roundRect(x, y, sz, sz, u * 0.15); g.stroke();
   }
   const pulse = REDUCED ? 1 : 0.5 + 0.5 * Math.sin(now / 140);
+  if (spot != null) {
+    // dim everything except the chosen district, then outline its shops
+    g.fillStyle = 'rgba(43,35,70,0.45)';
+    for (const c of cells) if (!(c.type === 'shop' && c.d === spot)) { g.beginPath(); g.roundRect(c.x * u + u * 0.08, c.y * u + u * 0.08, u * 0.84, u * 0.84, u * 0.15); g.fill(); }
+    for (const id of DISTRICTS[spot].shops) {
+      const c = cells[id];
+      g.lineWidth = 3 + 2 * pulse; g.strokeStyle = '#ffd23f';
+      g.beginPath(); g.roundRect(c.x * u - 1, c.y * u - 1, u + 2, u + 2, u * 0.25); g.stroke();
+    }
+  }
   g.textAlign = 'center'; g.textBaseline = 'middle';
   for (const m of marks) {
     const c = cells[m.id], cx = (c.x + 0.5) * u, cy = (c.y + 0.5) * u;
@@ -1834,7 +1910,7 @@ function isBusy(now) {
   return players.some(p => p.anim && now < p.anim.t0 + p.anim.dur + 80)
     || (dice && (dice.rolling || (dice.t0 && now - dice.t0 < 900)))
     || highlight.length > 0 || focus.cands.length > 0 || focus.sel != null
-    || Object.keys(cellFx).length > 0 || shown('auctionOv') || shown('tradeOv');
+    || Object.keys(cellFx).length > 0 || shown('auctionOv') || shown('tradeOv') || shown('stockOv');
 }
 let lastDraw = 0, wasBusy = true;
 function frame(now) {
@@ -1847,6 +1923,7 @@ function frame(now) {
   drawBoard(now);
   if (shown('auctionOv')) drawMiniMap($('auMap'), miniMarks.au, now);
   if (shown('tradeOv')) drawMiniMap($('trMap'), miniMarks.tr, now);
+  if (shown('stockOv')) drawMiniMap($('skMap'), [], now, { district: stockView && stockView.d });
   drawFx(now);
 }
 document.fonts && document.fonts.ready.then(markDirty);
@@ -2016,10 +2093,6 @@ async function move(p, n) {
   }
 }
 
-const arrow = (from, to) => {
-  const dx = cells[to].x - cells[from].x, dy = cells[to].y - cells[from].y;
-  return dx > 0 ? '→' : dx < 0 ? '←' : dy > 0 ? '↓' : '↑';
-};
 const cellName = id => {
   const c = cells[id];
   return c.type === 'shop' ? c.name : c.type === 'suit' ? SUITS[c.suit] : SPECIAL[c.type].label;
@@ -2029,12 +2102,8 @@ function humanDirection(p, opts, left) {
   highlight = opts;
   return new Promise(res => {
     const done = v => { pick = null; highlight = []; closeDialog(); res(v); };
-    pick = { opts, done };
-    showDialog({
-      title: `どっちに進む？（のこり ${left}マス）`,
-      body: '光っているマスをタップしても選べます。',
-      buttons: opts.map(id => ({ label: `${arrow(p.pos, id)} ${cellName(id)}`, value: id })),
-    }, done);
+    pick = { opts, done, from: p.pos };
+    showDialog({ title: `矢印をタップして進もう（のこり${left}）` }, done);
   });
 }
 
@@ -2607,35 +2676,96 @@ async function humanInvest(p, shopIds, title) {
 const buyPrice = (d, mult = 1) => Math.max(1, Math.round(price(d) * mult));
 async function humanBuyStock(p, title, mult = 1) {
   if (p.cash < 1) return false;
-  const r = await pickerDialog({
-    title,
-    body: `所持金 <b>${fmt(p.cash)}</b>`,
-    items: DISTRICTS.map((d, i) => ({ value: i, label: `<span class="tag" style="background:${d.color}">${d.key}</span>${d.name}`, right: `${buyPrice(i, mult)}G ・ ${p.stocks[i]}株` })),
-    amountMax: d => Math.min(99, Math.floor(p.cash / buyPrice(d, mult))),
-    amountLabel: (d, a) => `${a}株 = ${fmt(a * buyPrice(d, mult))}`,
-    okLabel: '買う', step: 1,
-  });
+  const r = await stockScreen(p, 'buy', title, mult);
   if (!r) return false;
-  trade(p, r.sel, r.amt, mult);
+  trade(p, r.d, r.qty, mult);
   return true;
 }
 
-async function humanSellStock(p) {
-  const held = DISTRICTS.map((d, i) => i).filter(i => p.stocks[i] > 0);
-  if (!held.length) return;
-  // in debt, list first the stocks that can clear it on their own
-  if (p.cash < 0) held.sort((a, b) => (p.stocks[b] * price(b) >= -p.cash) - (p.stocks[a] * price(a) >= -p.cash));
-  const r = await pickerDialog({
-    title: '売る株を選んでね',
-    body: `所持金 <b>${fmt(p.cash)}</b>`,
-    items: held.map(i => ({ value: i, label: `<span class="tag" style="background:${DISTRICTS[i].color}">${DISTRICTS[i].key}</span>${DISTRICTS[i].name}`, right: `${price(i)}G ・ ${p.stocks[i]}株` })),
-    amountMax: d => p.stocks[d],
-    amountLabel: (d, a) => `${a}株 = ${fmt(a * price(d))}${p.cash < 0 ? ` → 所持金 ${fmt(p.cash + a * price(d))}` : ''}`,
-    // in debt: start at the fewest shares that bring cash back to zero or above
-    amountInit: p.cash < 0 ? d => Math.min(p.stocks[d], Math.ceil(-p.cash / price(d))) : null,
-    okLabel: '売る', step: 1,
+// price right after trading qty shares (10+ shares move the market, see trade())
+function priceAfter(d, qty) {
+  const k = Math.abs(qty), mod = DISTRICTS[d].mod * (k >= 10 ? 1 + Math.sign(qty) * 0.015 * Math.floor(k / 10) : 1);
+  return Math.max(1, Math.round(districtValue(d) * mod / 50));
+}
+let stockView = null;
+// full-screen stock trading: big mini map on top, district picker and projection below
+function stockScreen(p, mode, title, mult = 1) {
+  const buy = mode === 'buy';
+  const ids = DISTRICTS.map((d, i) => i).filter(i => buy || p.stocks[i] > 0);
+  if (!ids.length) return Promise.resolve(null);
+  if (!buy && p.cash < 0) ids.sort((a, b) => (p.stocks[b] * price(b) >= -p.cash) - (p.stocks[a] * price(a) >= -p.cash));
+  const unit = d => buy ? buyPrice(d, mult) : price(d);
+  const maxQ = d => buy ? Math.min(99, Math.floor(Math.max(0, p.cash) / unit(d))) : p.stocks[d];
+  const initQ = d => !buy && p.cash < 0 ? Math.min(p.stocks[d], Math.ceil(-p.cash / price(d))) : Math.min(maxQ(d), buy ? 10 : p.stocks[d]);
+  const st = { d: ids[0], qty: 0 };
+  const range = $('skRange');
+  return new Promise(res => {
+    const finish = v => { $('stockOv').classList.add('hidden'); stockView = null; Sound.play('click'); res(v); };
+    const row = (label, value, cls = '') => `<span>${label}</span><b class="${cls}">${value}</b>`;
+    const signed = v => (v >= 0 ? '+' : '−') + fmt(Math.abs(v));
+    const renderProj = () => {
+      const d = st.d, k = st.qty, held = p.stocks[d], before = price(d), after = priceAfter(d, buy ? k : -k);
+      $('skQty').textContent = `${k}株`;
+      $('skOk').textContent = buy ? `${k}株 買う` : `${k}株 売る`;
+      $('skOk').disabled = k <= 0;
+      const move = after === before ? `${before}G（変わらず）` : `${before}G → <em class="${after > before ? 'gain' : 'loss'}">${after}G</em>`;
+      if (buy) {
+        const cost = k * unit(d), gain = (held + k) * after - held * before - cost;
+        $('skProj').innerHTML = row('支払い', fmt(cost)) + row('株価', move) +
+          row('持ち株価値', fmt((held + k) * after)) + row('すぐの損益', signed(gain), gain >= 0 ? 'gain' : 'loss') +
+          row('配当', `料100Gごと ${fmt(Math.round((held + k) * 0.4))}`) + row('所持金', fmt(p.cash - cost));
+      } else {
+        const got = k * before;
+        $('skProj').innerHTML = row('受け取り', fmt(got), 'gain') + row('株価', move) +
+          row('のこり', `${held - k}株 ${fmt((held - k) * after)}`) + row('所持金', fmt(p.cash + got), p.cash + got < 0 ? 'loss' : '');
+      }
+    };
+    const renderArea = () => {
+      const D = DISTRICTS[st.d], owners = {};
+      D.shops.forEach(s => { const o = cells[s].owner; owners[o == null ? 'v' : o] = (owners[o == null ? 'v' : o] || 0) + 1; });
+      $('skArea').innerHTML = `<span class="tag" style="background:${D.color}">${D.key}</span><b>${D.name}</b><span>株価 ${price(st.d)}G ・ 持ち株 ${p.stocks[st.d]}株</span>
+        <span class="own">${Object.entries(owners).map(([o, n]) => o === 'v' ? `空き店${n}` : `${pname(players[+o])}${n}軒`).join(' ')}</span>`;
+    };
+    const select = d => {
+      st.d = d; stockView = { d };
+      range.max = maxQ(d); st.qty = initQ(d); range.value = st.qty;
+      $('skList').querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.d === d));
+      renderArea(); renderProj();
+    };
+    $('skTitle').textContent = title;
+    $('skCash').innerHTML = `所持金 <b>${fmt(p.cash)}</b>`;
+    $('skList').innerHTML = ids.map(i => `<button data-d="${i}" style="--k:${DISTRICTS[i].color}"><b>${DISTRICTS[i].key}</b>${unit(i)}G<small>${p.stocks[i]}株</small></button>`).join('');
+    $('skList').querySelectorAll('button').forEach(b => b.onclick = () => { Sound.play('click'); select(+b.dataset.d); });
+    range.oninput = () => { st.qty = +range.value; renderProj(); };
+    $('skMinus').onclick = () => { range.value = Math.max(0, st.qty - 1); range.oninput(); };
+    $('skPlus').onclick = () => { range.value = Math.min(+range.max, st.qty + 1); range.oninput(); };
+    $('skOk').onclick = () => finish({ d: st.d, qty: st.qty });
+    $('skCancel').onclick = () => finish(null);
+    $('skMap').onclick = e => {
+      const r = $('skMap').getBoundingClientRect(), u = r.width / N;
+      const id = at[Math.floor((e.clientX - r.left) / u) + ',' + Math.floor((e.clientY - r.top) / u)];
+      if (id != null && cells[id].type === 'shop' && ids.includes(cells[id].d)) { Sound.play('click'); select(cells[id].d); }
+    };
+    $('skLegend').innerHTML = players.map(q => `<span class="chip" style="--pc:${q.color}">${q.name[0]} ${q.name}</span>`).join('') + '<span class="chip" style="--pc:#fff">空き店</span>';
+    $('stockOv').classList.remove('hidden');
+    fitStockMap();
+    select(st.d);
   });
-  if (r) trade(p, r.sel, -r.amt);
+}
+function fitStockMap() {
+  const box = $('stockOv').querySelector('.sk-map'), legend = $('skLegend');
+  const land = matchMedia('(orientation: landscape)').matches;
+  const s = Math.floor(land ? Math.min(box.clientWidth, box.clientHeight - legend.offsetHeight - 6)
+    : Math.min(box.clientWidth, innerHeight * 0.42 - legend.offsetHeight));
+  $('skMap').style.width = $('skMap').style.height = Math.max(120, s) + 'px';
+}
+window.addEventListener('resize', () => { if (shown('stockOv')) fitStockMap(); });
+
+async function humanSellStock(p) {
+  if (!p.stocks.some(n => n > 0)) return;
+  // in debt the slider starts at the fewest shares that bring cash back to zero
+  const r = await stockScreen(p, 'sell', p.cash < 0 ? '株を売ってお金をつくろう' : '売る株をえらんでね');
+  if (r) trade(p, r.d, -r.qty);
 }
 
 async function humanSellShop(p, forced = false) {
