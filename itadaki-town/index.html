@@ -313,7 +313,7 @@
     <div class="tools">
       <button id="seBtn">🔊 効果音 ON</button>
       <button id="bgmBtn">🎵 BGM ON</button>
-      <button id="speedBtn">CPU速度: ふつう</button>
+      <button id="speedBtn">テンポ: ふつう</button>
       <button id="rulesBtn">ルール</button>
       <button id="chanceBtn">🎴 チャンスボード</button>
       <button id="ecoBtn">⚡ 省エネ ON</button>
@@ -523,7 +523,9 @@ const START_CASH = 1500;
 let players = [], turn = 0, round = 1, over = true, target = 8000, gameId = 0;
 let current = null, highlight = [], selected = null, dice = null, pick = null, feeDay = null;
 let focus = { cands: [], sel: null };
-let speed = DEMO ? 0.01 : 1;
+const TEMPOS = [{ v: 2.2, label: 'ゆっくり' }, { v: 1.5, label: 'ふつう' }, { v: 1, label: 'はやい' }, { v: 0.4, label: 'すごく速い' }];
+let tempo = (() => { try { const v = localStorage.getItem('itadaki-town-tempo'); return v != null && TEMPOS[+v] ? +v : 1; } catch { return 1; } })();
+let speed = DEMO ? 0.01 : TEMPOS[tempo].v;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms * speed));
 const fmt = n => n.toLocaleString('ja-JP') + 'G';
@@ -605,10 +607,10 @@ const ask = o => new Promise(res => showDialog(o, v => { closeDialog(); res(v); 
 
 // radio list + amount slider. returns { sel, amt } via mutable object
 // point at shops on the board while the player chooses one in a dialog
-function focusShops(cands, sel) {
+function focusShops(cands, sel, scroll = true) {
   focus = { cands, sel };
   if (sel != null) { selected = sel; renderInfo(); }
-  if (cands.length && window.innerWidth <= 860) cv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (scroll && cands.length && window.innerWidth <= 860) cv.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 const clearFocus = v => { focus = { cands: [], sel: null }; markDirty(); return v; };
 
@@ -1795,6 +1797,7 @@ async function takeTurn(p) {
     return;
   }
   if (p.cpu) {
+    await toast(`🎲 ${pname(p)}の番`, 700);
     if (!sulking(p) && patienceOf(p) < 3) p.patience = patienceOf(p) + 1;
     await cpuPropose(p);
     await cpuCpuTrade(p);
@@ -1971,6 +1974,7 @@ async function landShop(p, c) {
       p.cash -= c.value; c.owner = p.id;
       Sound.play('buy'); cellPop(c.id); burstCell(c.id, 28);
       log(`${pname(p)}が${d.name}の${c.name}を <b>${fmt(c.value)}</b> で買った`);
+      if (p.cpu) await toast(`🏠 ${pname(p)}が<br><b>${c.name}</b>を ${fmt(c.value)} で買った！`, 1100);
       checkMonopoly(p, c.id);
       await sleep(400);
     }
@@ -2020,6 +2024,7 @@ async function landPlot(p, c) {
     Object.assign(c, { owner: p.id, building: b, cpFee: 10 });
     Sound.play('buy'); cellPop(c.id); burstCell(c.id, 28);
     log(`${pname(p)}が空き地に${BUILDINGS[b].label}を建てた`);
+    if (p.cpu) await toast(`🏗️ ${pname(p)}が空き地に<br><b>${BUILDINGS[b].label}</b>を建てた！`, 1100);
     await sleep(400);
   } else if (c.owner === p.id) {
     log(`${pname(p)}は自分の${BUILDINGS[c.building].label}に止まった`);
@@ -3102,7 +3107,9 @@ async function cpuInvest(p, shopIds) {
   const amt = Math.floor(Math.min(room(s), budget * 0.7) / 10) * 10;
   if (amt < 30) return;
   invest(p, s, amt);
-  await sleep(500);
+  focusShops([s], s, false);
+  await toast(`💰 ${pname(p)}が<br><b>${cells[s].name}</b>に ${fmt(amt)} 増資！`, 1200);
+  clearFocus();
 }
 
 async function cpuBuyStock(p, eager = false, mult = 1) {
@@ -3112,7 +3119,7 @@ async function cpuBuyStock(p, eager = false, mult = 1) {
   const qty = Math.min(99, Math.floor((p.cash - 500) * 0.4 / buyPrice(d, mult)));
   if (qty < 1) return;
   trade(p, d, qty, mult);
-  await sleep(500);
+  await toast(`📈 ${pname(p)}が<br><b>${DISTRICTS[d].name}</b>の株を ${qty}株 買った`, 1100);
 }
 
 // ---- end ----
@@ -3185,11 +3192,15 @@ $('titleSound').onclick = () => {
 };
 document.addEventListener('pointerdown', () => Sound.unlock());
 syncSoundButtons();
+const syncTempo = () => { $('speedBtn').textContent = 'テンポ: ' + TEMPOS[tempo].label; };
 $('speedBtn').onclick = () => {
   if (DEMO) return;
-  speed = speed === 1 ? 0.4 : speed === 0.4 ? 0.15 : 1;
-  $('speedBtn').textContent = 'CPU速度: ' + { 1: 'ふつう', 0.4: 'はやい', 0.15: 'すごく速い' }[speed];
+  tempo = (tempo + 1) % TEMPOS.length;
+  speed = TEMPOS[tempo].v;
+  try { localStorage.setItem('itadaki-town-tempo', tempo); } catch {}
+  syncTempo(); Sound.play('click');
 };
+syncTempo();
 
 resize();
 players = PLAYER_DEFS.map((d, id) => ({ ...d, id, cash: START_CASH, pos: BANK, suits: {}, wild: 0, level: 1, stocks: DISTRICTS.map(() => 0) }));
