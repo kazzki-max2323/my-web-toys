@@ -2,8 +2,18 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>いただきタウン</title>
+<!-- pwa:start (home-screen app; left out of the Claude artifact copy) -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#a9e1ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="いただきタウン">
+<!-- pwa:end -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
@@ -25,7 +35,9 @@
     color-scheme: light;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; color: var(--ink); font-family: var(--body); font-weight: 500; overflow: hidden; }
+  html, body { margin: 0; height: 100%; color: var(--ink); font-family: var(--body); font-weight: 500; overflow: hidden;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+  #app, .overlay button, #toolbar { -webkit-user-select: none; user-select: none; }
   body, .overlay.sky {
     background-color: var(--sky);
     background-image: radial-gradient(var(--sky-dot) 17%, transparent 18%), radial-gradient(var(--sky-dot) 17%, transparent 18%);
@@ -3585,6 +3597,9 @@ refreshResume();
 renderPanel();
 requestAnimationFrame(frame);
 if (DEMO) newGame(+(params.get('target') || 8000));
+// offline support when served as its own site (not inside another page)
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost') && window.top === window)
+  navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
