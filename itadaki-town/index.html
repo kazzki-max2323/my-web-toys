@@ -681,7 +681,11 @@ const TEMPOS = [{ v: 2.2, label: 'ゆっくり' }, { v: 1.5, label: 'ふつう' 
 let tempo = (() => { try { const v = localStorage.getItem('itadaki-town-tempo'); return v != null && TEMPOS[+v] ? +v : 1; } catch { return 1; } })();
 let speed = DEMO ? 0.01 : TEMPOS[tempo].v;
 
-const sleep = ms => new Promise(r => setTimeout(r, ms * speed));
+// while the player is in another app or tab the game holds at its next pause, and the sound stops
+let appAway = false;
+const awayWaiters = [];
+const untilBack = () => appAway ? new Promise(r => awayWaiters.push(r)) : undefined;
+const sleep = ms => new Promise(r => setTimeout(r, ms * speed)).then(untilBack);
 const fmt = n => n.toLocaleString('ja-JP') + 'G';
 const rand = n => Math.floor(Math.random() * n);
 
@@ -1357,7 +1361,7 @@ const Sound = (() => {
         for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       } catch { ac = null; return null; }
     }
-    if (ac.state === 'suspended') ac.resume().catch(() => {});
+    if (ac.state === 'suspended' && !away) ac.resume().catch(() => {});
     return ac;
   }
   function tone(f, t, dur, type = 'square', vol = 0.1, slide = 1, dest = sfxBus) {
@@ -1905,11 +1909,10 @@ const Sound = (() => {
     fadeOut(song);
     startSong(nextIndex(), ac.currentTime + 0.5);
   }
-  document.addEventListener('visibilitychange', () => {
-    if (!ac) return;
-    if (document.hidden) ac.suspend().catch(() => {}); else ac.resume().catch(() => {});
-  });
+  let away = false;
   return {
+    pause() { away = true; if (ac) ac.suspend().catch(() => {}); },
+    resume() { away = false; if (ac) ac.resume().catch(() => {}); },
     play, startBgm, stopBgm, nextSong, playSong, prefs,
     songs: () => SONGS.map(x => ({ title: x.t, genre: GENRE_NAME[x.g] })),
     setOnSong(fn) { onSong = fn; },
@@ -3578,7 +3581,21 @@ $('npTitle').onclick = () => {
   $('songOv').classList.remove('hidden');
 };
 $('songClose').onclick = () => $('songOv').classList.add('hidden');
-document.addEventListener('pointerdown', () => Sound.unlock());
+function setAway(v) {
+  if (DEMO || appAway === v) return;
+  appAway = v;
+  if (v) Sound.pause();
+  else { Sound.resume(); awayWaiters.splice(0).forEach(r => r()); }
+}
+document.addEventListener('visibilitychange', () => setAway(document.hidden));
+addEventListener('pagehide', () => setAway(true));
+addEventListener('pageshow', () => setAway(document.hidden));
+// on phones, switching apps can leave the page "visible" but unfocused
+if (matchMedia('(pointer: coarse)').matches) {
+  addEventListener('blur', () => setAway(true));
+  addEventListener('focus', () => setAway(false));
+}
+document.addEventListener('pointerdown', () => { setAway(false); Sound.unlock(); }, true);
 const syncTempo = () => {
   $('tempoSeg').innerHTML = TEMPOS.map((t, i) => `<button data-t="${i}" class="${i === tempo ? 'on' : ''}">${t.label}</button>`).join('');
   $('tempoSeg').querySelectorAll('button').forEach(b => b.onclick = () => {
