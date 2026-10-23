@@ -4362,7 +4362,7 @@
   },
   {
     "name": "酒",
-    "keywords": "酒 アルコール ビール 日本酒 ワイン liquor",
+    "keywords": "酒 お酒 さけ アルコール ビール 日本酒 ワイン 焼酎 ウイスキー ブランデー 梅酒 果実酒 リキュール 泡盛 紹興酒 地酒 一升瓶 liquor",
     "category": "食品・飲料",
     "domestic": "⭕ 引受け（度数確認）",
     "air": "△ 条件あり",
@@ -7931,7 +7931,7 @@ const dangerousCategories = ['すべて', ...new Set(dangerousGoods.map(x=>x.cat
         function renderDangerousResults(){
             const q=(document.getElementById('dangerousSearchInput')?.value||'').trim().toLowerCase();
             dgPrepareYomi(); const collator=new Intl.Collator('ja',{numeric:true,sensitivity:'variant'});
-            const rowOrder={ 'すべて':0,'あ行':1,'か行':2,'さ行':3,'た行':4,'な行':5,'は行':6,'ま行':7,'や行':8,'ら行':9,'わ行':10 }; const list=dangerousGoods.filter(x=>(dangerousRow==='すべて'||x.row===dangerousRow) && (dangerousCategory==='すべて'||x.category===dangerousCategory) && (!q || (x.name+' '+x.keywords+' '+x.category).toLowerCase().includes(q))).sort((a,b)=>(a.sortKey<b.sortKey?-1:a.sortKey>b.sortKey?1:0)||collator.compare(a.yomi,b.yomi)||collator.compare(a.name,b.name));
+            const rowOrder={ 'すべて':0,'あ行':1,'か行':2,'さ行':3,'た行':4,'な行':5,'は行':6,'ま行':7,'や行':8,'ら行':9,'わ行':10 }; const list=dangerousGoods.filter(x=>(dangerousRow==='すべて'||x.row===dangerousRow) && (dangerousCategory==='すべて'||x.category===dangerousCategory) && (!q || (x.name+' '+(x.yomi||'')+' '+x.keywords+' '+x.category).toLowerCase().includes(q))).sort((a,b)=>(a.sortKey<b.sortKey?-1:a.sortKey>b.sortKey?1:0)||collator.compare(a.yomi,b.yomi)||collator.compare(a.name,b.name));
             const box=document.getElementById('dangerousResults'); if(!box)return;
             const verifiedCount = dangerousGoods.filter(x=>x.officialDetailVerified).length;
             const indexCount = dangerousGoods.filter(x=>x.officialIndexVerified).length;
