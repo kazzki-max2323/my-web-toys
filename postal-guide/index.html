@@ -15,29 +15,10 @@
     <meta name="robots" content="noindex, nofollow, noarchive">
     <style>body:not(.show-all) main>#discFoot{display:block !important}</style>
 
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <div id="dangerousModal" class="dg-modal" onclick="if(event.target===this)closeDangerousModal()" role="dialog" aria-modal="true" aria-label="詳細"><div class="dg-sheet"><div class="dg-handle"></div><div id="dangerousModalBody" class="dg-body"></div><button type="button" class="dg-close-fab" onclick="closeDangerousModal()" aria-label="閉じる">✕ 閉じる</button></div></div>
     <div id="dangerousDetailModal" class="dg-modal" onclick="if(event.target===this)closeDangerousDetail()" role="dialog" aria-modal="true" aria-label="危険物の詳細"><div class="dg-sheet"><div class="dg-handle"></div><div id="dangerousDetailModalBody" class="dg-body"></div><button type="button" class="dg-close-fab" onclick="closeDangerousDetail()" aria-label="閉じる">✕ 閉じる</button></div></div>
     <button id="floatingClose" class="floating-close" type="button" aria-label="ページの一番上へ戻る" onclick="window.scrollTo({top:0,behavior:'smooth'})">⬆️ TOPへ</button>
 
-    <script>
-        if (window.tailwind) tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        jpost: {
-                            red: '#E60012',
-                            darkred: '#B3000E',
-                            lightbg: '#FFF8F8',
-                            gray: '#2C2C2C',
-                            lightgray: '#F5F5F7'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
         body {
@@ -180,6 +161,8 @@
     </style>
 
 <style id="dangerous-full-height-fix">#dangerousSearch .dangerous-results-wrap{max-height:none!important;overflow:visible!important;}#dangerousSearch #dangerousResults{max-height:none!important;overflow:visible!important;}#dangerousSearch #dangerousDetail{max-height:none!important;overflow:visible!important;}</style>
+    <!-- Tailwind は tailwind.css にあらかじめ作ってある（作り方は tailwind.config.js）。CDN と同じく最後に読みこむ -->
+    <link rel="stylesheet" href="tailwind.css">
 </head>
 <body class="min-h-screen flex flex-col antialiased">
 
