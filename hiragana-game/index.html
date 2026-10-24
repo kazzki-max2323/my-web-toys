@@ -227,7 +227,7 @@
   </div>
 </div>
 
-<script src="voice.js"></script>
+<script src="voices/v0.js"></script>
 <script>
 // ---- data ----
 const ROWS = [
@@ -301,21 +301,42 @@ const sfx = {
 };
 
 // ---- voice ----
-// Recorded clips from voice.js play through WebAudio, so the voice works even where the
+// Recorded clips from voices/*.js play through WebAudio, so the voice works even where the
 // browser has no speech engine (in-app browsers, Android WebView). speechSynthesis is only
 // a fallback for a clip that is missing or failed to decode.
-const VOICE_TEXT = { title: 'ひらがな、ぽんぽん！', float: 'こんどは、ふわふわ、だよ', which: 'どれかな？' };
-const voiceBufs = {};
-let voiceSrc = null, voiceToken = 0;
-function loadVoiceClips() {
-  const a = audio();
-  if (!a || !window.VOICE || loadVoiceClips.started) return;
-  loadVoiceClips.started = true;
-  for (const [key, b64] of Object.entries(window.VOICE)) {
+// Ten voice packs; each row is read by a randomly picked one. v0 ships with the page, the rest
+// load in the background after the first tap.
+const VOICE_IDS = ['v0', 'v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'v9'];
+const VOICE_TEXT = { title: 'ひらがな、ぽんぽん！', float: 'こんどは、ふわふわ、だよ' };
+const voiceBufs = {};   // pack id -> { key: Promise<AudioBuffer|null> }
+let voiceId = 'v0', voiceSrc = null, voiceToken = 0;
+function decodePack(id) {
+  const a = audio(), pack = window.VOICE_PACKS?.[id];
+  if (!a || !pack || voiceBufs[id]) return;
+  voiceBufs[id] = {};
+  for (const [key, b64] of Object.entries(pack)) {
     const bin = atob(b64), buf = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-    voiceBufs[key] = a.decodeAudioData(buf.buffer).catch(() => null);
+    voiceBufs[id][key] = a.decodeAudioData(buf.buffer).catch(() => null);
   }
+}
+function loadAllPacks() {
+  if (loadAllPacks.started) return;
+  loadAllPacks.started = true;
+  // one at a time, so the first rows are not slowed down by ten parallel downloads
+  const todo = VOICE_IDS.filter(id => !window.VOICE_PACKS?.[id]);
+  const next = () => {
+    const id = todo.shift(); if (!id) return;
+    const sc = document.createElement('script');
+    sc.src = `voices/${id}.js`; sc.onload = sc.onerror = next;
+    document.head.appendChild(sc);
+  };
+  next();
+}
+function pickVoice() {
+  const ready = VOICE_IDS.filter(id => window.VOICE_PACKS?.[id] && id !== voiceId);
+  if (ready.length) voiceId = pick(ready);
+  decodePack(voiceId);
 }
 function stopVoice() {
   voiceToken++;
@@ -323,7 +344,8 @@ function stopVoice() {
   synth?.cancel();
 }
 function playClip(key, tok) {
-  return Promise.resolve(voiceBufs[key]).then(buf => {
+  decodePack(voiceId);
+  return Promise.resolve(voiceBufs[voiceId]?.[key]).then(buf => {
     if (tok !== voiceToken) return;
     if (!buf) return speak(VOICE_TEXT[key] || key.replace(/^(row|lap):/, ''));
     return new Promise(resolve => {
@@ -336,9 +358,9 @@ function playClip(key, tok) {
     });
   });
 }
-// say('あ') or say(['あ', 'which']): plays clips in order, cutting off whatever was playing
+// say('あ') or say(['あ', 'float']): plays clips in order, cutting off whatever was playing
 async function say(keys) {
-  audio(); loadVoiceClips();
+  audio(); loadAllPacks();
   stopVoice();
   const tok = voiceToken;
   for (const k of [].concat(keys)) {
@@ -503,6 +525,7 @@ function makeItem(k, i, size) {
 }
 
 function startRow(i) {
+  pickVoice();
   stopFloat();
   game = { row: ROWS[i], rowIdx: i, phase: 1, next: 0, items: [], busy: true, combo: 0, idleTimer: 0, token: {} };
   show('play');
