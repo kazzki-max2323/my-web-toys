@@ -139,6 +139,9 @@
         #dangerousModalBody .in-modal{max-height:none!important;opacity:1!important;overflow:visible!important;border-top:0!important;margin-left:-1rem;margin-right:-1rem}
         #dangerousModalBody .dangerous-results-wrap,#dangerousModalBody #dangerousResults{max-height:none!important;overflow:visible!important}
         #prefModal{z-index:130!important}
+        .goto-link{cursor:pointer;color:#1d4ed8;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+        .goto-link::after{content:" ›";color:#93a3c0;text-decoration:none;display:inline-block;margin-left:.1rem}
+        .goto-link:active{background:#eff6ff}
         #dangerousModalBody .in-modal .sticky.top-0{top:var(--dg-head,2.5rem);z-index:4}
         /* 日本地図 */
         .jp-pref{cursor:pointer;vector-effect:non-scaling-stroke;transition:opacity .2s ease,filter .15s ease}
@@ -574,7 +577,7 @@
                         </div>
                     <!-- COLD / FROZEN YU-PACK GUIDE -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-5">
-                        <div class="bg-blue-50 p-4 sm:p-5 rounded-2xl border border-blue-200 space-y-4">
+                        <div id="chilledInfo" class="bg-blue-50 p-4 sm:p-5 rounded-2xl border border-blue-200 space-y-4">
                             <div class="flex items-center justify-between gap-3">
                                 <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2"><span>❄️</span> チルドゆうパック（冷蔵）</h3>
                                 <span class="px-2.5 py-1 rounded-full bg-blue-600 text-white text-xs font-bold">0～10℃</span>
@@ -10942,6 +10945,58 @@ if('serviceWorker' in navigator){addEventListener('load',()=>{
      ゲームの途中などで読みこみ直したくないときは、アプリ側で window.canReload=()=>false を返すようにする */
   let had=!!navigator.serviceWorker.controller,want=false;const go=()=>{if(want&&(!window.canReload||window.canReload()))location.reload()};
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had){want=true;go()}});setInterval(go,3000)})}
+</script>
+<script>
+/* ---- 表の中のサービス名をタップすると、その詳しいカードを開く ----
+   表の1列目が下の名前と同じなら、自動でリンクになる（自分のカードへのリンクは作らない）。
+   表以外でも data-goto="カードのid" を付ければ同じ動きになる。 */
+const GOTO_MAP={
+  '重量ゆうパック':'heavyYupack','チルドゆうパック':'niigataMap#chilledInfo','ゆうパック':'niigataMap',
+  'スマホ割':'yupackMore','持込割引':'yupackMore','同一あて先割引':'yupackMore','複数口割引':'yupackMore','継続利用割引':'yupackMore',
+  '通常はがき':'postalGroup','往復はがき':'postalGroup','定形郵便':'postalGroup','定形外郵便':'postalGroup',
+  'スマートレター':'smartLetter','ミニレター':'smartLetter',
+  'レターパックライト':'letterPack','レターパックプラス':'letterPack','レターパック':'letterPack',
+  'クリックポスト':'smallParcelGroup','ゆうパケット':'smallParcelGroup','ゆうメール':'smallParcelGroup',
+  'ゆうパケットポスト・mini・プラス':'yupacketPost','ゆうパケットポスト':'yupacketPost','ゆうパケットプラス':'yupacketPost',
+  '速達':'postalOptions','特定記録':'postalOptions','簡易書留':'postalOptions','一般書留':'postalOptions','現金書留':'postalOptions','配達証明':'postalOptions','内容証明':'postalOptions',
+  '本人限定受取':'idOptions','本人限定受取郵便':'idOptions','引受時刻証明':'idOptions','返信依頼郵便':'idOptions','特別あて所配達郵便':'idOptions','特別送達':'idOptions',
+  '配達日指定':'dateTime','配達時間帯指定郵便':'dateTime',
+  '代金引換':'codService','着払い':'codService','着払':'codService','セキュリティサービス':'codService',
+  '料金別納郵便':'bulkPay','料金後納郵便':'bulkPay','料金受取人払':'bulkPay',
+  'EMS':'emsCard','e内容証明':'bizDocs','レタックス':'bizDocs',
+  '郵便物':'postalGroup','レターパック/スマートレター':'letterPack','特殊取扱付き郵便物':'postalOptions',
+  'ゆうパック・荷物類':'niigataMap','メール便・その他小型荷物':'smallParcelGroup','割引':'yupackMore'
+};
+function gotoLabel(cell){
+  const f=cell.firstChild; let t=f?f.textContent:'';
+  t=t.replace(/[\s\u{1F000}-\u{1FFFF}☀-➿️]/gu,'').replace(/（[^）]*）$|\([^)]*\)$/,'');
+  return t;
+}
+function gotoMark(cell){
+  if(cell.dataset.goto) return;
+  const id=GOTO_MAP[gotoLabel(cell)]; if(!id||!document.getElementById(id.split('#')[0])) return;
+  const own=cell.closest('.service-card[id],.postal-group[id]'); if(own&&own.id===id.split('#')[0]) return;
+  cell.dataset.goto=id; cell.classList.add('goto-link');
+}
+function gotoInit(){
+  // 列の見出し（表の一番上の行）も、サービス名ならリンクにする
+  document.querySelectorAll('.service-card table, .postal-group table').forEach(t=>{
+    const r=t.querySelector('tr'); if(r) r.querySelectorAll('th').forEach((th,i)=>{ if(i>0) gotoMark(th); });
+  });
+  document.querySelectorAll('.service-card table tr, .postal-group table tr').forEach(tr=>{
+    const cell=tr.querySelector('td,th'); if(!cell||cell.dataset.goto) return;
+    if(tr.parentElement.tagName==='THEAD'||cell.tagName==='TH'&&tr.querySelectorAll('td').length===0) return;
+    gotoMark(cell);
+  });
+}
+function gotoOwner(){ return (typeof dgMoved!=='undefined'&&dgMoved&&dgMoved.ph&&dgMoved.ph.parentNode)?dgMoved.ph.parentNode.closest('.service-card[id],.postal-group[id]'):null; }
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-goto]'); if(!a) return;
+  const [id,sub]=a.dataset.goto.split('#'), own=gotoOwner(); if(own&&own.id===id) return;
+  e.preventDefault(); e.stopPropagation(); jumpToSection(id);
+  if(sub) setTimeout(()=>{ const t=document.getElementById(sub), b=t&&t.closest('.dg-body'); if(b) b.scrollTop=t.getBoundingClientRect().top-b.getBoundingClientRect().top+b.scrollTop-60; },150);
+},true);
+gotoInit();
 </script>
 </body>
 </html>
