@@ -158,12 +158,59 @@
   @keyframes shine { 50% { transform: scale(1.08) rotate(6deg); } }
   .stars { font-size: 34px; letter-spacing: 6px; }
 
-  #book .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px; width: 100%; max-width: 460px;
-    overflow-y: auto; padding: 4px 0 24px; }
-  #book .cell { aspect-ratio: 1; border-radius: 18px; background: var(--panel); display: grid; place-items: center; font-size: 40px; position: relative; }
-  #book .cell.none { font-size: 26px; opacity: 0.45; }
-  #book .cell small { position: absolute; right: 4px; bottom: 2px; font-size: 13px; }
-  #book .count { font-size: 20px; margin-bottom: 10px; }
+  /* sticker book: a scene to stick on, and a tray of owned stickers below it */
+  #book { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  #pageTabs { display: flex; gap: 8px; justify-content: center; flex: 1; }
+  #pageTabs button { width: 48px; height: 48px; border-radius: 50%; font-size: 26px; background: var(--panel); opacity: 0.55;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1); transition: transform 0.2s, opacity 0.2s; }
+  #pageTabs button.on { opacity: 1; transform: scale(1.15); outline: 4px solid var(--accent); }
+  #scene { position: relative; flex: 1; width: 100%; max-width: 560px; border-radius: 26px; overflow: hidden; touch-action: none;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.08), 0 10px 24px rgba(0,0,0,0.12); border: 6px solid #fff; }
+  .s-0 { background:
+    radial-gradient(ellipse 75% 32% at 25% 100%, #8fd96b 99%, transparent 100%),
+    radial-gradient(ellipse 80% 38% at 90% 104%, #6cc552 99%, transparent 100%),
+    radial-gradient(circle at 84% 14%, #ffe066 0 34px, rgba(255,224,102,0.35) 35px 52px, transparent 53px),
+    linear-gradient(#8fd3ff, #e4f6ff 75%); }
+  .s-1 { background:
+    radial-gradient(ellipse 120% 30% at 50% 108%, #f6dea0 99%, transparent 100%),
+    repeating-linear-gradient(170deg, transparent 0 26px, rgba(255,255,255,0.18) 26px 30px),
+    linear-gradient(#bfeaff 0 30%, #5cc4ef 30%, #1d8fcf); }
+  .s-2 { background:
+    radial-gradient(circle at 78% 18%, #fff6c9 0 28px, transparent 29px),
+    radial-gradient(circle at 74% 15%, #2a2a66 0 26px, transparent 27px),
+    radial-gradient(2px 2px at 12% 20%, #fff, transparent), radial-gradient(2px 2px at 30% 45%, #fff, transparent),
+    radial-gradient(2px 2px at 55% 12%, #fff, transparent), radial-gradient(2px 2px at 62% 60%, #fff, transparent),
+    radial-gradient(2px 2px at 20% 75%, #fff, transparent), radial-gradient(2px 2px at 88% 50%, #fff, transparent),
+    radial-gradient(2px 2px at 42% 85%, #fff, transparent), radial-gradient(2px 2px at 90% 85%, #fff, transparent),
+    linear-gradient(#1b1e4b, #4b3c8f); }
+  .s-3 { background:
+    linear-gradient(transparent 72%, #e2b487 72% 74%, #d9a77a 74%),
+    repeating-linear-gradient(90deg, #ffeef4 0 24px, #ffe0ea 24px 48px); }
+  #scene .empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-size: 22px;
+    color: #5a3f7a; padding: 20px; pointer-events: none; }
+  .placed { position: absolute; transform: translate(-50%, -50%) rotate(var(--r)) scale(var(--z, 1)); font-size: 56px; line-height: 1;
+    touch-action: none; transition: transform 0.18s cubic-bezier(.3,1.6,.5,1);
+    filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 3px 3px rgba(0,0,0,0.25)); }
+  .placed.lift { transform: translate(-50%, -55%) rotate(var(--r)) scale(calc(var(--z, 1) * 1.2)); transition: none; z-index: 5;
+    filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 12px 8px rgba(0,0,0,0.25)); }
+  .placed.stick { animation: stick 0.35s ease-out; }
+  @keyframes stick { 0% { scale: 1.5; } 55% { scale: 0.88 1.08; } 100% { scale: 1; } }
+  .placed.peel { animation: peel 0.35s ease-in forwards; pointer-events: none; }
+  @keyframes peel { to { scale: 0.2; rotate: 40deg; opacity: 0; } }
+  #ghost { position: fixed; left: 0; top: 0; z-index: 45; pointer-events: none; display: none; }
+  #tray { width: 100%; max-width: 560px; display: flex; gap: 10px; overflow-x: auto; padding: 14px 4px 6px; touch-action: pan-x;
+    scrollbar-width: none; min-height: 92px; }
+  #tray::-webkit-scrollbar { display: none; }
+  #tray .t { flex: none; width: 72px; height: 72px; border-radius: 20px; background: var(--panel); font-size: 44px; position: relative;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.08); touch-action: pan-x; }
+  #tray .t:active { transform: scale(0.92); }
+  #tray .t i { position: absolute; right: -4px; top: -8px; font-style: normal; font-size: 14px; min-width: 24px; height: 24px; padding: 0 5px;
+    border-radius: 12px; background: var(--accent); color: #fff; display: grid; place-items: center; }
+  #tray .t.out { opacity: 0.3; }
+  #tray .note { font-size: 18px; align-self: center; padding: 0 8px; }
+  #collect .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 8px; max-height: 55vh; overflow-y: auto; margin: 10px 0; }
+  #collect .cell { aspect-ratio: 1; border-radius: 14px; background: rgba(255,255,255,0.7); display: grid; place-items: center; font-size: 32px; }
+  #collect .cell.none { font-size: 22px; opacity: 0.4; }
 </style>
 </head>
 <body class="t-bubble">
@@ -176,7 +223,7 @@
   <h1><span>ひらがな</span><br><span style="animation-delay:-1.2s">ぽんぽん</span></h1>
   <div class="laps" id="titleLaps"></div>
   <button class="big-btn" id="startBtn">あそぶ</button>
-  <button class="big-btn sub" id="bookBtn1">📖 シール</button>
+  <button class="big-btn sub" id="bookBtn1">📖 シールちょう</button>
 </section>
 
 <section class="screen" id="map">
@@ -201,12 +248,22 @@
 <section class="screen" id="book">
   <div class="topbar">
     <button class="icon-btn" id="bookBack">⬅️</button>
-    <div class="label">シールちょう</div>
-    <div style="width:56px"></div>
+    <div id="pageTabs"></div>
+    <button class="icon-btn" id="collectBtn">🗂️</button>
   </div>
-  <div class="count" id="bookCount"></div>
-  <div class="grid" id="bookGrid"></div>
+  <div id="scene"></div>
+  <div id="tray"></div>
 </section>
+<div class="placed" id="ghost"></div>
+
+<div class="modal" id="collect">
+  <div class="card">
+    <h2>あつめた シール</h2>
+    <p id="collectCount"></p>
+    <div class="grid" id="collectGrid"></div>
+    <button class="big-btn sub" id="collectClose">とじる</button>
+  </div>
+</div>
 
 <div class="modal" id="clearModal">
   <div class="card">
@@ -297,6 +354,9 @@ const sfx = {
     [1046.5, 1318.5, 1568].forEach(f => tone(f, 0.9, { type: 'triangle', vol: 0.12, at: 0.5 }));
     for (let i = 0; i < 8; i++) tone(rand(1800, 3200), 0.15, { vol: 0.05, at: 0.6 + i * 0.07 });
   },
+  peta() { tone(220, 0.12, { to: 90, vol: 0.4 }); tone(1600, 0.04, { type: 'square', vol: 0.03 }); },
+  peel() { tone(700, 0.2, { to: 2200, vol: 0.08, type: 'sawtooth' }); },
+  boing() { tone(260, 0.3, { to: 620, vol: 0.2, type: 'sine' }); tone(620, 0.15, { to: 400, vol: 0.08, at: 0.2 }); },
   sparkle() { for (let i = 0; i < 6; i++) tone(rand(1500, 3000), 0.18, { vol: 0.06, at: i * 0.06 }); },
 };
 
@@ -484,15 +544,161 @@ function openMap() {
   });
   show('map');
 }
+// ---- sticker book ----
+// Each page is a scene; a sticker you own N of can be stuck N times across all pages.
+// Positions are stored as fractions of the scene so they survive a different screen size.
+const PAGES = [{ icon: '🌷' }, { icon: '🐟' }, { icon: '🌙' }, { icon: '🧸' }];
+const SIZES = [1, 1.5, 2, 0.7];
+let bookPage = 0;
+if (!Array.isArray(save.book) || save.book.length !== PAGES.length) save.book = PAGES.map(() => []);
+
+function stuckCount(s) { return save.book.reduce((n, pg) => n + pg.filter(p => p.s === s).length, 0); }
+
 function openBook(from) {
-  const got = Object.keys(save.stickers).length;
-  $('bookCount').textContent = `${got} / ${STICKERS.length} まい`;
-  $('bookGrid').innerHTML = STICKERS.map(s => save.stickers[s]
-    ? `<div class="cell">${s}${save.stickers[s] > 1 ? `<small>×${save.stickers[s]}</small>` : ''}</div>`
-    : '<div class="cell none">？</div>').join('');
   $('bookBack').onclick = () => { sfx.tick(); from === 'map' ? openMap() : show('title'); };
+  $('pageTabs').innerHTML = '';
+  PAGES.forEach((pg, i) => {
+    const b = document.createElement('button');
+    b.textContent = pg.icon;
+    b.addEventListener('click', () => { sfx.tick(); bookPage = i; renderBook(); });
+    $('pageTabs').appendChild(b);
+  });
   show('book');
+  renderBook();
 }
+function renderBook() {
+  [...$('pageTabs').children].forEach((b, i) => b.classList.toggle('on', i === bookPage));
+  const scene = $('scene');
+  scene.className = 's-' + bookPage; scene.innerHTML = '';
+  save.book[bookPage].forEach(p => scene.appendChild(makePlaced(p)));
+  if (!Object.keys(save.stickers).length) scene.insertAdjacentHTML('beforeend', '<div class="empty">ゲームで シールを あつめて<br>ここに はろう！</div>');
+  renderTray();
+}
+function renderTray() {
+  const tray = $('tray'); tray.innerHTML = '';
+  const owned = STICKERS.filter(s => save.stickers[s]);
+  if (!owned.length) { tray.innerHTML = '<div class="note">まだ シールが ないよ</div>'; return; }
+  for (const s of owned) {
+    const left = save.stickers[s] - stuckCount(s);
+    const b = document.createElement('button');
+    b.className = 't' + (left > 0 ? '' : ' out');
+    b.innerHTML = `${s}<i>${left}</i>`;
+    trayDrag(b, s);
+    tray.appendChild(b);
+  }
+}
+function makePlaced(p) {
+  const el = document.createElement('div');
+  el.className = 'placed';
+  el.textContent = p.s;
+  el.style.left = p.x * 100 + '%'; el.style.top = p.y * 100 + '%';
+  el.style.setProperty('--r', p.r + 'deg'); el.style.setProperty('--z', p.z);
+  placedDrag(el, p);
+  return el;
+}
+function stickAt(s, x, y) {
+  if (save.stickers[s] - stuckCount(s) <= 0) { sfx.nope(); return; }
+  const p = { s, x: Math.min(0.94, Math.max(0.06, x)), y: Math.min(0.94, Math.max(0.06, y)), r: Math.round(rand(-15, 15)), z: 1 };
+  save.book[bookPage].push(p); persist();
+  $('scene').querySelector('.empty')?.remove();
+  const el = makePlaced(p);
+  $('scene').appendChild(el);
+  el.classList.add('stick');
+  sfx.peta();
+  const r = el.getBoundingClientRect();
+  burst(r.left + r.width / 2, r.top + r.height / 2, pick(COLORS), 12);
+  renderTray();
+}
+function sceneFrac(e) {
+  const r = $('scene').getBoundingClientRect();
+  return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height,
+    inside: e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom };
+}
+
+// tray: tap = stick somewhere on the page, drag upward = carry it to a spot
+function trayDrag(btn, s) {
+  let start = null, dragging = false;
+  const ghost = $('ghost');
+  btn.addEventListener('pointerdown', e => { audio(); start = { x: e.clientX, y: e.clientY, id: e.pointerId }; dragging = false; });
+  btn.addEventListener('pointermove', e => {
+    if (!start || e.pointerId !== start.id) return;
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (!dragging && dy < -12 && Math.abs(dy) > Math.abs(dx)) {
+      if (save.stickers[s] - stuckCount(s) <= 0) { start = null; sfx.nope(); return; }
+      dragging = true; btn.setPointerCapture(e.pointerId);
+      ghost.textContent = s; ghost.style.display = 'block'; ghost.className = 'placed lift';
+      ghost.style.setProperty('--r', '0deg'); ghost.style.setProperty('--z', 1);
+      sfx.tick();
+    }
+    if (dragging) { ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
+  });
+  const end = e => {
+    if (!start) return;
+    if (dragging) {
+      ghost.style.display = 'none';
+      const f = sceneFrac(e);
+      if (f.inside) stickAt(s, f.x, f.y);
+    } else if (e.type === 'pointerup') {
+      stickAt(s, rand(0.25, 0.75), rand(0.25, 0.7));
+    }
+    start = null; dragging = false;
+  };
+  btn.addEventListener('pointerup', end);
+  btn.addEventListener('pointercancel', e => { if (dragging) end(e); start = null; });
+}
+
+// placed sticker: tap = change size, drag = move, drag off the page = peel it off
+function placedDrag(el, p) {
+  let start = null, moved = false;
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault(); audio();
+    el.parentNode.appendChild(el);   // bring to front (before capturing: moving the node drops the capture)
+    el.setPointerCapture(e.pointerId);
+    start = { x: e.clientX, y: e.clientY }; moved = false;
+    el.classList.remove('stick'); el.classList.add('lift');
+  });
+  el.addEventListener('pointermove', e => {
+    if (!start) return;
+    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 8) moved = true;
+    if (!moved) return;
+    const f = sceneFrac(e);
+    el.style.left = f.x * 100 + '%'; el.style.top = f.y * 100 + '%';
+    el.style.opacity = f.inside ? 1 : 0.5;
+  });
+  const end = e => {
+    if (!start) return;
+    start = null; el.classList.remove('lift'); el.style.opacity = '';
+    const pg = save.book[bookPage];
+    pg.splice(pg.indexOf(p), 1);
+    if (!moved) {
+      p.z = SIZES[(SIZES.indexOf(p.z) + 1) % SIZES.length];
+      el.style.setProperty('--z', p.z);
+      sfx.boing();
+      pg.push(p);
+    } else {
+      const f = sceneFrac(e);
+      if (!f.inside) {
+        el.classList.add('peel'); sfx.peel();
+        setTimeout(() => el.remove(), 350);
+      } else {
+        p.x = f.x; p.y = f.y; pg.push(p);
+        void el.offsetWidth; el.classList.add('stick'); sfx.peta();
+      }
+    }
+    persist(); renderTray();
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+}
+
+function openCollect() {
+  const got = Object.keys(save.stickers).length;
+  $('collectCount').textContent = `${got} / ${STICKERS.length} まい`;
+  $('collectGrid').innerHTML = STICKERS.map(s => save.stickers[s] ? `<div class="cell">${s}</div>` : '<div class="cell none">？</div>').join('');
+  $('collect').classList.add('on');
+}
+$('collectBtn').addEventListener('click', () => { sfx.tick(); openCollect(); });
+$('collectClose').addEventListener('click', () => { sfx.tick(); $('collect').classList.remove('on'); });
 
 // ---- game ----
 const stage = $('stage');
