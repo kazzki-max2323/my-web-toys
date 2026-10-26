@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2b5cff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="QRコード">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>QRコードメーカー</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --text: #13204a;
+    --muted: #6b7699;
+    --line: #dfe4f0;
+    --accent: #2b5cff;
+    --danger: #e0324f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, "Hiragino Sans", "Yu Gothic UI", sans-serif; -webkit-text-size-adjust: 100%; }
+  main { max-width: 480px; margin: 0 auto;
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
+  h1 { font-size: 22px; margin: 4px 0 14px; }
+  .field { display: flex; gap: 8px; }
+  textarea {
+    flex: 1; min-width: 0; resize: none; height: 72px; padding: 12px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+    font: inherit; font-size: 16px; line-height: 1.4;
+  }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+  button {
+    padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); font: inherit; font-size: 15px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:active { transform: scale(0.97); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: 0.4; pointer-events: none; }
+  .side { display: flex; flex-direction: column; gap: 8px; }
+  .side button { flex: 1; padding: 6px 10px; font-size: 13px; }
+  .note { min-height: 20px; margin: 6px 2px 0; font-size: 13px; color: var(--muted); }
+  .note.warn { color: var(--danger); }
+
+  .qr-card {
+    margin-top: 10px; background: var(--card); border-radius: 18px; border: 1px solid var(--line);
+    padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .qr-box { width: 100%; max-width: 320px; aspect-ratio: 1; display: grid; place-items: center; cursor: zoom-in; }
+  .qr-box canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; line-height: 1.8; }
+  .qr-text { font-size: 12px; color: var(--muted); word-break: break-all; text-align: center; max-height: 3.6em; overflow: hidden; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+
+  h2 { font-size: 14px; color: var(--muted); margin: 22px 2px 8px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  h2 button { padding: 2px 8px; font-size: 12px; border: none; background: none; color: var(--muted); }
+  .history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .history button { width: 100%; text-align: left; font-size: 13px; padding: 10px 12px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .big {
+    position: fixed; inset: 0; background: #fff; display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px; padding: 24px; cursor: zoom-out; z-index: 10;
+  }
+  .big.show { display: flex; }
+  .big canvas { width: min(92vw, 80vh); height: min(92vw, 80vh); image-rendering: pixelated; }
+  .big p { margin: 0; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>QRコードメーカー</h1>
+  <div class="field">
+    <textarea id="input" placeholder="https://example.com" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url" aria-label="URL"></textarea>
+    <div class="side">
+      <button id="paste" type="button">貼り付け</button>
+      <button id="clear" type="button">消す</button>
+    </div>
+  </div>
+  <p id="note" class="note"></p>
+
+  <section class="qr-card">
+    <div id="qrBox" class="qr-box" title="タップで大きく表示">
+      <p class="empty">上の欄にURLを入れると<br>ここにQRコードが出ます</p>
+    </div>
+    <div id="qrText" class="qr-text"></div>
+    <div class="actions">
+      <button id="save" type="button" class="primary" disabled>画像を保存</button>
+      <button id="share" type="button" disabled>共有</button>
+    </div>
+  </section>
+
+  <h2 id="historyHead" hidden>さいきん作ったもの <button id="historyClear" type="button">履歴を消す</button></h2>
+  <ul id="history" class="history"></ul>
+</main>
+
+<div id="big" class="big" role="dialog" aria-label="QRコードを大きく表示">
+  <canvas id="bigCanvas"></canvas>
+  <p>タップでもどる</p>
+</div>
+
+<script src="qrcode.js"></script>
+<script>
+// 日本語などを含むURLも読めるように UTF-8 で埋めこむ
+qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+
+const $ = id => document.getElementById(id);
+const input = $('input'), note = $('note'), qrBox = $('qrBox'), qrText = $('qrText');
+const HISTORY_KEY = 'qr-maker-history', HISTORY_MAX = 10;
+let current = '';   // いま表示している文字列
+let qr = null;      // いま表示している QR（qrcode-generator のオブジェクト）
+
+function makeQR(text) {
+  const q = qrcode(0, 'M');  // 0 = 長さに合わせて大きさを自動で決める
+  q.addData(text);
+  q.make();
+  return q;
+}
+
+// まわりに白いすき間（4マス）をつけて canvas に描く
+function draw(canvas, q, cell) {
+  const n = q.getModuleCount(), quiet = 4, size = (n + quiet * 2) * cell;
+  canvas.width = canvas.height = size;
+  const g = canvas.getContext('2d');
+  g.fillStyle = '#fff';
+  g.fillRect(0, 0, size, size);
+  g.fillStyle = '#000';
+  for (let y = 0; y < n; y++)
+    for (let x = 0; x < n; x++)
+      if (q.isDark(y, x)) g.fillRect((x + quiet) * cell, (y + quiet) * cell, cell, cell);
+}
+
+function update() {
+  const text = input.value.trim();
+  current = text;
+  note.textContent = '';
+  note.classList.remove('warn');
+  $('save').disabled = $('share').disabled = true;
+  qrText.textContent = '';
+  qr = null;
+  if (!text) {
+    qrBox.innerHTML = '<p class="empty">上の欄にURLを入れると<br>ここにQRコードが出ます</p>';
+    return;
+  }
+  try {
+    qr = makeQR(text);
+  } catch (e) {
+    qrBox.innerHTML = '<p class="empty">長すぎてQRコードにできません</p>';
+    note.textContent = '文字を減らしてください';
+    note.classList.add('warn');
+    return;
+  }
+  const canvas = document.createElement('canvas');
+  draw(canvas, qr, 8);
+  qrBox.replaceChildren(canvas);
+  qrText.textContent = text;
+  $('save').disabled = $('share').disabled = false;
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(text)) {
+    note.textContent = /^[^\s]+\.[^\s]+$/.test(text)
+      ? 'ヒント：「https://」をつけると、読みとった人がそのまま開けます'
+      : 'URLではない文字もQRコードにできます';
+  }
+}
+
+// 入力が止まってから履歴に残す（1文字ずつ残らないように）
+let saveTimer = 0;
+input.addEventListener('input', () => {
+  update();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => remember(current), 1500);
+});
+
+// ---- 履歴（この端末の中だけに保存） ----
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch (e) { return []; }
+}
+function saveHistory(list) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch (e) {}
+  renderHistory();
+}
+function remember(text) {
+  if (!text || !qr) return;
+  saveHistory([text, ...loadHistory().filter(t => t !== text)].slice(0, HISTORY_MAX));
+}
+function renderHistory() {
+  const list = loadHistory(), ul = $('history');
+  $('historyHead').hidden = !list.length;
+  ul.replaceChildren(...list.map(t => {
+    const li = document.createElement('li'), b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = t;
+    b.onclick = () => { input.value = t; update(); remember(t); scrollTo({ top: 0, behavior: 'smooth' }); };
+    li.append(b);
+    return li;
+  }));
+}
+$('historyClear').onclick = () => { if (confirm('履歴をすべて消しますか？')) saveHistory([]); };
+
+// ---- ボタン ----
+$('clear').onclick = () => { input.value = ''; update(); input.focus(); };
+
+$('paste').onclick = async () => {
+  try {
+    const t = await navigator.clipboard.readText();
+    if (t) { input.value = t.trim(); update(); remember(current); }
+  } catch (e) {
+    note.textContent = '貼り付けできませんでした。欄を長押しして貼り付けてください';
+    note.classList.add('warn');
+  }
+};
+
+// 保存・共有用は大きめ（1マス 16px）に描きなおす
+function exportBlob() {
+  const c = document.createElement('canvas');
+  draw(c, qr, 16);
+  return new Promise(ok => c.toBlob(ok, 'image/png'));
+}
+
+$('save').onclick = async () => {
+  if (!qr) return;
+  remember(current);
+  const blob = await exportBlob(), a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'qrcode.png';
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+};
+
+$('share').onclick = async () => {
+  if (!qr) return;
+  remember(current);
+  const blob = await exportBlob();
+  const file = new File([blob], 'qrcode.png', { type: 'image/png' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], text: current });
+    } else if (navigator.share) {
+      await navigator.share({ text: current });
+    } else {
+      await navigator.clipboard.writeText(current);
+      note.textContent = 'URLをコピーしました';
+    }
+  } catch (e) { /* 共有をやめたとき */ }
+};
+
+// ---- タップで大きく表示（相手に読みとってもらうとき用） ----
+qrBox.onclick = () => {
+  if (!qr) return;
+  remember(current);
+  draw($('bigCanvas'), qr, 16);
+  $('big').classList.add('show');
+};
+$('big').onclick = () => $('big').classList.remove('show');
+addEventListener('keydown', e => { if (e.key === 'Escape') $('big').classList.remove('show'); });
+
+// 新しい版への読みこみ直しは、入力が空のときだけ（入れた URL が消えないように）
+window.canReload = () => !input.value.trim();
+
+// ?url=... で開いたときはその URL を表示する
+const fromParam = new URLSearchParams(location.search).get('url');
+if (fromParam) input.value = fromParam;
+update();
+renderHistory();
+</script>
+<script>
+if('serviceWorker' in navigator){addEventListener('load',()=>{
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{document.addEventListener('visibilitychange',()=>{if(!document.hidden)r.update().catch(()=>{})})}).catch(()=>{});
+  /* 新しい版に入れかわったら、安全なときに1回だけ読みこみ直す。
+     ゲームの途中などで読みこみ直したくないときは、アプリ側で window.canReload=()=>false を返すようにする */
+  let had=!!navigator.serviceWorker.controller,want=false;const go=()=>{if(want&&(!window.canReload||window.canReload()))location.reload()};
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had){want=true;go()}});setInterval(go,3000)})}
+</script>
+</body>
+</html>

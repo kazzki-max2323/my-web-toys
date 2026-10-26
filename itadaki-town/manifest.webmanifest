@@ -1,0 +1,17 @@
+{
+  "name": "いただきタウン",
+  "short_name": "いただきタウン",
+  "description": "お店を買って、増資して、株でもうけるボードゲーム。あなた対CPU3人。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#a9e1ff",
+  "theme_color": "#a9e1ff",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
