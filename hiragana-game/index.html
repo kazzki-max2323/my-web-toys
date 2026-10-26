@@ -284,6 +284,7 @@
   </div>
 </div>
 
+<script src="bg-sound.js"></script>
 <script src="voices/v0.js"></script>
 <script>
 // ---- data ----
@@ -319,8 +320,9 @@ const theme = () => THEMES[save.lap % THEMES.length];
 // ---- sound (WebAudio, synthesized) ----
 let ac = null;
 function audio() {
-  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; } }
-  if (ac.state === 'suspended') ac.resume();
+  if (!ac) { try { ac = BgSound.add(new (window.AudioContext || window.webkitAudioContext)()); } catch { return null; } }
+  // a hint timer can fire while the app is in the background; leave the context suspended then
+  if (ac.state === 'suspended' && !document.hidden) ac.resume();
   // iOS: play through the silent switch like a media app
   try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {}
   return ac;
