@@ -2072,6 +2072,7 @@
                         午前中 / 12-14時 / 14-16時 / 16-18時 / 18-20時 / 19-21時
                     </div>
                 </div>
+                <p id="modalNote" class="text-[11px] text-gray-500 leading-relaxed"></p>
             </div>
             <button onclick="closeModal()" class="w-full bg-jpost-red text-white py-2.5 rounded-xl font-bold text-xs shadow-sm hover:bg-jpost-darkred transition">
                 閉じる
@@ -2335,14 +2336,14 @@
         "color": "#8E73B9",
         "days": "翌日16-18",
         "slots": "16-18時以降",
-        "note": "日本郵便のお届け日数検索（新潟中央郵便局→県庁所在地・午後差出、2026年10月26日）で確認"
+        "note": "県庁所在地（広島市）あての公式お届け日数検索の結果です。県内でも分かれ、東広島・呉（市街地）も翌日16-18時ごろ、福山・尾道・三次は翌日14-16時ごろ、島しょ部（呉市豊浜町など）は翌々日午前です。新潟県内のどこから出しても同じでした（2026年10月26日確認）。"
     },
     "35": {
         "name": "山口県",
         "color": "#1F3A8A",
         "days": "翌日夜間",
         "slots": "18-20時・19-21時",
-        "note": "日本郵便のお届け日数検索（新潟中央郵便局→県庁所在地・午後差出、2026年10月26日）で確認"
+        "note": "県庁所在地（山口市）あての公式お届け日数検索の結果です。宇部・岩国・萩も翌日夜間、下関・周南は翌日16-18時ごろです。新潟県内のどこから出しても同じでした（2026年10月26日確認）。"
     },
     "36": {
         "name": "徳島県",
@@ -2370,7 +2371,7 @@
         "color": "#1F3A8A",
         "days": "翌日夜間",
         "slots": "18-20時・19-21時",
-        "note": "日本郵便のお届け日数検索（新潟中央郵便局→県庁所在地・午後差出、2026年10月26日）で確認"
+        "note": "県庁所在地（高知市）あての公式お届け日数検索の結果です。南国・四万十・室戸・須崎などは翌日16-18時ごろと、高知市より早く届きます。新潟県内のどこから出しても同じでした（2026年10月26日確認）。"
     },
     "40": {
         "name": "福岡県",
@@ -2655,6 +2656,7 @@
             document.getElementById('modalPrefDot').style.backgroundColor = data.color;
             document.getElementById('modalDays').innerText = data.days;
             document.getElementById('modalTimeSlots').innerText = data.slots;
+            document.getElementById('modalNote').innerText = /お届け日数検索/.test(data.note||'') ? data.note : '県内でも市町村によって日数・時間帯が変わることがあります。';
             document.getElementById('prefModal').classList.remove('hidden');
         }
 
