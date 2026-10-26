@@ -139,6 +139,7 @@
         #dangerousModalBody .in-modal{max-height:none!important;opacity:1!important;overflow:visible!important;border-top:0!important;margin-left:-1rem;margin-right:-1rem}
         #dangerousModalBody .dangerous-results-wrap,#dangerousModalBody #dangerousResults{max-height:none!important;overflow:visible!important}
         #prefModal{z-index:130!important}
+        #dangerousModalBody .in-modal .sticky.top-0{top:var(--dg-head,2.5rem);z-index:4}
         /* 日本地図 */
         .jp-pref{cursor:pointer;vector-effect:non-scaling-stroke;transition:opacity .2s ease,filter .15s ease}
         .jp-pref:hover{filter:brightness(.92)}
@@ -8111,7 +8112,7 @@ const dangerousCategories = ['すべて', ...new Set(dangerousGoods.map(x=>x.cat
                 body = `<div class="bg-white rounded-xl border border-gray-200 p-3 mb-3"><p class="text-xs leading-relaxed text-gray-700">この品目は、内容物・状態・包装等によって条件が変わるため、公式個別詳細ページを確認してください。</p></div>`;
             }
             const hasLocal=x.domestic!=='公式詳細確認' && x.domestic!=='要確認';
-            box.innerHTML=`<div class="sticky top-0 -mx-4 -mt-3 px-4 pt-3 pb-2 mb-3 bg-gray-50 border-b border-gray-200 flex items-start justify-between gap-3" style="z-index:1"><div><h3 class="font-bold text-base sm:text-lg text-gray-900">${esc(x.name)}</h3><div class="text-xs text-gray-500 mt-1">${esc(x.row)} ・ ${esc(x.category)}${v?` ・ <span class="text-green-700 font-bold">公式個別詳細を全文収録済み</span>`:(x.officialIndexVerified?` ・ <span class="text-red-700 font-bold">公式一覧確認済み</span>`:'')}</div></div><button type="button" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-white border" onclick="closeDangerousDetail()">✕ 閉じる</button></div>
+            box.innerHTML=`<div class="sticky top-0 -mx-4 -mt-3 px-4 pt-3 pb-2 mb-3 bg-gray-50 border-b border-gray-200 flex items-start justify-between gap-3" style="z-index:5;top:-.75rem"><div><h3 class="font-bold text-base sm:text-lg text-gray-900">${esc(x.name)}</h3><div class="text-xs text-gray-500 mt-1">${esc(x.row)} ・ ${esc(x.category)}${v?` ・ <span class="text-green-700 font-bold">公式個別詳細を全文収録済み</span>`:(x.officialIndexVerified?` ・ <span class="text-red-700 font-bold">公式一覧確認済み</span>`:'')}</div></div><button type="button" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-white border" onclick="closeDangerousDetail()">✕ 閉じる</button></div>
                 ${body}
                 <div class="mt-3 flex flex-col sm:flex-row gap-2"><a href="${esc(x.officialUrl||x.officialSearch)}" target="_blank" rel="noopener noreferrer" class="flex-1 text-center px-4 py-3 rounded-xl bg-red-600 text-white font-bold text-sm">🇯🇵 日本郵便公式の個別詳細ページを開く ↗</a></div>
                 <div class="text-[11px] text-gray-500 mt-2">${v?`✅ この品目は、日本郵便公式の個別詳細ページの全内容をHTML内にそのまま収録しています（収録日：2026-10-23）。`:`⚠️ この品目は公式個別詳細ページに未対応のため、上のリンクから確認してください。`}</div>
@@ -8200,13 +8201,14 @@ const dangerousCategories = ['すべて', ...new Set(dangerousGoods.map(x=>x.cat
             const body = document.getElementById('dangerousModalBody');
             if(!body || !node) return;
             restoreModalContent();
-            body.innerHTML = `<div class="sticky top-0 -mx-4 -mt-3 px-4 pt-3 pb-2 mb-3 bg-gray-50 border-b border-gray-200 flex items-start justify-between gap-3" style="z-index:1"><h3 class="font-bold text-base sm:text-lg text-gray-900 min-w-0">${(title||'').trim()}</h3></div>`;
+            body.innerHTML = `<div class="sticky top-0 -mx-4 -mt-3 px-4 pt-3 pb-2 mb-3 bg-gray-50 border-b border-gray-200 flex items-start justify-between gap-3" style="z-index:5;top:-.75rem"><h3 class="font-bold text-base sm:text-lg text-gray-900 min-w-0">${(title||'').trim()}</h3></div>`;
             const ph = document.createComment('popup-placeholder');
             node.parentNode.insertBefore(ph, node);
             dgMoved = {node, ph};
             node.classList.add('in-modal');
             body.appendChild(node);
             openDangerousModal();
+            body.style.setProperty('--dg-head', Math.max(0, body.firstElementChild.offsetHeight - 12) + 'px');
         }
         function restoreModalContent(){
             if(!dgMoved) return;
