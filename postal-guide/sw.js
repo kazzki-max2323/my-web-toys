@@ -3,7 +3,7 @@
 //  - インストール時は画面の部品（CORE）だけを保存する。大きい音声・動画をまとめて取りにいくと、1つ失敗しただけで更新が止まるため
 //  - 音声・動画は使ったときに MEDIA に保存し、版が変わっても消さない
 //  - いつもネットの最新版を先に取りにいき（変わっていなければ304で軽い）、つながらない・遅いときだけ保存した物を使う
-const CACHE='postal-guide-v17',MEDIA='postal-guide-media';
+const CACHE='postal-guide-v18',MEDIA='postal-guide-media';
 const CORE=['./','index.html','tailwind.css','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png'];
 const IS_MEDIA=/\.(mp3|m4a|ogg|wav|mp4|webm)$/i;
 
