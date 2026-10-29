@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>時間差計算</title>
+<style>
+  :root { color-scheme: dark; --bg:#0b1220; --card:#151f30; --field:#0d1727; --text:#f8fafc; --muted:#aab6c8; --accent:#55e0b2; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif; display:flex; justify-content:center; }
+  main { width:min(100%,480px); padding:24px 18px calc(24px + env(safe-area-inset-bottom)); }
+  h1 { margin:8px 0 6px; font-size:1.5rem; letter-spacing:.02em; }
+  .sub { margin:0 0 24px; color:var(--muted); font-size:.9rem; }
+  .card { background:var(--card); border:1px solid #29364a; border-radius:22px; padding:20px; box-shadow:0 12px 36px #0002; }
+  label { display:block; color:var(--muted); font-size:.9rem; margin:0 0 9px; }
+  .field { margin-bottom:20px; }
+  input[type=time] { appearance:none; width:100%; background:var(--field); color:var(--text); border:1px solid #34445d; border-radius:14px; padding:16px 14px; font:600 2rem/1.2 system-ui,sans-serif; min-height:68px; }
+  .result { text-align:center; margin:24px 0 20px; padding:22px 10px; border-radius:18px; background:#0d1727; border:1px solid #2c4053; }
+  .result-label { color:var(--muted); font-size:.85rem; margin-bottom:8px; }
+  #result { font-size:clamp(2rem,9vw,3rem); font-weight:800; line-height:1.2; color:var(--accent); letter-spacing:.01em; }
+  #total { color:var(--muted); font-size:.9rem; margin-top:8px; }
+  .buttons { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  button { border:0; border-radius:14px; min-height:54px; padding:12px; font-size:1rem; font-weight:700; cursor:pointer; }
+  .clear { color:var(--text); background:#29364a; }
+  .now { color:#06261c; background:var(--accent); }
+  .hint { margin:16px 3px 0; color:var(--muted); font-size:.8rem; line-height:1.6; }
+  @media (max-width:360px) { main { padding:16px 12px; } .card { padding:15px; } input[type=time] { font-size:1.7rem; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>時間差計算</h1>
+  <p class="sub">時刻を入れるだけ。すぐに計算。</p>
+  <section class="card" aria-label="時間差計算">
+    <div class="field">
+      <label for="start">開始時刻</label>
+      <input id="start" type="time" value="14:23" step="60">
+    </div>
+    <div class="field">
+      <label for="end">終了時刻</label>
+      <input id="end" type="time" value="17:09" step="60">
+    </div>
+    <div class="result" aria-live="polite">
+      <div class="result-label">時間差</div>
+      <div id="result">2時間46分</div>
+      <div id="total">合計 166 分</div>
+    </div>
+    <div class="buttons">
+      <button class="now" id="setNow" type="button">終了を現在時刻に</button>
+      <button class="clear" id="reset" type="button">リセット</button>
+    </div>
+  </section>
+  <p class="hint">終了時刻が開始時刻より早い場合は、翌日の時刻として計算します。通信は行わず、この端末だけで動作します。</p>
+</main>
+<script>
+const start = document.getElementById('start');
+const end = document.getElementById('end');
+const result = document.getElementById('result');
+const total = document.getElementById('total');
+function minutesOf(value) {
+  if (!value) return null;
+  const [h, m] = value.split(':').map(Number);
+  return h * 60 + m;
+}
+function calculate() {
+  const a = minutesOf(start.value), b = minutesOf(end.value);
+  if (a === null || b === null) {
+    result.textContent = '時刻を入力';
+    total.textContent = '';
+    return;
+  }
+  let diff = b - a;
+  if (diff < 0) diff += 24 * 60;
+  const hours = Math.floor(diff / 60), mins = diff % 60;
+  result.textContent = `${hours}時間${mins}分`;
+  total.textContent = `合計 ${diff} 分`;
+}
+start.addEventListener('input', calculate);
+end.addEventListener('input', calculate);
+document.getElementById('setNow').addEventListener('click', () => {
+  const d = new Date();
+  end.value = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  calculate();
+});
+document.getElementById('reset').addEventListener('click', () => {
+  start.value = '';
+  end.value = '';
+  calculate();
+  start.focus();
+});
+calculate();
+</script>
+</body>
+</html>
