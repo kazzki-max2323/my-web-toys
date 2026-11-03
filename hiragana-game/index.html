@@ -366,9 +366,9 @@ const sfx = {
 // Recorded clips from voices/*.js play through WebAudio, so the voice works even where the
 // browser has no speech engine (in-app browsers, Android WebView). speechSynthesis is only
 // a fallback for a clip that is missing or failed to decode.
-// Ten voice packs; each row is read by a randomly picked one. v0 ships with the page, the rest
-// load in the background after the first tap.
-const VOICE_IDS = ['v0', 'v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'v9'];
+// Five voice packs (Kokoro-82M Japanese voices and blends of them); each row is read by a randomly
+// picked one. v0 ships with the page, the rest load in the background after the first tap.
+const VOICE_IDS = ['v0', 'v1', 'v2', 'v3', 'v4'];
 const VOICE_TEXT = { title: 'ひらがな、ぽんぽん！', float: 'こんどは、ふわふわ、だよ' };
 const voiceBufs = {};   // pack id -> { key: Promise<AudioBuffer|null> }
 let voiceId = 'v0', voiceSrc = null, voiceToken = 0;
@@ -406,13 +406,16 @@ function stopVoice() {
   synth?.cancel();
 }
 function playClip(key, tok) {
-  decodePack(voiceId);
-  return Promise.resolve(voiceBufs[voiceId]?.[key]).then(buf => {
+  // a pack can lack a kana it could not say clearly; borrow that clip from another loaded pack
+  const id = window.VOICE_PACKS?.[voiceId]?.[key] ? voiceId
+    : VOICE_IDS.find(v => window.VOICE_PACKS?.[v]?.[key]) || voiceId;
+  decodePack(id);
+  return Promise.resolve(voiceBufs[id]?.[key]).then(buf => {
     if (tok !== voiceToken) return;
     if (!buf) return speak(VOICE_TEXT[key] || key.replace(/^(row|lap):/, ''));
     return new Promise(resolve => {
       const src = ac.createBufferSource(), g = ac.createGain();
-      g.gain.value = 1.4;
+      g.gain.value = 1;   // clips are normalized; any boost would clip and sound harsh
       src.buffer = buf; src.connect(g).connect(ac.destination);
       src.onended = resolve;
       setTimeout(resolve, buf.duration * 1000 + 400);   // in case onended never fires
