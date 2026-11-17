@@ -13,57 +13,78 @@
 <link rel="manifest" href="manifest.webmanifest">
 <title>時間差計算</title>
 <style>
-  :root { color-scheme: dark; --bg:#020617; --card:#020818; --line:#3a4459; --field:#1f293a; --text:#f8fafc; --muted:#94a3b8; --accent:#24b081; --sum:#fbbf24; }
+  :root { color-scheme: dark; --bg:#020617; --card:#020818; --line:#3a4459; --field:#1f293a; --text:#f8fafc; --muted:#94a3b8; --accent:#24b081; --sum:#fbbf24; --dial:#525252; --pick:#0a84ff; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html, body { margin:0; background:var(--bg); color:var(--text); -webkit-text-size-adjust:100%; }
   body { min-height:100vh; font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif; display:flex; justify-content:center; }
-  main { width:min(100%,480px); padding:calc(24px + env(safe-area-inset-top)) 18px calc(130px + env(safe-area-inset-bottom)); }
-  h1 { margin:8px 0 6px; font-size:1.55rem; font-weight:800; letter-spacing:.02em; }
-  .sub { margin:0 0 22px; color:var(--muted); font-size:.95rem; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:24px; padding:20px 22px 22px; box-shadow:0 0 40px #0006; margin-bottom:18px; }
-  .card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .card-title { font-weight:800; font-size:1.05rem; }
-  .now { border:0; border-radius:12px; min-height:40px; padding:8px 14px; font:700 .9rem/1 inherit; font-family:inherit; color:#03251a; background:var(--accent); cursor:pointer; white-space:nowrap; }
-  label { display:block; color:var(--muted); font-size:.95rem; margin:0 0 10px; }
-  .field { margin-bottom:18px; }
-  input[type=time] { appearance:none; -webkit-appearance:none; display:block; width:100%; background:var(--field); color:var(--text); border:1px solid var(--line); border-radius:16px; padding:14px 26px; font:700 2.1rem/1.2 system-ui,-apple-system,sans-serif; min-height:84px; font-variant-numeric:tabular-nums; text-align:left; }
-  input[type=time]:focus { outline:2px solid var(--accent); outline-offset:2px; }
-  input[type=time]::-webkit-date-and-time-value { text-align:left; }
-  input[type=time]::-webkit-calendar-picker-indicator { filter:invert(1); opacity:.5; }
-  .result { text-align:center; padding:20px 10px; border-radius:20px; border:1px solid var(--line); }
-  .result-label { color:var(--muted); font-size:.95rem; margin-bottom:4px; }
-  .diff { font-size:clamp(2rem,10vw,2.8rem); font-weight:800; line-height:1.25; color:var(--accent); font-variant-numeric:tabular-nums; }
-  .mins { color:var(--muted); font-size:.95rem; margin-top:6px; min-height:1.2em; }
-  .reset { width:100%; border:1px solid var(--line); border-radius:14px; min-height:54px; padding:10px; font-size:1rem; font-weight:700; font-family:inherit; color:var(--text); background:var(--field); cursor:pointer; }
-  button:active { transform:scale(.98); }
-  .hint { margin:16px 3px 0; color:var(--muted); font-size:.8rem; line-height:1.6; }
-  .sumbar { position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:center; background:linear-gradient(transparent, var(--bg) 18px); padding:18px 18px calc(14px + env(safe-area-inset-bottom)); z-index:10; }
-  .sumbox { width:min(100%,444px); display:flex; align-items:center; justify-content:space-between; gap:12px; background:#1a1405; border:2px solid var(--sum); border-radius:20px; padding:12px 20px; box-shadow:0 -6px 30px #000a; }
+  main { width:min(100%,560px); padding:calc(12px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom)); }
+  h1 { margin:4px 0 2px; font-size:1.35rem; font-weight:800; letter-spacing:.02em; }
+  .sub { margin:0 0 12px; color:var(--muted); font-size:.85rem; }
+  #calcs { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .card { min-width:0; background:var(--card); border:1px solid var(--line); border-radius:20px; padding:12px; box-shadow:0 0 30px #0006; }
+  .card-title { font-weight:800; font-size:.95rem; margin:0 0 8px; }
+  .row { display:flex; align-items:center; justify-content:space-between; min-height:30px; margin-bottom:6px; }
+  .lbl { color:var(--muted); font-size:.85rem; }
+  .now { border:0; border-radius:10px; min-height:30px; padding:4px 12px; font:700 .85rem/1 inherit; font-family:inherit; color:#03251a; background:var(--accent); cursor:pointer; }
+  .time { display:block; width:100%; margin:0 0 12px; background:var(--field); color:var(--text); border:1px solid var(--line); border-radius:14px; padding:8px 0; font:700 clamp(1.5rem,7.5vw,2.1rem)/1.2 system-ui,-apple-system,sans-serif; min-height:62px; font-variant-numeric:tabular-nums; cursor:pointer; }
+  .time.empty { color:#64748b; }
+  .time.active { outline:2px solid var(--pick); outline-offset:1px; }
+  .result { text-align:center; padding:10px 4px; border-radius:14px; border:1px solid var(--line); }
+  .result-label { color:var(--muted); font-size:.8rem; }
+  .diff { font-size:clamp(1.15rem,5.6vw,1.6rem); font-weight:800; line-height:1.3; color:var(--accent); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .mins { color:var(--muted); font-size:.8rem; min-height:1.2em; }
+  .sumbox { margin:12px 0 10px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:#1a1405; border:2px solid var(--sum); border-radius:18px; padding:12px 18px; }
   .sum-label { color:var(--sum); font-weight:800; font-size:1rem; line-height:1.3; }
   .sum-label small { display:block; color:var(--muted); font-weight:500; font-size:.8rem; }
-  #sum { font-size:clamp(1.7rem,8vw,2.3rem); font-weight:800; color:var(--sum); font-variant-numeric:tabular-nums; white-space:nowrap; }
-  @media (max-width:360px) { main { padding-left:12px; padding-right:12px; } .card { padding:15px; } input[type=time] { font-size:1.8rem; padding:12px 18px; } }
+  #sum { font-size:clamp(1.6rem,8vw,2.3rem); font-weight:800; color:var(--sum); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .reset { width:100%; border:1px solid var(--line); border-radius:14px; min-height:46px; padding:8px; font-size:.95rem; font-weight:700; font-family:inherit; color:var(--text); background:var(--field); cursor:pointer; }
+  button:active { transform:scale(.98); }
+  .hint { margin:8px 3px 0; color:var(--muted); font-size:.75rem; line-height:1.6; }
+
+  /* 時計の文字盤（指を離したら決定） */
+  #picker { position:fixed; inset:0; z-index:20; display:none; flex-direction:column; justify-content:flex-end; align-items:center; background:#000a; }
+  #picker.open { display:flex; }
+  .sheet { width:min(100%,480px); background:#1c1c1e; border-radius:20px 20px 0 0; padding-bottom:calc(16px + env(safe-area-inset-bottom)); box-shadow:0 -10px 40px #000; }
+  .p-head { background:#4b4b4b; border-radius:20px 20px 0 0; text-align:center; padding:10px 0 6px; }
+  .p-who { color:#d4d4d4; font-size:.85rem; }
+  .p-time { font:300 3.6rem/1.15 system-ui,-apple-system,sans-serif; font-variant-numeric:tabular-nums; color:#a3a3a3; }
+  .p-time span { cursor:pointer; padding:0 4px; }
+  .p-time span.on { color:#fff; }
+  .p-help { color:var(--muted); font-size:.85rem; text-align:center; margin:12px 0 6px; }
+  #dial { display:block; margin:0 auto; width:min(80vw,300px); height:min(80vw,300px); touch-action:none; user-select:none; -webkit-user-select:none; }
+  .p-close { display:block; margin:10px auto 0; border:0; background:none; color:#7dd3c0; font:700 1rem/1 inherit; font-family:inherit; padding:10px 20px; cursor:pointer; }
 </style>
 </head>
 <body>
 <main>
   <h1>時間差計算</h1>
-  <p class="sub">時刻を入れるだけ。2つの時間差の合計もすぐに計算。</p>
+  <p class="sub">時刻を入れるだけ。2つの合計もすぐに計算。</p>
   <div id="calcs"></div>
-  <button class="reset" id="reset" type="button">ぜんぶリセット</button>
-  <p class="hint">終了時刻が開始時刻より早い場合は、翌日の時刻として計算します。片方だけ入れたときは、入っているほうだけを合計します。入れた時刻はこの端末に残ります。通信は行いません。</p>
-</main>
-<div class="sumbar" aria-live="polite">
-  <div class="sumbox">
+  <div class="sumbox" aria-live="polite">
     <div class="sum-label">2つの合計<small id="sumMins"></small></div>
     <div id="sum">0時間0分</div>
+  </div>
+  <button class="reset" id="reset" type="button">ぜんぶリセット</button>
+  <p class="hint">時刻をタップすると時計が出ます。時→分の順に指でなぞって、離したら決定。終了時刻が開始時刻より早い場合は翌日として計算します。入れた時刻はこの端末に残ります。</p>
+</main>
+<div id="picker" role="dialog" aria-modal="true" aria-label="時刻をえらぶ">
+  <div class="sheet">
+    <div class="p-head">
+      <div class="p-who" id="pWho"></div>
+      <div class="p-time"><span id="pH">00</span>:<span id="pM">00</span></div>
+    </div>
+    <div class="p-help" id="pHelp"></div>
+    <svg id="dial" viewBox="-150 -150 300 300"></svg>
+    <button class="p-close" id="pClose" type="button">とじる</button>
   </div>
 </div>
 <template id="tpl">
   <section class="card">
-    <div class="card-head"><span class="card-title"></span><button class="now" type="button">終了を現在時刻に</button></div>
-    <div class="field"><label>開始時刻</label><input class="start" type="time" step="60"></div>
-    <div class="field"><label>終了時刻</label><input class="end" type="time" step="60"></div>
+    <div class="card-title"></div>
+    <div class="row"><span class="lbl">開始時刻</span></div>
+    <button class="time start" type="button"></button>
+    <div class="row"><span class="lbl">終了時刻</span><button class="now" type="button">今</button></div>
+    <button class="time end" type="button"></button>
     <div class="result" aria-live="polite">
       <div class="result-label">時間差</div>
       <div class="diff"></div>
@@ -75,35 +96,42 @@
 const KEY = 'time-calc:v2';
 const N = 2;
 const DEFAULTS = [{ start: '14:23', end: '17:09' }, { start: '', end: '' }];
+const pad = n => String(n).padStart(2, '0');
 let saved = null;
 try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
 if (!saved) { // 前の版で入れた時刻があれば1つめに引きつぐ
   try { const old = JSON.parse(localStorage.getItem('time-calc:last') || 'null'); if (old) saved = [old, DEFAULTS[1]]; } catch (e) {}
 }
 saved = saved || DEFAULTS;
-const calcsEl = document.getElementById('calcs');
-const tpl = document.getElementById('tpl');
+
+// 時刻の欄（ボタン）。value は "HH:MM" か ""
+function makeTime(btn, value, name) {
+  const t = { btn, name, value: value || '' };
+  t.set = v => { t.value = v; btn.textContent = v || '--:--'; btn.classList.toggle('empty', !v); btn.setAttribute('aria-label', `${name} ${v || '未入力'}`); };
+  t.set(t.value);
+  btn.addEventListener('click', () => openPicker(t));
+  return t;
+}
+
 const rows = [];
+const tpl = document.getElementById('tpl');
 for (let i = 0; i < N; i++) {
   const el = tpl.content.firstElementChild.cloneNode(true);
-  const start = el.querySelector('.start'), end = el.querySelector('.end');
-  start.id = 'start' + i; end.id = 'end' + i;
-  el.querySelectorAll('label')[0].htmlFor = start.id;
-  el.querySelectorAll('label')[1].htmlFor = end.id;
-  el.querySelector('.card-title').textContent = ['1つめ', '2つめ'][i];
-  el.setAttribute('aria-label', `時間差 ${i + 1}`);
-  start.value = (saved[i] && saved[i].start) || '';
-  end.value = (saved[i] && saved[i].end) || '';
-  const row = { start, end, diff: el.querySelector('.diff'), mins: el.querySelector('.mins') };
-  for (const inp of [start, end]) { inp.addEventListener('input', calculate); inp.addEventListener('change', calculate); }
-  el.querySelector('.now').addEventListener('click', () => {
-    const d = new Date();
-    end.value = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    calculate();
-  });
+  const title = ['1つめ', '2つめ'][i];
+  el.querySelector('.card-title').textContent = title;
+  el.setAttribute('aria-label', `時間差 ${title}`);
+  const s = saved[i] || {};
+  const row = {
+    start: makeTime(el.querySelector('.start'), s.start, `${title}の開始時刻`),
+    end: makeTime(el.querySelector('.end'), s.end, `${title}の終了時刻`),
+    diff: el.querySelector('.diff'), mins: el.querySelector('.mins'),
+  };
+  el.querySelector('.now').addEventListener('click', () => { const d = new Date(); row.end.set(`${pad(d.getHours())}:${pad(d.getMinutes())}`); calculate(); });
+  el.querySelector('.now').setAttribute('aria-label', `${title}の終了を現在時刻に`);
   rows.push(row);
-  calcsEl.appendChild(el);
+  document.getElementById('calcs').appendChild(el);
 }
+
 function minutesOf(value) {
   if (!value) return null;
   const [h, m] = value.split(':').map(Number);
@@ -120,19 +148,95 @@ function calculate() {
     const nextDay = diff < 0;
     if (nextDay) diff += 24 * 60;
     r.diff.textContent = hm(diff);
-    r.mins.textContent = `合計 ${diff} 分` + (nextDay ? '（翌日）' : '');
+    r.mins.textContent = `${diff} 分` + (nextDay ? '（翌日）' : '');
     sum += diff; count++;
   }
   document.getElementById('sum').textContent = hm(sum);
   document.getElementById('sumMins').textContent = count ? `${sum} 分` : '時刻を入力';
 }
 document.getElementById('reset').addEventListener('click', () => {
-  for (const r of rows) { r.start.value = ''; r.end.value = ''; }
+  for (const r of rows) { r.start.set(''); r.end.set(''); }
   calculate();
 });
+
+// ---- 時計の文字盤：なぞって指を離したら決定（時→分→とじる） ----
+const picker = document.getElementById('picker'), dial = document.getElementById('dial');
+const pH = document.getElementById('pH'), pM = document.getElementById('pM');
+const SVG = 'http://www.w3.org/2000/svg';
+const R_OUT = 112, R_IN = 74; // 外側の輪（1〜12）と内側の輪（00・13〜23）
+let target = null, h = 0, m = 0, mode = 'h', dragging = false;
+
+function svg(tag, attrs, text) { const e = document.createElementNS(SVG, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; dial.appendChild(e); return e; }
+function pos(i, r) { const a = i * Math.PI / 6; return [Math.sin(a) * r, -Math.cos(a) * r]; }
+function draw() {
+  dial.textContent = '';
+  svg('circle', { r: 145, fill: 'var(--dial)' });
+  let sel, r;
+  if (mode === 'h') { r = (h === 0 || h > 12) ? R_IN : R_OUT; sel = pos(h % 12, r); }
+  else { r = R_OUT; const a = m * Math.PI / 30; sel = [Math.sin(a) * r, -Math.cos(a) * r]; }
+  svg('line', { x1: 0, y1: 0, x2: sel[0], y2: sel[1], stroke: 'var(--pick)', 'stroke-width': 3 });
+  svg('circle', { r: 4, fill: 'var(--pick)' });
+  svg('circle', { cx: sel[0], cy: sel[1], r: 22, fill: 'var(--pick)' });
+  const label = (i, rr, t, size, color) => { const [x, y] = pos(i, rr); svg('text', { x, y, 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': size, fill: color, 'font-family': 'system-ui,sans-serif' }, t); };
+  if (mode === 'h') {
+    for (let i = 0; i < 12; i++) {
+      label(i, R_OUT, String(i === 0 ? 12 : i), 19, '#fff');
+      label(i, R_IN, i === 0 ? '00' : String(i + 12), 15, '#d4d4d4');
+    }
+  } else {
+    for (let i = 0; i < 12; i++) label(i, R_OUT, pad(i * 5), 19, '#fff');
+  }
+  pH.textContent = pad(h); pM.textContent = pad(m);
+  pH.classList.toggle('on', mode === 'h'); pM.classList.toggle('on', mode === 'm');
+  document.getElementById('pHelp').textContent = mode === 'h' ? '「時」をなぞって、指を離すと決定' : '「分」をなぞって、指を離すと決定';
+}
+function pick(ev) {
+  const b = dial.getBoundingClientRect();
+  const x = (ev.clientX - b.left) / b.width * 300 - 150, y = (ev.clientY - b.top) / b.height * 300 - 150;
+  let ang = Math.atan2(x, -y); if (ang < 0) ang += Math.PI * 2;
+  const before = mode === 'h' ? h : m;
+  if (mode === 'h') {
+    const i = Math.round(ang / (Math.PI / 6)) % 12;
+    const inner = Math.hypot(x, y) < (R_IN + R_OUT) / 2;
+    h = inner ? (i === 0 ? 0 : i + 12) : (i === 0 ? 12 : i);
+  } else {
+    m = Math.round(ang / (Math.PI / 30)) % 60;
+  }
+  if ((mode === 'h' ? h : m) !== before && navigator.vibrate) navigator.vibrate(5);
+  target.set(`${pad(h)}:${pad(m)}`); calculate(); draw();
+}
+dial.addEventListener('pointerdown', e => { dragging = true; dial.setPointerCapture(e.pointerId); pick(e); e.preventDefault(); });
+dial.addEventListener('pointermove', e => { if (dragging) pick(e); });
+dial.addEventListener('pointerup', e => {
+  if (!dragging) return; dragging = false; pick(e);
+  if (mode === 'h') { mode = 'm'; draw(); } else closePicker(); // 指を離したら決定
+});
+dial.addEventListener('pointercancel', () => { dragging = false; });
+function openPicker(t) {
+  target = t;
+  let v = t.value;
+  if (!v) { const d = new Date(); v = `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+  [h, m] = v.split(':').map(Number);
+  mode = 'h';
+  document.getElementById('pWho').textContent = t.name;
+  rows.forEach(r => [r.start, r.end].forEach(x => x.btn.classList.toggle('active', x === t)));
+  draw();
+  picker.classList.add('open');
+}
+function closePicker() {
+  picker.classList.remove('open');
+  rows.forEach(r => [r.start, r.end].forEach(x => x.btn.classList.remove('active')));
+  target = null;
+}
+pH.addEventListener('click', () => { mode = 'h'; draw(); });
+pM.addEventListener('click', () => { mode = 'm'; draw(); });
+document.getElementById('pClose').addEventListener('click', closePicker);
+picker.addEventListener('click', e => { if (e.target === picker) closePicker(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && target) closePicker(); });
+
 calculate();
 // 時刻を選んでいる途中は、新しい版への読みこみ直しを待つ
-window.canReload = () => !(document.activeElement && document.activeElement.tagName === 'INPUT');
+window.canReload = () => !target;
 </script>
 <script>
 if('serviceWorker' in navigator){addEventListener('load',()=>{
