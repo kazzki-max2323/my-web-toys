@@ -13,97 +13,121 @@
 <link rel="manifest" href="manifest.webmanifest">
 <title>時間差計算</title>
 <style>
-  :root { color-scheme: dark; --bg:#020617; --card:#020818; --line:#3a4459; --field:#1f293a; --text:#f8fafc; --muted:#94a3b8; --accent:#24b081; }
+  :root { color-scheme: dark; --bg:#020617; --card:#020818; --line:#3a4459; --field:#1f293a; --text:#f8fafc; --muted:#94a3b8; --accent:#24b081; --sum:#fbbf24; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html, body { margin:0; background:var(--bg); color:var(--text); -webkit-text-size-adjust:100%; }
   body { min-height:100vh; font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif; display:flex; justify-content:center; }
-  main { width:min(100%,480px); padding:calc(24px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom)); }
+  main { width:min(100%,480px); padding:calc(24px + env(safe-area-inset-top)) 18px calc(130px + env(safe-area-inset-bottom)); }
   h1 { margin:8px 0 6px; font-size:1.55rem; font-weight:800; letter-spacing:.02em; }
-  .sub { margin:0 0 24px; color:var(--muted); font-size:.95rem; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:24px; padding:22px; box-shadow:0 0 40px #0006; }
+  .sub { margin:0 0 22px; color:var(--muted); font-size:.95rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:24px; padding:20px 22px 22px; box-shadow:0 0 40px #0006; margin-bottom:18px; }
+  .card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .card-title { font-weight:800; font-size:1.05rem; }
+  .now { border:0; border-radius:12px; min-height:40px; padding:8px 14px; font:700 .9rem/1 inherit; font-family:inherit; color:#03251a; background:var(--accent); cursor:pointer; white-space:nowrap; }
   label { display:block; color:var(--muted); font-size:.95rem; margin:0 0 10px; }
-  .field { margin-bottom:22px; }
-  input[type=time] { appearance:none; -webkit-appearance:none; display:block; width:100%; background:var(--field); color:var(--text); border:1px solid var(--line); border-radius:16px; padding:16px 26px; font:700 2.1rem/1.2 system-ui,-apple-system,sans-serif; min-height:96px; font-variant-numeric:tabular-nums; text-align:left; }
+  .field { margin-bottom:18px; }
+  input[type=time] { appearance:none; -webkit-appearance:none; display:block; width:100%; background:var(--field); color:var(--text); border:1px solid var(--line); border-radius:16px; padding:14px 26px; font:700 2.1rem/1.2 system-ui,-apple-system,sans-serif; min-height:84px; font-variant-numeric:tabular-nums; text-align:left; }
   input[type=time]:focus { outline:2px solid var(--accent); outline-offset:2px; }
   input[type=time]::-webkit-date-and-time-value { text-align:left; }
   input[type=time]::-webkit-calendar-picker-indicator { filter:invert(1); opacity:.5; }
-  .result { text-align:center; margin:4px 0 20px; padding:26px 10px; border-radius:20px; background:transparent; border:1px solid var(--line); }
-  .result-label { color:var(--muted); font-size:.95rem; margin-bottom:6px; }
-  #result { font-size:clamp(2rem,10vw,3rem); font-weight:800; line-height:1.25; color:var(--accent); font-variant-numeric:tabular-nums; }
-  #total { color:var(--muted); font-size:.95rem; margin-top:8px; min-height:1.2em; }
-  .buttons { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  button { border:0; border-radius:14px; min-height:54px; padding:10px 6px; white-space:nowrap; font-size:1rem; font-weight:700; cursor:pointer; font-family:inherit; }
+  .result { text-align:center; padding:20px 10px; border-radius:20px; border:1px solid var(--line); }
+  .result-label { color:var(--muted); font-size:.95rem; margin-bottom:4px; }
+  .diff { font-size:clamp(2rem,10vw,2.8rem); font-weight:800; line-height:1.25; color:var(--accent); font-variant-numeric:tabular-nums; }
+  .mins { color:var(--muted); font-size:.95rem; margin-top:6px; min-height:1.2em; }
+  .reset { width:100%; border:1px solid var(--line); border-radius:14px; min-height:54px; padding:10px; font-size:1rem; font-weight:700; font-family:inherit; color:var(--text); background:var(--field); cursor:pointer; }
   button:active { transform:scale(.98); }
-  .clear { color:var(--text); background:var(--field); border:1px solid var(--line); }
-  .now { color:#03251a; background:var(--accent); }
   .hint { margin:16px 3px 0; color:var(--muted); font-size:.8rem; line-height:1.6; }
-  @media (max-width:360px) { main { padding-left:12px; padding-right:12px; } .card { padding:15px; } input[type=time] { font-size:1.8rem; padding:14px 18px; } }
+  .sumbar { position:fixed; left:0; right:0; bottom:0; display:flex; justify-content:center; background:linear-gradient(transparent, var(--bg) 18px); padding:18px 18px calc(14px + env(safe-area-inset-bottom)); z-index:10; }
+  .sumbox { width:min(100%,444px); display:flex; align-items:center; justify-content:space-between; gap:12px; background:#1a1405; border:2px solid var(--sum); border-radius:20px; padding:12px 20px; box-shadow:0 -6px 30px #000a; }
+  .sum-label { color:var(--sum); font-weight:800; font-size:1rem; line-height:1.3; }
+  .sum-label small { display:block; color:var(--muted); font-weight:500; font-size:.8rem; }
+  #sum { font-size:clamp(1.7rem,8vw,2.3rem); font-weight:800; color:var(--sum); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  @media (max-width:360px) { main { padding-left:12px; padding-right:12px; } .card { padding:15px; } input[type=time] { font-size:1.8rem; padding:12px 18px; } }
 </style>
 </head>
 <body>
 <main>
   <h1>時間差計算</h1>
-  <p class="sub">時刻を入れるだけ。すぐに計算。</p>
-  <section class="card" aria-label="時間差計算">
-    <div class="field">
-      <label for="start">開始時刻</label>
-      <input id="start" type="time" value="14:23" step="60">
-    </div>
-    <div class="field">
-      <label for="end">終了時刻</label>
-      <input id="end" type="time" value="17:09" step="60">
-    </div>
+  <p class="sub">時刻を入れるだけ。2つの時間差の合計もすぐに計算。</p>
+  <div id="calcs"></div>
+  <button class="reset" id="reset" type="button">ぜんぶリセット</button>
+  <p class="hint">終了時刻が開始時刻より早い場合は、翌日の時刻として計算します。片方だけ入れたときは、入っているほうだけを合計します。入れた時刻はこの端末に残ります。通信は行いません。</p>
+</main>
+<div class="sumbar" aria-live="polite">
+  <div class="sumbox">
+    <div class="sum-label">2つの合計<small id="sumMins"></small></div>
+    <div id="sum">0時間0分</div>
+  </div>
+</div>
+<template id="tpl">
+  <section class="card">
+    <div class="card-head"><span class="card-title"></span><button class="now" type="button">終了を現在時刻に</button></div>
+    <div class="field"><label>開始時刻</label><input class="start" type="time" step="60"></div>
+    <div class="field"><label>終了時刻</label><input class="end" type="time" step="60"></div>
     <div class="result" aria-live="polite">
       <div class="result-label">時間差</div>
-      <div id="result">2時間46分</div>
-      <div id="total">合計 166 分</div>
-    </div>
-    <div class="buttons">
-      <button class="now" id="setNow" type="button">終了を現在時刻に</button>
-      <button class="clear" id="reset" type="button">リセット</button>
+      <div class="diff"></div>
+      <div class="mins"></div>
     </div>
   </section>
-  <p class="hint">終了時刻が開始時刻より早い場合は、翌日の時刻として計算します。入れた時刻はこの端末に残り、次に開いたときもそのまま。通信は行いません。</p>
-</main>
+</template>
 <script>
-const start = document.getElementById('start');
-const end = document.getElementById('end');
-const result = document.getElementById('result');
-const total = document.getElementById('total');
-const KEY = 'time-calc:last';
-try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s) { start.value = s.start || ''; end.value = s.end || ''; } } catch (e) {}
+const KEY = 'time-calc:v2';
+const N = 2;
+const DEFAULTS = [{ start: '14:23', end: '17:09' }, { start: '', end: '' }];
+let saved = null;
+try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+if (!saved) { // 前の版で入れた時刻があれば1つめに引きつぐ
+  try { const old = JSON.parse(localStorage.getItem('time-calc:last') || 'null'); if (old) saved = [old, DEFAULTS[1]]; } catch (e) {}
+}
+saved = saved || DEFAULTS;
+const calcsEl = document.getElementById('calcs');
+const tpl = document.getElementById('tpl');
+const rows = [];
+for (let i = 0; i < N; i++) {
+  const el = tpl.content.firstElementChild.cloneNode(true);
+  const start = el.querySelector('.start'), end = el.querySelector('.end');
+  start.id = 'start' + i; end.id = 'end' + i;
+  el.querySelectorAll('label')[0].htmlFor = start.id;
+  el.querySelectorAll('label')[1].htmlFor = end.id;
+  el.querySelector('.card-title').textContent = ['1つめ', '2つめ'][i];
+  el.setAttribute('aria-label', `時間差 ${i + 1}`);
+  start.value = (saved[i] && saved[i].start) || '';
+  end.value = (saved[i] && saved[i].end) || '';
+  const row = { start, end, diff: el.querySelector('.diff'), mins: el.querySelector('.mins') };
+  for (const inp of [start, end]) { inp.addEventListener('input', calculate); inp.addEventListener('change', calculate); }
+  el.querySelector('.now').addEventListener('click', () => {
+    const d = new Date();
+    end.value = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    calculate();
+  });
+  rows.push(row);
+  calcsEl.appendChild(el);
+}
 function minutesOf(value) {
   if (!value) return null;
   const [h, m] = value.split(':').map(Number);
   return h * 60 + m;
 }
+const hm = m => `${Math.floor(m / 60)}時間${m % 60}分`;
 function calculate() {
-  try { localStorage.setItem(KEY, JSON.stringify({ start: start.value, end: end.value })); } catch (e) {}
-  const a = minutesOf(start.value), b = minutesOf(end.value);
-  if (a === null || b === null) {
-    result.textContent = '時刻を入力';
-    total.textContent = '';
-    return;
+  try { localStorage.setItem(KEY, JSON.stringify(rows.map(r => ({ start: r.start.value, end: r.end.value })))); } catch (e) {}
+  let sum = 0, count = 0;
+  for (const r of rows) {
+    const a = minutesOf(r.start.value), b = minutesOf(r.end.value);
+    if (a === null || b === null) { r.diff.textContent = '時刻を入力'; r.mins.textContent = ''; continue; }
+    let diff = b - a;
+    const nextDay = diff < 0;
+    if (nextDay) diff += 24 * 60;
+    r.diff.textContent = hm(diff);
+    r.mins.textContent = `合計 ${diff} 分` + (nextDay ? '（翌日）' : '');
+    sum += diff; count++;
   }
-  let diff = b - a;
-  const nextDay = diff < 0;
-  if (nextDay) diff += 24 * 60;
-  const hours = Math.floor(diff / 60), mins = diff % 60;
-  result.textContent = `${hours}時間${mins}分`;
-  total.textContent = `合計 ${diff} 分` + (nextDay ? '（翌日）' : '');
+  document.getElementById('sum').textContent = hm(sum);
+  document.getElementById('sumMins').textContent = count ? `${sum} 分` : '時刻を入力';
 }
-start.addEventListener('input', calculate);
-end.addEventListener('input', calculate);
-start.addEventListener('change', calculate);
-end.addEventListener('change', calculate);
-document.getElementById('setNow').addEventListener('click', () => {
-  const d = new Date();
-  end.value = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  calculate();
-});
 document.getElementById('reset').addEventListener('click', () => {
-  start.value = '';
-  end.value = '';
+  for (const r of rows) { r.start.value = ''; r.end.value = ''; }
   calculate();
 });
 calculate();
