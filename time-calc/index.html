@@ -163,7 +163,7 @@ document.getElementById('reset').addEventListener('click', () => {
 const picker = document.getElementById('picker'), dial = document.getElementById('dial');
 const pH = document.getElementById('pH'), pM = document.getElementById('pM');
 const SVG = 'http://www.w3.org/2000/svg';
-const R_OUT = 112, R_IN = 74; // 外側の輪（1〜12）と内側の輪（00・13〜23）
+const R_OUT = 112, R_IN = 74; // 外側の輪（00・13〜23）と内側の輪（12・1〜11）
 let target = null, h = 0, m = 0, mode = 'h', dragging = false;
 
 function svg(tag, attrs, text) { const e = document.createElementNS(SVG, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; dial.appendChild(e); return e; }
@@ -172,7 +172,7 @@ function draw() {
   dial.textContent = '';
   svg('circle', { r: 145, fill: 'var(--dial)' });
   let sel, r;
-  if (mode === 'h') { r = (h === 0 || h > 12) ? R_IN : R_OUT; sel = pos(h % 12, r); }
+  if (mode === 'h') { r = (h === 0 || h > 12) ? R_OUT : R_IN; sel = pos(h % 12, r); }
   else { r = R_OUT; const a = m * Math.PI / 30; sel = [Math.sin(a) * r, -Math.cos(a) * r]; }
   svg('line', { x1: 0, y1: 0, x2: sel[0], y2: sel[1], stroke: 'var(--pick)', 'stroke-width': 3 });
   svg('circle', { r: 4, fill: 'var(--pick)' });
@@ -180,8 +180,8 @@ function draw() {
   const label = (i, rr, t, size, color) => { const [x, y] = pos(i, rr); svg('text', { x, y, 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': size, fill: color, 'font-family': 'system-ui,sans-serif' }, t); };
   if (mode === 'h') {
     for (let i = 0; i < 12; i++) {
-      label(i, R_OUT, String(i === 0 ? 12 : i), 19, '#fff');
-      label(i, R_IN, i === 0 ? '00' : String(i + 12), 15, '#d4d4d4');
+      label(i, R_OUT, i === 0 ? '00' : String(i + 12), 19, '#fff');
+      label(i, R_IN, String(i === 0 ? 12 : i), 15, '#d4d4d4');
     }
   } else {
     for (let i = 0; i < 12; i++) label(i, R_OUT, pad(i * 5), 19, '#fff');
@@ -198,7 +198,7 @@ function pick(ev) {
   if (mode === 'h') {
     const i = Math.round(ang / (Math.PI / 6)) % 12;
     const inner = Math.hypot(x, y) < (R_IN + R_OUT) / 2;
-    h = inner ? (i === 0 ? 0 : i + 12) : (i === 0 ? 12 : i);
+    h = inner ? (i === 0 ? 12 : i) : (i === 0 ? 0 : i + 12);
   } else {
     m = Math.round(ang / (Math.PI / 30)) % 60;
   }
