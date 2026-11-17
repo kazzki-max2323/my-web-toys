@@ -14,7 +14,7 @@
 <title>時間差計算</title>
 <style>
   :root { color-scheme: dark; --bg:#020617; --card:#020818; --line:#3a4459; --field:#1f293a; --text:#f8fafc; --muted:#94a3b8; --accent:#24b081; --sum:#fbbf24; --dial:#525252; --pick:#0a84ff; }
-  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
   html, body { margin:0; background:var(--bg); color:var(--text); -webkit-text-size-adjust:100%; }
   body { min-height:100vh; font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif; display:flex; justify-content:center; }
   main { width:min(100%,560px); padding:calc(12px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom)); }
@@ -28,6 +28,7 @@
   .now { border:0; border-radius:10px; min-height:30px; padding:4px 12px; font:700 .85rem/1 inherit; font-family:inherit; color:#03251a; background:var(--accent); cursor:pointer; }
   .time { display:block; width:100%; margin:0 0 12px; background:var(--field); color:var(--text); border:1px solid var(--line); border-radius:14px; padding:8px 0; font:700 clamp(1.5rem,7.5vw,2.1rem)/1.2 system-ui,-apple-system,sans-serif; min-height:62px; font-variant-numeric:tabular-nums; cursor:pointer; }
   .time.empty { color:#64748b; }
+  .time:active { transform:none; }
   .time.active { outline:2px solid var(--pick); outline-offset:1px; }
   .result { text-align:center; padding:10px 4px; border-radius:14px; border:1px solid var(--line); }
   .result-label { color:var(--muted); font-size:.8rem; }
@@ -109,7 +110,9 @@ function makeTime(btn, value, name) {
   const t = { btn, name, value: value || '' };
   t.set = v => { t.value = v; btn.textContent = v || '--:--'; btn.classList.toggle('empty', !v); btn.setAttribute('aria-label', `${name} ${v || '未入力'}`); };
   t.set(t.value);
-  btn.addEventListener('click', () => openPicker(t));
+  // 指が触れた瞬間に開く（離したときの click だと、指が少し動いただけで取り消されることがあるため）
+  btn.addEventListener('pointerdown', e => { if (e.button === 0) { e.preventDefault(); openPicker(t); } });
+  btn.addEventListener('click', e => { if (e.detail === 0) openPicker(t); });  // キーボードで押したとき
   return t;
 }
 
@@ -231,7 +234,10 @@ function closePicker() {
 pH.addEventListener('click', () => { mode = 'h'; draw(); });
 pM.addEventListener('click', () => { mode = 'm'; draw(); });
 document.getElementById('pClose').addEventListener('click', closePicker);
-picker.addEventListener('click', e => { if (e.target === picker) closePicker(); });
+// 暗い所をタップしたら閉じる。指を置いたのも暗い所のときだけ（開いたときの指を離した分では閉じない）
+let downOnBack = false;
+picker.addEventListener('pointerdown', e => { downOnBack = e.target === picker; });
+picker.addEventListener('click', e => { if (e.target === picker && downOnBack) closePicker(); downOnBack = false; });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && target) closePicker(); });
 
 calculate();
